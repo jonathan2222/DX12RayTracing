@@ -51,15 +51,8 @@ void Run()
 
         // Toggle fullscreen by pressing F11
         {
-            static bool s_F11Active = true;
-            RS::KeyState f11State = RS::Input::Get()->GetKeyState(RS::Key::F11);
-            if (f11State == RS::KeyState::PRESSED && s_F11Active)
-            {
+            if (RS::Input::Get()->IsKeyClicked(RS::Key::F11))
                 pDisplay->ToggleFullscreen();
-                s_F11Active = false;
-            }
-            else if (f11State == RS::KeyState::RELEASED)
-                s_F11Active = true;
         }
 
         frameTimer.FixedTick([&]() { FixedTick(); });
