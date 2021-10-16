@@ -4,12 +4,11 @@
 #include <vector>
 #include <string>
 
+#define RS_CONFIG_DEVELOPMENT defined(RS_CONFIG_DEBUG) || defined(RS_CONFIG_RELEASE)
+#include "Utils/Logger.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-
-#define RS_CONFIG_DEVELOPMENT defined(RS_CONFIG_DEBUG) || defined(RS_CONFIG_RELEASE)
-
-#include "Utils/Logger.h"
 
 #ifdef RS_CONFIG_DEVELOPMENT
 	#define RS_ASSERT(exp, ...) {if(!(exp)){LOG_CRITICAL(__VA_ARGS__);} assert(exp); }

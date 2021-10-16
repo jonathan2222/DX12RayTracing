@@ -5,7 +5,7 @@ end
 project "Sandbox"
 	kind "ConsoleApp"
 	language "C++"
-	cppdialect "C++latest"
+	cppdialect "C++17"
 	systemversion "latest"
 
     -- Pre-Compiled Headers
