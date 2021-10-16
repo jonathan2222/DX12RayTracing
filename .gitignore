@@ -1,0 +1,26 @@
+# Ignore DS_Store
+*.DS_Store
+
+# Ignore all Visual Studio project and solution files
+*.sln
+*.vcxproj*
+
+# Ignore visual studio hint files
+*.hint
+
+# Ignore all files in the .vs- and .vscode- folders (Created by Visual Studio)
+.vs/
+.vscode/
+
+# Ignore all compiled files
+Build/
+
+#Other ignored files
+*.dot
+cppcheck_report*
+
+#Ignore files for settings
+*.ini
+
+# Ignore extra files created by Blender
+*.blend1
