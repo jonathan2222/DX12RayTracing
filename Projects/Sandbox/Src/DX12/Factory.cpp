@@ -66,3 +66,31 @@ void DX12Factory::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** pp
 
     *ppAdapter = adapter.Detach();
 }
+
+void RS::DX12Factory::CreateSwapChain(
+    ComPtr<IDXGIFactory4>& factory,
+    ComPtr<ID3D12CommandQueue>& commandQueue,
+    HWND hwnd,
+    uint32 numBackBuffers,
+    uint32 width,
+    uint32 height,
+    ComPtr<IDXGISwapChain1>& swapChain)
+{
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.BufferCount          = numBackBuffers;
+    swapChainDesc.Width                = width;
+    swapChainDesc.Height               = height;
+    swapChainDesc.Format               = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.SampleDesc.Count     = 1;
+    swapChainDesc.SwapEffect           = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+    ThrowIfFailed(factory->CreateSwapChainForHwnd(
+        commandQueue.Get(),        // Swap chain needs the queue so that it can force a flush on it.
+        hwnd,
+        &swapChainDesc,
+        nullptr,
+        nullptr,
+        &swapChain
+    ));
+}

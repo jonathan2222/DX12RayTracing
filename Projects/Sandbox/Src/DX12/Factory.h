@@ -14,6 +14,15 @@ namespace RS
 		*/
 		static void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter = false);
 
+		static void CreateSwapChain(
+			ComPtr<IDXGIFactory4>& factory,
+			ComPtr<ID3D12CommandQueue>& commandQueue,
+			HWND hwnd,
+			uint32 numBackBuffers,
+			uint32 width,
+			uint32 height,
+			ComPtr<IDXGISwapChain1>& swapChain);
+
 	private:
 
 	};

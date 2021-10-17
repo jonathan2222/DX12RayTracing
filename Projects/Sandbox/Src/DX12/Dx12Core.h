@@ -23,12 +23,12 @@ namespace RS
 		void Render();
 		void PopulateCommandList();
 
-	private:
 		/* 
 			The meaning of s_FrameCount is for use in both the maximum number of frames that will be queued to the GPU at a time, 
 			as well as the number of back buffers in the DXGI swap chain. For the majority of applications, this is convenient and works well.
 		*/
-		static const UINT s_FrameCount= 2;
+		static const UINT FrameCount= 2;
+	private:
 
 		struct Vertex
 		{
@@ -36,14 +36,15 @@ namespace RS
 			DirectX::XMFLOAT4 color;
 		};
 
+		ComPtr<ID3D12Device>			m_Device;
+		ComPtr<IDXGISwapChain3>			m_SwapChain;
+		ComPtr<ID3D12Resource>			m_RenderTargets[FrameCount];
+		ComPtr<ID3D12CommandAllocator>	m_CommandAllocators[FrameCount];
+		ComPtr<ID3D12CommandQueue>		m_CommandQueueDirect;
+
 		// Pipeline objects.
 		CD3DX12_VIEWPORT m_viewport;
 		CD3DX12_RECT m_scissorRect;
-		ComPtr<IDXGISwapChain3> m_swapChain;
-		ComPtr<ID3D12Device> m_device;
-		ComPtr<ID3D12Resource> m_renderTargets[s_FrameCount];
-		ComPtr<ID3D12CommandAllocator> m_commandAllocators[s_FrameCount];
-		ComPtr<ID3D12CommandQueue> m_commandQueue;
 		ComPtr<ID3D12RootSignature> m_rootSignature;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		ComPtr<ID3D12PipelineState> m_pipelineState;
@@ -58,6 +59,6 @@ namespace RS
 		UINT m_frameIndex;
 		HANDLE m_fenceEvent;
 		ComPtr<ID3D12Fence> m_fence;
-		UINT64 m_fenceValues[s_FrameCount];
+		UINT64 m_fenceValues[FrameCount];
 	};
 }
