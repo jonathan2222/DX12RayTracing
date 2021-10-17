@@ -32,7 +32,7 @@
 	RS_NO_COPY_AND_MOVE(name) \
 	RS_DEFAULT_CLASS(name)
 /*
-* This will remove all copy and move constructors and assignemnt operators.
+* This will remove all copy, move constructors and assignemnt operators.
 * Furthermore, it will create a default destructor.
 * To get a singleton class, a private constructor need to be decleared.
 */

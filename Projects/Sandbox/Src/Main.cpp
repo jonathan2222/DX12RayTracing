@@ -3,11 +3,7 @@
 #include "Core/Config.h"
 #include "Core/Display.h"
 #include "Core/Input.h"
-#include "Core/FrameTimer.h"
-
-void Run();
-void FixedTick();
-void Tick(const RS::FrameStats& frameStats);
+#include "Core/EngineLoop.h"
 
 int main()
 {
@@ -23,53 +19,10 @@ int main()
     RS::Display::Get()->Init(displayDesc);
     RS::Input::Get()->Init();
 
-    Run();
+    RS::EngineLoop::Get()->Init();
+    RS::EngineLoop::Get()->Run();
 
+    RS::EngineLoop::Get()->Release();
     RS::Display::Get()->Release();
     return 0;
-}
-
-void Run()
-{
-    std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
-
-    RS::FrameStats frameStats = {};
-    RS::FrameTimer frameTimer;
-    frameTimer.Init(&frameStats, 0.25f);
-    while (!pDisplay->ShouldClose())
-    {
-        frameTimer.Begin();
-
-        pDisplay->PollEvents();
-        RS::Input::Get()->PreUpdate();
-
-        // Quit by pressing ESCAPE
-        {
-            if (RS::Input::Get()->IsKeyPressed(RS::Key::ESCAPE))
-                pDisplay->Close();
-        }
-
-        // Toggle fullscreen by pressing F11
-        {
-            if (RS::Input::Get()->IsKeyClicked(RS::Key::F11))
-                pDisplay->ToggleFullscreen();
-        }
-
-        frameTimer.FixedTick([&]() { FixedTick(); });
-        Tick(frameStats);
-
-        RS::Input::Get()->PostUpdate(frameStats.frame.currentDT);
-
-        frameTimer.End();
-    }
-}
-
-void FixedTick()
-{
-
-}
-
-void Tick(const RS::FrameStats& frameStats)
-{
-
 }

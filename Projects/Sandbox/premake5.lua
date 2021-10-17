@@ -41,20 +41,29 @@ project "Sandbox"
 		links
 		{
 			"glfw",
-			"imgui"
+			"imgui",
+			"d3d12.lib",
+			"dxgi.lib",
+			"d3dcompiler.lib"
 		}
 
 	filter "configurations:Release"
 		links
 		{
 			"glfw",
-			"imgui"
+			"imgui",
+			"d3d12.lib",
+			"dxgi.lib",
+			"d3dcompiler.lib"
 		}
 	filter "configurations:Production"
 		links
 		{
 			"glfw",
-			"imgui"
+			"imgui",
+			"d3d12.lib",
+			"dxgi.lib",
+			"d3dcompiler.lib"
 		}
 	filter {}
 
