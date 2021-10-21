@@ -20,6 +20,7 @@ int main()
     RS::Input::Get()->Init();
 
     RS::EngineLoop::Get()->Init();
+    RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(RS::EngineLoop::Get().get()));
     RS::EngineLoop::Get()->Run();
 
     RS::EngineLoop::Get()->Release();

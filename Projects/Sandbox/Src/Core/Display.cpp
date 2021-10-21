@@ -132,6 +132,11 @@ float Display::GetAspectRatio() const
 	return (float)m_Description.Width / (float)m_Description.Height;
 }
 
+void RS::Display::SetOnSizeChangeCallback(IDisplaySizeChange* pCallback)
+{
+	m_pCallback = pCallback;
+}
+
 void RS::Display::ErrorCallback(int error, const char* description)
 {
 	RS_UNREFERENCED_VARIABLE(error);
@@ -149,4 +154,9 @@ void RS::Display::FrameBufferResizeCallback(GLFWwindow* window, int width, int h
 	description.Fullscreen = false;
 
 	//Renderer::Get()->Resize((uint32)width, (uint32)height);
+
+	if (m_pSelf->m_pCallback)
+	{
+		m_pSelf->m_pCallback->OnSizeChange((uint32)width, (uint32)height);
+	}
 }

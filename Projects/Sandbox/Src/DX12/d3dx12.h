@@ -1,7 +1,11 @@
 //*********************************************************
 //
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License (MIT).
+// Copyright (c) Microsoft. All rights reserved.
+// This code is licensed under the MIT License (MIT).
+// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
+// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
+// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
 //
 //*********************************************************
 
@@ -2436,8 +2440,7 @@ inline HRESULT D3DX12SerializeVersionedRootSignature(
                 {
                     if (desc_1_1.pParameters[n].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
                     {
-                        auto pDescriptorRanges_1_0 = pParameters_1_0[n].DescriptorTable.pDescriptorRanges;
-                        HeapFree(GetProcessHeap(), 0, reinterpret_cast<void*>(const_cast<D3D12_DESCRIPTOR_RANGE*>(pDescriptorRanges_1_0)));
+                        HeapFree(GetProcessHeap(), 0, reinterpret_cast<void*>(const_cast<D3D12_DESCRIPTOR_RANGE*>(pParameters_1_0[n].DescriptorTable.pDescriptorRanges)));
                     }
                 }
                 HeapFree(GetProcessHeap(), 0, pParameters);
@@ -4073,7 +4076,6 @@ private:
     void* Data() noexcept override { return &m_Desc; }
     D3D12_NODE_MASK m_Desc;
 };
-
 
 #undef D3DX12_COM_PTR
 #undef D3DX12_COM_PTR_GET

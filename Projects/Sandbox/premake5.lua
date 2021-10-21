@@ -25,7 +25,7 @@ project "Sandbox"
 	files { GetFiles("Src/") }
 
 	--Includes
-    includedirs { "Src" }
+    includedirs { "Src", "$(IntDir)CompiledShaders\\" }
 
     sysincludedirs
 	{
@@ -37,6 +37,13 @@ project "Sandbox"
 		"%{includeDir.glfw}"
 	}
 
+	filter("files:**.hlsl")
+		shadermodel "6.3"
+		--shadertype "Library"
+		shadervariablename "g_p%(Filename)"
+		shaderheaderfileoutput "$(IntDir)CompiledShaders\\%(Filename).hlsl.h"
+	filter {}
+
 	filter "configurations:Debug"
 		links
 		{
@@ -44,6 +51,7 @@ project "Sandbox"
 			"imgui",
 			"d3d12.lib",
 			"dxgi.lib",
+			"dxguid.lib",
 			"d3dcompiler.lib"
 		}
 

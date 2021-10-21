@@ -13,6 +13,12 @@ namespace RS
 		bool			VSync		= true;
 	};
 
+	class IDisplaySizeChange
+	{
+	public:
+		virtual void OnSizeChange(uint32 width, uint32 height) = 0;
+	};
+
 	class Display
 	{
 	public:
@@ -40,18 +46,22 @@ namespace RS
 		uint32	GetHeight() const;
 		float	GetAspectRatio() const;
 
+		void SetOnSizeChangeCallback(IDisplaySizeChange* pCallback);
+
 	private:
 		static void ErrorCallback(int error, const char* description);
 		static void FrameBufferResizeCallback(GLFWwindow* window, int width, int height);
 
 	private:
-		inline static Display* m_pSelf = nullptr;
+		inline static Display* m_pSelf		= nullptr;
 
-		uint32				m_PreWidth = 0;
-		uint32				m_PreHeight = 0;
+		uint32				m_PreWidth		= 0;
+		uint32				m_PreHeight		= 0;
 		DisplayDescription	m_Description;
-		bool				m_ShouldClose = false;
-		GLFWwindow* m_pWindow = nullptr;
-		HWND				m_HWND = nullptr;
+		bool				m_ShouldClose	= false;
+		GLFWwindow*			m_pWindow		= nullptr;
+		HWND				m_HWND			= nullptr;
+
+		IDisplaySizeChange* m_pCallback		= nullptr;
 	};
 }
