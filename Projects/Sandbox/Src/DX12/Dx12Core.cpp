@@ -119,7 +119,7 @@ void RS::Dx12Core::InitializeDXGIAdapter()
 {
     bool debugDXGI = false;
 
-#if defined(RS_CONFIG_DEBUG)
+#ifdef RS_CONFIG_DEBUG
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
     {

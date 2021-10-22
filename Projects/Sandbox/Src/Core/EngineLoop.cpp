@@ -22,6 +22,9 @@ std::shared_ptr<EngineLoop> EngineLoop::Get()
 
 void EngineLoop::Init()
 {
+    m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
+    UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
+
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     Dx12Core::Get()->Init(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, 3, D3D_FEATURE_LEVEL_11_0, Dx12Core::c_RequireTearingSupport);
 
@@ -433,8 +436,8 @@ void RS::EngineLoop::BuildGeometry()
         { offset, offset, depthValue }
     };
 
-    AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer);
-    AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer);
+    AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer, L"VertexBuffer");
+    AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer, L"IndexBuffer");
 }
 
 void RS::EngineLoop::BuildAccelerationStructures()
