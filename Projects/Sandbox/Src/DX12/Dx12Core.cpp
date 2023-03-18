@@ -32,6 +32,7 @@ void RS::Dx12Core::Init(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFor
     m_DepthBufferFormat = depthBufferFormat;
     m_BackBufferCount = backBufferCount;
     m_D3DMinFeatureLevel = minFeatureLevel;
+    m_Options = flags;
 
     if (backBufferCount > MAX_BACK_BUFFER_COUNT)
     {
@@ -310,6 +311,8 @@ void RS::Dx12Core::CreateWindowSizeDependentResources()
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
 #ifdef RS_CONFIG_DEBUG
+            
+            //fmt::format()
             char buff[64] = {};
             sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", (hr == DXGI_ERROR_DEVICE_REMOVED) ? m_D3DDevice->GetDeviceRemovedReason() : hr);
             OutputDebugStringA(buff);
@@ -567,11 +570,7 @@ void RS::Dx12Core::Present(D3D12_RESOURCE_STATES beforeState)
     // If the device was reset we must completely reinitialize the renderer.
     if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
     {
-#ifdef _DEBUG
-        char buff[64] = {};
-        sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n", (hr == DXGI_ERROR_DEVICE_REMOVED) ? m_D3DDevice->GetDeviceRemovedReason() : hr);
-        OutputDebugStringA(buff);
-#endif
+        LOG_DEBUG("Device Lost on Present: Reason code {:#010x}", (hr == DXGI_ERROR_DEVICE_REMOVED) ? m_D3DDevice->GetDeviceRemovedReason() : hr);
         HandleDeviceLost();
     }
     else

@@ -33,7 +33,7 @@ void EngineLoop::Init()
     Dx12Core::Get()->InitializeDXGIAdapter();
 
     ThrowIfFalse(Dx12Core::IsDirectXRaytracingSupported(Dx12Core::Get()->GetAdapter()),
-        L"ERROR: DirectX Raytracing is not supported by your OS, GPU and/or driver.\n\n");
+        "ERROR: DirectX Raytracing is not supported by your OS, GPU and/or driver.\n\n");
 
     Dx12Core::Get()->CreateDeviceResources();
     Dx12Core::Get()->CreateWindowSizeDependentResources();
@@ -213,7 +213,7 @@ void RS::EngineLoop::DoRaytracing()
 
     auto pDisplay = Display::Get();
 
-    auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
+    auto DispatchRays = [&](auto* commandList, auto* stateObject, D3D12_DISPATCH_RAYS_DESC* dispatchDesc)
     {
         // Since each shader table has only one shader record, the stride is same as the size.
         dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
@@ -246,8 +246,8 @@ void RS::EngineLoop::CreateRaytracingInterfaces()
     auto device = Dx12Core::Get()->GetD3DDevice();
     auto commandList = Dx12Core::Get()->GetCommandList();
 
-    ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), L"Couldn't get DirectX Raytracing interface for the device.\n");
-    ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), L"Couldn't get DirectX Raytracing interface for the command list.\n");
+    ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), "Couldn't get DirectX Raytracing interface for the device.");
+    ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), "Couldn't get DirectX Raytracing interface for the command list.");
 }
 
 void RS::EngineLoop::SerializeAndCreateRaytracingRootSignature(D3D12_ROOT_SIGNATURE_DESC& desc, ComPtr<ID3D12RootSignature>* rootSig)
@@ -425,7 +425,7 @@ void RS::EngineLoop::BuildGeometry()
     };
 
     float depthValue = 1.0;
-    float offset = 0.7f;
+    float offset = 1.0f;
     Vertex vertices[] =
     {
         // The sample raytraces in screen space coordinates.

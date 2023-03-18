@@ -19,6 +19,8 @@ using Microsoft::WRL::ComPtr;
 
 #include <stdexcept>
 
+#include "Utils/Utils.h"
+
 class HrException : public std::runtime_error
 {
     inline std::string HrToString(HRESULT hr)
@@ -57,6 +59,24 @@ inline void ThrowIfFalse(bool value)
 }
 
 inline void ThrowIfFalse(bool value, const wchar_t* msg)
+{
+    ThrowIfFailed(value ? S_OK : E_FAIL, msg);
+}
+
+inline void ThrowIfFailed(HRESULT hr, const std::string& msg)
+{
+    if (FAILED(hr))
+    {
+        LOG_ERROR(msg.c_str());
+        LOG_FLUSH();
+    }
+
+    const std::wstring wStr = RS::Utils::Str2WStr(msg);
+    ThrowIfFailed(hr, wStr.c_str());
+}
+
+
+inline void ThrowIfFalse(bool value, const std::string& msg)
 {
     ThrowIfFailed(value ? S_OK : E_FAIL, msg);
 }

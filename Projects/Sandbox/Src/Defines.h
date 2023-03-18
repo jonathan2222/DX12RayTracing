@@ -4,6 +4,10 @@
 #include <vector>
 #include <string>
 
+#define LOG_DEBUG_ENABLED 1
+#define LOG_ENABLE_WINDOWS_DEBUGGER_LOGGING 1
+#define LOG_FLUSH_INTERVAL 2 // In seconds
+
 #define RS_CONFIG_DEVELOPMENT defined(RS_CONFIG_DEBUG) || defined(RS_CONFIG_RELEASE)
 #include "Utils/Logger.h"
 

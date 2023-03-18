@@ -53,7 +53,7 @@ namespace RS
 				{
 					if (FAILED(DXGIDeclareAdapterRemovalSupport()))
 					{
-						LOG_WARNING("Warning: Application failed to declare adapter removal support!");
+						LOG_ERROR("Application failed to declare adapter removal support!");
 						OutputDebugString(L"Warning: Application failed to declare adapter removal support!\n");
 					}
 				}
