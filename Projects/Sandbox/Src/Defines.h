@@ -16,6 +16,7 @@
 	#define RS_ASSERT(exp, ...) {assert(exp);}
 #endif
 
+#define RS_LOG_FILE_PATH "../../Debug/Tmp/"
 #define RS_CONFIG_FILE_PATH "../../Assets/Config/EngineConfig.json"
 #define RS_SHADER_PATH "../../Assets/Shaders/"
 #define RS_TEXTURE_PATH "../../Assets/Textures/"

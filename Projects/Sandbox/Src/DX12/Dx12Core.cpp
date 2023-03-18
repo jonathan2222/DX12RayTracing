@@ -414,7 +414,7 @@ void RS::Dx12Core::CreateWindowSizeDependentResources()
         depthOptimizedClearValue.Format = m_DepthBufferFormat;
         depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
         depthOptimizedClearValue.DepthStencil.Stencil = 0;
-
+        
         ThrowIfFailed(m_D3DDevice->CreateCommittedResource(&depthHeapProperties,
             D3D12_HEAP_FLAG_NONE,
             &depthStencilDesc,
