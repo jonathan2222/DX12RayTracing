@@ -131,7 +131,7 @@ void RS::Dx12Core::InitializeDXGIAdapter()
         }
         else
         {
-            OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
+            LOG_WARNING("Direct3D Debug Device is not available.");
         }
 
         ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
@@ -144,12 +144,16 @@ void RS::Dx12Core::InitializeDXGIAdapter()
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
         }
+        else
+        {
+            LOG_WARNING("Filed to get Direct3D debug interface.");
+        }
     }
 #endif
 
     if (!debugDXGI)
     {
-        ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DXGIFactory)));
+        ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_DXGIFactory)), "Failed to Create DXGIFactory!");
     }
 
     // Determines whether tearing support is available for fullscreen borderless windows.
@@ -166,11 +170,8 @@ void RS::Dx12Core::InitializeDXGIAdapter()
 
         if (FAILED(hr) || !allowTearing)
         {
-            OutputDebugStringA("WARNING: Variable refresh rate displays are not supported.\n");
-            if (m_Options & c_RequireTearingSupport)
-            {
-                ThrowIfFailed(false, L"Error: Sample must be run on an OS with tearing support.\n");
-            }
+            LOG_WARNING("Variable refresh rate displays are not supported.");
+            ThrowIfFalse((m_Options & c_RequireTearingSupport) == 0, "Sample must be run on an OS with tearing support.");
             m_Options &= ~c_AllowTearing;
         }
     }
@@ -870,10 +871,8 @@ void Dx12Core::InitializeAdapter(IDXGIAdapter1** ppAdapter)
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<IDXGIFactory6> factory6;
     HRESULT hr = m_DXGIFactory.As(&factory6);
-    if (FAILED(hr))
-    {
-        throw std::exception("DXGI 1.6 not supported");
-    }
+    ThrowIfFailed(hr, "DXGI 1.6 not supported!");
+    
     for (UINT adapterID = 0; DXGI_ERROR_NOT_FOUND != factory6->EnumAdapterByGpuPreference(adapterID, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter)); ++adapterID)
     {
         if (m_AdapterIDoverride != UINT_MAX && adapterID != m_AdapterIDoverride)
@@ -895,11 +894,9 @@ void Dx12Core::InitializeAdapter(IDXGIAdapter1** ppAdapter)
         {
             m_AdapterID = adapterID;
             m_AdapterDescription = desc.Description;
-#ifdef _DEBUG
-            wchar_t buff[256] = {};
-            swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterID, desc.VendorId, desc.DeviceId, desc.Description);
-            OutputDebugStringW(buff);
-#endif
+
+            LOG_INFO("Direct3D Adapter({}) : VID: {:04X}, PID : {:04X} - {}", adapterID, desc.VendorId, desc.DeviceId, Utils::ToString(desc.Description).c_str());
+
             break;
         }
     }
@@ -908,12 +905,10 @@ void Dx12Core::InitializeAdapter(IDXGIAdapter1** ppAdapter)
     if (!adapter && m_AdapterIDoverride == UINT_MAX)
     {
         // Try WARP12 instead
-        if (FAILED(m_DXGIFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter))))
-        {
-            throw std::exception("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-        }
+        HRESULT hr = m_DXGIFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter));
+        ThrowIfFailed(hr, "WARP12 not available. Enable the 'Graphics Tools' optional feature");
 
-        OutputDebugStringA("Direct3D Adapter - WARP12\n");
+        LOG_DEBUG("Direct3D Adapter - WARP12");
     }
 #endif
 

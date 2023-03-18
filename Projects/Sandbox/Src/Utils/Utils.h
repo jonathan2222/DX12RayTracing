@@ -7,7 +7,7 @@ namespace RS
 	public:
 		RS_STATIC_CLASS(Utils);
 
-		static std::wstring Str2WStr(const std::string& s)
+		static std::wstring ToWString(const std::string& s)
 		{
 			// s2ws code from: https://stackoverflow.com/questions/27220/how-to-convert-stdstring-to-lpcwstr-in-c-unicode
 			int len;
@@ -18,6 +18,19 @@ namespace RS
 			std::wstring res(pBuf);
 			delete[] pBuf;
 			return res;
+		}
+
+		static std::string ToString(const std::wstring& s)
+		{
+			// From https://codereview.stackexchange.com/questions/419/converting-between-stdwstring-and-stdstring
+			int len;
+			int slength = (int)s.length() + 1;
+			len = WideCharToMultiByte(CP_ACP, 0, s.c_str(), slength, 0, 0, 0, 0);
+			char* buf = new char[len];
+			WideCharToMultiByte(CP_ACP, 0, s.c_str(), slength, buf, len, 0, 0);
+			std::string r(buf);
+			delete[] buf;
+			return r;
 		}
 	};
 }

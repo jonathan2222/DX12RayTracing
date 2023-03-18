@@ -71,7 +71,7 @@ inline void ThrowIfFailed(HRESULT hr, const std::string& msg)
         LOG_FLUSH();
     }
 
-    const std::wstring wStr = RS::Utils::Str2WStr(msg);
+    const std::wstring wStr = RS::Utils::ToWString(msg);
     ThrowIfFailed(hr, wStr.c_str());
 }
 
