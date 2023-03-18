@@ -24,3 +24,6 @@ cppcheck_report*
 
 # Ignore extra files created by Blender
 *.blend1
+
+# Ignore debug temporary files
+Debug/Tmp/
