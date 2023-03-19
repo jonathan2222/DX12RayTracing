@@ -16,11 +16,13 @@ void RS::DX12::Dx12FrameCommandList::Init(ID3D12Device8* pDevice, D3D12_COMMAND_
 	{
 		CommandFrame& commandFrame = m_CommandFrames[i];
 		commandFrame.Init(pDevice, type);
+		LOG_DEBUG("Created command allocator [{}] of type {}", i, DX12::GetCommandListTypeAsString(type).data());
 	}
 
 	hr = pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList));
 	ThrowIfFailed(hr, "Failed to create {} command list!", DX12::GetCommandListTypeAsString(type).data());
 	DX12_SET_DEBUG_NAME(m_CommandList, "{} Command List", DX12::GetCommandListTypeAsString(type).data());
+	ThrowIfFailed(m_CommandList->Close());
 
 	hr = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
 	ThrowIfFailed(hr, "Failed to create fence!");
@@ -105,7 +107,7 @@ void RS::DX12::Dx12FrameCommandList::CommandFrame::Release()
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Wait(ID3D12Fence1* pFence, HANDLE fenceEvent)
 {
-	RS_ASSERT(pFence, fenceEvent);
+	RS_ASSERT(pFence && fenceEvent, "Fence or fence handle are not initialized!");
 
 	// If the current fence value on the GPU is less than the one on the CPU, then we know the GPU has not finished executing the command lists sice it has not reached the "m_CommandQueue->Signal()" command.
 	if (pFence->GetCompletedValue() < m_FenceValue)

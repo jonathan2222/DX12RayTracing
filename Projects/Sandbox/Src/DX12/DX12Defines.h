@@ -55,7 +55,27 @@ namespace RS::DX12
         case D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE:
             return "Video Encode";
         default:
-            return "Unknown command list type";
+            LOG_WARNING("Unknown command list type {}", (uint32)type);
+            return "Unknown";
+        }
+    }
+
+    constexpr std::string_view GetDescriptorHeapTypeAsString(D3D12_DESCRIPTOR_HEAP_TYPE type)
+    {
+        switch (type)
+        {
+        case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+            return "CBV_SRV_UAV";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+            return "SAMPLER";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+            return "RTV";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+            return "DSV";
+        case D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES:
+        default:
+            LOG_WARNING("Unknown descriptor heap type {}", (uint32)type);
+            return "Unknown";
         }
     }
 

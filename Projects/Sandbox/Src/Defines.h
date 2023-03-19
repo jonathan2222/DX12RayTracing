@@ -17,8 +17,10 @@
 #include <Windows.h>
 
 #ifdef RS_CONFIG_DEVELOPMENT
+	#define RS_ASSERT_NO_MSG(exp, ...) {assert(exp);}
 	#define RS_ASSERT(exp, ...) {if(!(exp)){LOG_CRITICAL(__VA_ARGS__);} assert(exp); }
 #else
+	#define RS_ASSERT_NO_MSG(exp, ...) {assert(exp);}
 	#define RS_ASSERT(exp, ...) {assert(exp);}
 #endif
 
