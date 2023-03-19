@@ -5,7 +5,7 @@
 #include "DX12Defines.h"
 #include "Dx12Core2.h"
 
-void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, const std::string& name)
+void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, const std::string name)
 {
 	std::lock_guard lock{ m_Mutex };
 	RS_ASSERT_NO_MSG(capacity && capacity < D3D12_MAX_SHADER_VISIBLE_DESCRIPTOR_HEAP_SIZE_TIER_2);
@@ -28,8 +28,7 @@ void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, c
 	desc.NumDescriptors = capacity;
 	desc.Type = m_Type;
 	desc.NodeMask = 0;
-	HRESULT hr = pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_Heap));
-	ThrowIfFailed(hr, "Failed to create descriptor heap!");
+	DXCallVerbose(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_Heap)));
 	DX12_SET_DEBUG_NAME(m_Heap, name.c_str());
 
 	m_FreeHandles = std::move(std::make_unique<uint32[]>(capacity));

@@ -21,9 +21,16 @@ using Microsoft::WRL::ComPtr;
 
 #include "Utils/Logger.h"
 #include "Utils/Utils.h"
+#include "Core/LaunchArguments.h"
 
 #ifdef RS_CONFIG_DEBUG
-    #define DX12_SET_DEBUG_NAME(resource, ...) resource->SetName(Utils::ToWString(Utils::Format(__VA_ARGS__)).c_str());
+    #define DX12_SET_DEBUG_NAME(resource, ...)                              \
+        {                                                                   \
+            std::string _resource##_name = Utils::Format(__VA_ARGS__);      \
+            resource->SetName(Utils::ToWString(_resource##_name).c_str());  \
+            if(LaunchArguments::Contains(LaunchParams::logDXNamedObjects))  \
+                LOG_DEBUG("Named Resource: {}", _resource##_name.c_str());  \
+        }
 #else
     #define DX12_SET_DEBUG_NAME(resource, ...)
 #endif
@@ -32,6 +39,24 @@ using Microsoft::WRL::ComPtr;
     {                           \
         if (x) x->Release();    \
         x = nullptr;            \
+    }
+
+#define DXCall(x)                                                               \
+    {                                                                           \
+        HRESULT hr = x;                                                         \
+        std::string resourceName = #x;                                          \
+        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());   \
+        if (LaunchArguments::Contains(LaunchParams::logDXCallsSpam))            \
+            LOG_DEBUG("DXCall({})", resourceName.c_str());                      \
+    }
+
+#define DXCallVerbose(x)                                                                                \
+    {                                                                                                   \
+        HRESULT hr = x;                                                                                 \
+        std::string resourceName = #x;                                                                  \
+        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());                           \
+        if (LaunchArguments::ContainsAny({LaunchParams::logDXCalls, LaunchParams::logDXCallsSpam}))     \
+            LOG_DEBUG("DXCall({})", resourceName.c_str());                                              \
     }
 
 namespace RS::DX12

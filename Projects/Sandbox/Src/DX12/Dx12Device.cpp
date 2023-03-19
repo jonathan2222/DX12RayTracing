@@ -42,7 +42,7 @@ void RS::DX12::Dx12Device::CreateFactory()
         {
             debugDXGI = true;
 
-            ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory)), "Failed to create DXGIFactory with debug flags!");
+            DXCallVerbose(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory)));
 
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -56,7 +56,7 @@ void RS::DX12::Dx12Device::CreateFactory()
 
     if (!debugDXGI)
     {
-        ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_Factory)), "Failed to Create DXGIFactory!");
+        DXCallVerbose(CreateDXGIFactory1(IID_PPV_ARGS(&m_Factory)));
     }
 
     // If requested, determines whether tearing is supported.
@@ -87,14 +87,13 @@ void RS::DX12::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<IDXGIFactory6> factory6;
     {
-        HRESULT hr = m_Factory->QueryInterface(IID_PPV_ARGS(&factory6));
-        ThrowIfFailed(hr, "Failed to query DXGI 1.6 factory!");
+        DXCallVerbose(m_Factory->QueryInterface(IID_PPV_ARGS(&factory6)));
     }
 
     for (uint32 adapterID = 0; DXGI_ERROR_NOT_FOUND != factory6->EnumAdapterByGpuPreference((UINT)adapterID, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter)); ++adapterID)
     {
         DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
+        DXCallVerbose(adapter->GetDesc1(&desc));
 
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         {
@@ -117,8 +116,7 @@ void RS::DX12::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
     if (!adapter)
     {
         // Try WARP12 instead
-        HRESULT hr = m_Factory->EnumWarpAdapter(IID_PPV_ARGS(&adapter));
-        ThrowIfFailed(hr, "WARP12 not available. Enable the 'Graphics Tools' optional feature");
+        DXCallVerbose(m_Factory->EnumWarpAdapter(IID_PPV_ARGS(&adapter)));
 
         LOG_DEBUG("Direct3D Adapter - WARP12");
     }
@@ -135,7 +133,7 @@ void RS::DX12::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
 void RS::DX12::Dx12Device::CreateDevice()
 {
     // Create the DX12 API device object.
-    ThrowIfFailed(D3D12CreateDevice(m_Adapter, m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_Device)));
+    DXCallVerbose(D3D12CreateDevice(m_Adapter, m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_Device)));
     DX12_SET_DEBUG_NAME(m_Device, "D3D12 Device");
 
 #ifdef RS_CONFIG_DEBUG

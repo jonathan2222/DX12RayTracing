@@ -1,14 +1,18 @@
 #include <iostream>
 
+#include "Core/LaunchArguments.h"
 #include "Core/Config.h"
 #include "Core/Display.h"
 #include "Core/Input.h"
 #include "Core/EngineLoop.h"
 
-int main()
+int main(int argc, char* argv[])
 {
     RS::Logger::Init();
+    RS::LaunchArguments::Init(argc, argv);
     RS::Config::Get()->Init(RS_CONFIG_FILE_PATH);
+
+    //RS::LaunchParams::logDXCalls.value;
 
     RS::DisplayDescription displayDesc = {};
     displayDesc.Title       = RS::Config::Get()->Fetch<std::string>("Display/Title", "Sandbox DX12");
@@ -25,5 +29,6 @@ int main()
 
     RS::EngineLoop::Get()->Release();
     RS::Display::Get()->Release();
+    RS::LaunchArguments::Release();
     return 0;
 }

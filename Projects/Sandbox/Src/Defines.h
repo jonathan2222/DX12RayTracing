@@ -64,26 +64,28 @@ typedef uint64_t	uint64;
 *		MyFlags tmp = MyFlag::B;
 *	Which is the same as writing:
 *		uint32 tmp = 2;
+*	
+*	All functions which makes it work are hidden inside the _Internal namespace.
 * */
 #define BEGIN_BITFLAGS(type, field)																						\
     typedef type field##s;																								\
 	namespace field {																									\
-        constexpr char* fieldName = #field;																				\
 		namespace _Internal {																							\
+			constexpr char* fieldName = #field;																			\
 			constexpr bool containsFlag = RS::Utils::ContainsLastStr(fieldName, "Flag");								\
 			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
+			typedef type BitFieldType;																					\
+			template<BitFieldType N>																					\
+			struct FlagStruct {																							\
+				enum : type { value = 1 << N };																			\
+			};																											\
+			template<>																									\
+			struct FlagStruct<0> {																						\
+				enum : type { value = 1 };																				\
+			};																											\
 		}																												\
-		typedef type _InternalBitFieldType;																				\
-		template<_InternalBitFieldType N>																				\
-		struct FlagStruct {																								\
-			enum : type { value = 1 << N };																				\
-		};																												\
-		template<>																										\
-		struct FlagStruct<0> {																							\
-			enum : type { value = 1 };																					\
-		};																												\
-		constexpr _InternalBitFieldType startLine = __LINE__ + 1;
+		namespace _Internal {constexpr _Internal::BitFieldType startLine = __LINE__ + 1;} // startLine should be the last line of BEGIN_BITFLAGS, because we want these the line diff of 1 for each consecutive FLAG. 
 #define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
 #define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
-#define BITFLAG(flag) constexpr _InternalBitFieldType flag = FlagStruct<__LINE__ - startLine>::value;
+#define BITFLAG(flag) constexpr _Internal::BitFieldType flag = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
 #define END_BITFLAGS() }

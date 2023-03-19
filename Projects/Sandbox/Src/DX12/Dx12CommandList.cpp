@@ -8,24 +8,22 @@ void RS::DX12::Dx12FrameCommandList::Init(ID3D12Device8* pDevice, D3D12_COMMAND_
 	desc.NodeMask = 0; // For multiple devices.
 	desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	desc.Type = type;
-	HRESULT hr = pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_CommandQueue));
-	ThrowIfFailed(hr, "Failed to create {} command queue!", DX12::GetCommandListTypeAsString(type).data());
+	DXCallVerbose(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_CommandQueue)));
 	DX12_SET_DEBUG_NAME(m_CommandQueue, "{} Command Queue", DX12::GetCommandListTypeAsString(type).data());
 
 	for (uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
 	{
 		CommandFrame& commandFrame = m_CommandFrames[i];
 		commandFrame.Init(pDevice, type);
+		DX12_SET_DEBUG_NAME(commandFrame.m_CommandAllocator, "{} Command Allocator [{}]", DX12::GetCommandListTypeAsString(type), i);
 		LOG_DEBUG("Created command allocator [{}] of type {}", i, DX12::GetCommandListTypeAsString(type).data());
 	}
 
-	hr = pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList));
-	ThrowIfFailed(hr, "Failed to create {} command list!", DX12::GetCommandListTypeAsString(type).data());
+	DXCallVerbose(pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList)));
 	DX12_SET_DEBUG_NAME(m_CommandList, "{} Command List", DX12::GetCommandListTypeAsString(type).data());
-	ThrowIfFailed(m_CommandList->Close());
+	DXCallVerbose(m_CommandList->Close());
 
-	hr = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence));
-	ThrowIfFailed(hr, "Failed to create fence!");
+	DXCallVerbose(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
 	DX12_SET_DEBUG_NAME(m_Fence, "D3D12 Fence");
 
 	m_FenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
@@ -59,17 +57,13 @@ void RS::DX12::Dx12FrameCommandList::BeginFrame()
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
 	commandFrame.Wait(m_Fence, m_FenceEvent);
 
-	HRESULT hr = commandFrame.m_CommandAllocator->Reset();
-	ThrowIfFailed(hr, "Failed to reset command allocator!");
-
-	hr = m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr);
-	ThrowIfFailed(hr, "Failed to reset command list!");
+	DXCall(commandFrame.m_CommandAllocator->Reset());
+	DXCall(m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr));
 }
 
 void RS::DX12::Dx12FrameCommandList::EndFrame()
 {
-	HRESULT hr = m_CommandList->Close();
-	ThrowIfFailed(hr, "Failed to close command list!");
+	DXCall(m_CommandList->Close());
 
 	ID3D12CommandList* commandLists[]{ m_CommandList };
 	m_CommandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), &commandLists[0]);
@@ -94,9 +88,7 @@ void RS::DX12::Dx12FrameCommandList::Flush()
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type)
 {
-	HRESULT hr = pDevice->CreateCommandAllocator(type, IID_PPV_ARGS(&m_CommandAllocator));
-	ThrowIfFailed(hr, "Failed to create {} command allocator!", DX12::GetCommandListTypeAsString(type));
-	DX12_SET_DEBUG_NAME(m_CommandAllocator, "{} Command Allocator", DX12::GetCommandListTypeAsString(type));
+	DXCallVerbose(pDevice->CreateCommandAllocator(type, IID_PPV_ARGS(&m_CommandAllocator)));
 }
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Release()
@@ -113,8 +105,7 @@ void RS::DX12::Dx12FrameCommandList::CommandFrame::Wait(ID3D12Fence1* pFence, HA
 	if (pFence->GetCompletedValue() < m_FenceValue)
 	{
 		// We have the fence create an event which is signaled ones the fence's current value equals m_FenceValue.
-		HRESULT hr = pFence->SetEventOnCompletion(m_FenceValue, fenceEvent);
-		ThrowIfFailed(hr, "Failed to set EventOnCompletion");
+		DXCall(pFence->SetEventOnCompletion(m_FenceValue, fenceEvent));
 
 		// Wait until the fence has triggered the event.
 		WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);

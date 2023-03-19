@@ -30,7 +30,7 @@ namespace RS::DX12
 		Dx12DescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) : m_Type(type) {}
 		~Dx12DescriptorHeap() = default;
 
-		void Init(uint32 capacity, bool isShaderVisible, const std::string& name = "");
+		void Init(uint32 capacity, bool isShaderVisible, const std::string name = "");
 		void Release();
 
 		[[nodiscard]] DescriprtorHandle Allocate();
