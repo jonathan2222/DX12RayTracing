@@ -42,3 +42,21 @@ typedef uint8_t		uint8;
 typedef uint16_t	uint16;
 typedef uint32_t	uint32;
 typedef uint64_t	uint64;
+
+// Compile time bitfields relying on __LINE__ to get the right number.
+#define BEGIN_BITFLAGS(type, field)									\
+	namespace field {												\
+		typedef type _InternalBitFieldType;							\
+		template<_InternalBitFieldType N>							\
+		struct FlagStruct {											\
+			enum : type { value = 1 << N };							\
+		};															\
+		template<>													\
+		struct FlagStruct<0> {										\
+			enum : type { value = 1 };								\
+		};															\
+		constexpr _InternalBitFieldType startLine = __LINE__ + 1;
+#define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
+#define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
+#define BITFLAG(flag) constexpr _InternalBitFieldType flag = FlagStruct<__LINE__ - startLine>::value;
+#define END_BITFLAGS(field) }
