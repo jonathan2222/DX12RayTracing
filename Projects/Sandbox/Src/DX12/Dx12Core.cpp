@@ -110,7 +110,7 @@ void RS::Dx12Core::Init(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFor
 //    LoadAssets();
 //}
 
-void Dx12Core::Release()
+void RS::Dx12Core::Release()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be destroyed.
     WaitForGpu();

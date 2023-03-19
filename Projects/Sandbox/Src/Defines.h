@@ -43,20 +43,55 @@ typedef uint16_t	uint16;
 typedef uint32_t	uint32;
 typedef uint64_t	uint64;
 
-// Compile time bitfields relying on __LINE__ to get the right number.
-#define BEGIN_BITFLAGS(type, field)									\
-	namespace field {												\
-		typedef type _InternalBitFieldType;							\
-		template<_InternalBitFieldType N>							\
-		struct FlagStruct {											\
-			enum : type { value = 1 << N };							\
-		};															\
-		template<>													\
-		struct FlagStruct<0> {										\
-			enum : type { value = 1 };								\
-		};															\
+namespace RS::Internal
+{
+	// Compile time function to check if a string has a certain ending.
+	constexpr bool ContainsLastStr(std::string_view view, std::string_view ending)
+	{
+		if (view.length() >= ending.length()) {
+			return (0 == view.compare(view.length() - ending.length(), ending.length(), ending));
+		}
+		else {
+			return false;
+		}
+	}
+}
+
+/* 
+*	Compile time bitflags relying on __LINE__ to get the right bit indexand uses compile time function to check if name ending as "Flag".
+*	A bitflag name must have 'Flag' as an ending. This allows it to create a typedef for the flags type.
+*	Example:
+*		BEGIN_BITFLAGS_U32(MyFlag)
+*			BITFLAG(A)
+*			BITFLAG(B)
+*			BITFLAG(C)
+*		END_BITFLAGS()
+* 
+*	This creates a namespace MyFlag which holds constant values of type uint32. The values are A = 1, B = 2 and C = 4.
+*	One can create a flags variable by doing:
+*		MyFlags tmp = MyFlag::B;
+*	Which is the same as writing:
+*		uint32 tmp = 2;
+* */
+#define BEGIN_BITFLAGS(type, field)																						\
+    typedef type field##s;																								\
+	namespace field {																									\
+        constexpr char* fieldName = #field;																				\
+		namespace _Internal {																							\
+			constexpr bool containsFlag = RS::Internal::ContainsLastStr(fieldName, "Flag");								\
+			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
+		}																												\
+		typedef type _InternalBitFieldType;																				\
+		template<_InternalBitFieldType N>																				\
+		struct FlagStruct {																								\
+			enum : type { value = 1 << N };																				\
+		};																												\
+		template<>																										\
+		struct FlagStruct<0> {																							\
+			enum : type { value = 1 };																					\
+		};																												\
 		constexpr _InternalBitFieldType startLine = __LINE__ + 1;
 #define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
 #define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
 #define BITFLAG(flag) constexpr _InternalBitFieldType flag = FlagStruct<__LINE__ - startLine>::value;
-#define END_BITFLAGS(field) }
+#define END_BITFLAGS() }

@@ -2,7 +2,7 @@
 #include "Dx12Device.h"
 #include "Utils/Utils.h"
 
-void RS::Dx12Device::Init(D3D_FEATURE_LEVEL minFeatureLevel, uint32 dxgiFlags)
+void RS::Dx12Device::Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags)
 {
     m_D3DMinFeatureLevel = minFeatureLevel;
     m_DxgiFlags = dxgiFlags;
@@ -62,7 +62,7 @@ void RS::Dx12Device::CreateFactory()
     }
 
     // Determines whether tearing support is available for fullscreen borderless windows.
-    if (m_DxgiFlags & (DXGIFlags::ALLOW_TEARING | DXGIFlags::REQUIRE_TEARING_SUPPORT))
+    if (m_DxgiFlags & (DXGIFlag::ALLOW_TEARING | DXGIFlag::REQUIRE_TEARING_SUPPORT))
     {
         BOOL allowTearing = FALSE;
 
@@ -76,8 +76,8 @@ void RS::Dx12Device::CreateFactory()
         if (FAILED(hr) || !allowTearing)
         {
             LOG_WARNING("Variable refresh rate displays are not supported.");
-            ThrowIfFalse((m_DxgiFlags & DXGIFlags::REQUIRE_TEARING_SUPPORT) == 0, "Sample must be run on an OS with tearing support.");
-            m_DxgiFlags &= ~DXGIFlags::ALLOW_TEARING;
+            ThrowIfFalse((m_DxgiFlags & DXGIFlag::REQUIRE_TEARING_SUPPORT) == 0, "Sample must be run on an OS with tearing support.");
+            m_DxgiFlags &= ~DXGIFlag::ALLOW_TEARING;
         }
     }
 }
