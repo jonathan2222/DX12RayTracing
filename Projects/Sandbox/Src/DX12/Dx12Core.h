@@ -54,7 +54,6 @@ namespace RS
 					if (FAILED(DXGIDeclareAdapterRemovalSupport()))
 					{
 						LOG_ERROR("Application failed to declare adapter removal support!");
-						OutputDebugString(L"Warning: Application failed to declare adapter removal support!\n");
 					}
 				}
 			}
@@ -147,7 +146,7 @@ namespace RS
 		std::wstring                                        m_AdapterDescription;
 
 		// Direct3D objects.
-		Microsoft::WRL::ComPtr<ID3D12Device>                m_D3DDevice;
+		Microsoft::WRL::ComPtr<ID3D12Device>				m_D3DDevice;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue>          m_CommandQueue;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>   m_CommandList;
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>      m_CommandAllocators[MAX_BACK_BUFFER_COUNT];

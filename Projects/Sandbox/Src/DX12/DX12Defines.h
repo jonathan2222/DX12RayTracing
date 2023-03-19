@@ -21,6 +21,16 @@ using Microsoft::WRL::ComPtr;
 
 #include "Utils/Utils.h"
 
+inline void ReportLiveObjects()
+{
+    IDXGIDebug1* pDXGIDebug = nullptr;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDXGIDebug))))
+    {
+        pDXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL | D3D12_RLDO_DETAIL));
+        pDXGIDebug->Release();
+    }
+}
+
 class HrException : public std::runtime_error
 {
     inline std::string HrToString(HRESULT hr)

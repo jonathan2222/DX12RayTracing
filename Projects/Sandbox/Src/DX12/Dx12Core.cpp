@@ -124,10 +124,10 @@ void RS::Dx12Core::InitializeDXGIAdapter()
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
     {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+        ComPtr<ID3D12Debug> debugInterface;
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface))))
         {
-            debugController->EnableDebugLayer();
+            debugInterface->EnableDebugLayer();
         }
         else
         {
@@ -139,14 +139,14 @@ void RS::Dx12Core::InitializeDXGIAdapter()
         {
             debugDXGI = true;
 
-            ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_DXGIFactory)));
+            ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_DXGIFactory)), "Failed to create DXGIFactory with debug flags!");
 
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
             dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
         }
         else
         {
-            LOG_WARNING("Filed to get Direct3D debug interface.");
+            LOG_WARNING("Filed to get Direct3D debug info queue.");
         }
     }
 #endif
@@ -184,24 +184,25 @@ void RS::Dx12Core::CreateDeviceResources()
     // Create the DX12 API device object.
     ThrowIfFailed(D3D12CreateDevice(m_Adapter.Get(), m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
 
-#ifndef NDEBUG
-    // Configure debug device (if active).
-    ComPtr<ID3D12InfoQueue> d3dInfoQueue;
-    if (SUCCEEDED(m_D3DDevice.As(&d3dInfoQueue)))
-    {
 #ifdef RS_CONFIG_DEBUG
-        d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-        d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-#endif
-        D3D12_MESSAGE_ID hide[] =
+    {
+        // Configure debug device (if active).
+        ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+        if (SUCCEEDED(m_D3DDevice.As(&d3dInfoQueue)))
         {
-            D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE
-        };
-        D3D12_INFO_QUEUE_FILTER filter = {};
-        filter.DenyList.NumIDs = _countof(hide);
-        filter.DenyList.pIDList = hide;
-        d3dInfoQueue->AddStorageFilterEntries(&filter);
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+
+            D3D12_MESSAGE_ID hide[] =
+            {
+                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE
+            };
+            D3D12_INFO_QUEUE_FILTER filter = {};
+            filter.DenyList.NumIDs = _countof(hide);
+            filter.DenyList.pIDList = hide;
+            d3dInfoQueue->AddStorageFilterEntries(&filter);
+        }
     }
 #endif
 
@@ -269,10 +270,7 @@ void RS::Dx12Core::CreateDeviceResources()
     m_FenceValues[m_BackBufferIndex]++;
 
     m_FenceEvent.Attach(CreateEvent(nullptr, FALSE, FALSE, nullptr));
-    if (!m_FenceEvent.IsValid())
-    {
-        ThrowIfFailed(E_FAIL, L"CreateEvent failed.\n");
-    }
+    ThrowIfFalse(m_FenceEvent.IsValid(), "CreateEvent failed");
 }
 
 void RS::Dx12Core::CreateWindowSizeDependentResources()
@@ -510,14 +508,9 @@ void RS::Dx12Core::HandleDeviceLost()
     m_Adapter.Reset();
 
 #ifdef RS_CONFIG_DEBUG
-    {
-        ComPtr<IDXGIDebug1> dxgiDebug;
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
-        {
-            dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-        }
-    }
+    ReportLiveObjects();
 #endif
+
     InitializeDXGIAdapter();
     CreateDeviceResources();
     CreateWindowSizeDependentResources();

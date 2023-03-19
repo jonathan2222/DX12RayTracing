@@ -32,8 +32,7 @@ void EngineLoop::Init()
     Dx12Core::Get()->SetWindow(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
     Dx12Core::Get()->InitializeDXGIAdapter();
 
-    ThrowIfFalse(Dx12Core::IsDirectXRaytracingSupported(Dx12Core::Get()->GetAdapter()),
-        "ERROR: DirectX Raytracing is not supported by your OS, GPU and/or driver.\n\n");
+    ThrowIfFalse(Dx12Core::IsDirectXRaytracingSupported(Dx12Core::Get()->GetAdapter()), "DirectX Raytracing is not supported by your OS, GPU and/or driver.");
 
     Dx12Core::Get()->CreateDeviceResources();
     Dx12Core::Get()->CreateWindowSizeDependentResources();
@@ -47,6 +46,11 @@ void EngineLoop::Release()
     Dx12Core::Get()->WaitForGpu();
     OnDeviceLost();
     Dx12Core::Get()->Release();
+    Dx12Core::Get()->~Dx12Core();
+
+#ifdef RS_CONFIG_DEBUG
+    ReportLiveObjects();
+#endif
 }
 
 void EngineLoop::Run()
