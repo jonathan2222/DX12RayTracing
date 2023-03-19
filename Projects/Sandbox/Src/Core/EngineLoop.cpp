@@ -7,6 +7,8 @@
 #include "DX12/DirecXRaytracingHelper.h"
 #include "Raytracing.hlsl.h"
 
+#include "DX12/Dx12Core2.h"
+
 using namespace RS;
 
 const wchar_t* EngineLoop::c_hitGroupName = L"MyHitGroup";
@@ -22,35 +24,35 @@ std::shared_ptr<EngineLoop> EngineLoop::Get()
 
 void EngineLoop::Init()
 {
-    m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
-    UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
+    //m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
+    //UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
+    //
+    //std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
+    //DX12::Dx12Core::Get()->Init(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, 3, D3D_FEATURE_LEVEL_11_0, DX12::Dx12Core::c_RequireTearingSupport);
+    //
+    //DX12::Dx12Core::Get()->RegisterDeviceNotify(this);
+    //DX12::Dx12Core::Get()->SetWindow(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+    //DX12::Dx12Core::Get()->InitializeDXGIAdapter();
+    //
+    //DX12::ThrowIfFalse(DX12::Dx12Core::IsDirectXRaytracingSupported(DX12::Dx12Core::Get()->GetAdapter()), "DirectX Raytracing is not supported by your OS, GPU and/or driver.");
+    //
+    //DX12::Dx12Core::Get()->CreateDeviceResources();
+    //DX12::Dx12Core::Get()->CreateWindowSizeDependentResources();
+    //
+    //CreateDeviceDependentResources();
+    //CreateWindowSizeDependentResources();
 
-    std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
-    Dx12Core::Get()->Init(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, 3, D3D_FEATURE_LEVEL_11_0, Dx12Core::c_RequireTearingSupport);
-
-    Dx12Core::Get()->RegisterDeviceNotify(this);
-    Dx12Core::Get()->SetWindow(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
-    Dx12Core::Get()->InitializeDXGIAdapter();
-
-    ThrowIfFalse(Dx12Core::IsDirectXRaytracingSupported(Dx12Core::Get()->GetAdapter()), "DirectX Raytracing is not supported by your OS, GPU and/or driver.");
-
-    Dx12Core::Get()->CreateDeviceResources();
-    Dx12Core::Get()->CreateWindowSizeDependentResources();
-
-    CreateDeviceDependentResources();
-    CreateWindowSizeDependentResources();
+    DX12::Dx12Core2::Get()->Init();
 }
 
 void EngineLoop::Release()
 {
-    Dx12Core::Get()->WaitForGpu();
-    OnDeviceLost();
-    Dx12Core::Get()->Release();
-    Dx12Core::Get()->~Dx12Core();
+    //DX12::Dx12Core::Get()->WaitForGpu();
+    //OnDeviceLost();
+    //DX12::Dx12Core::Get()->Release();
+    //DX12::Dx12Core::Get()->~Dx12Core();
 
-#ifdef RS_CONFIG_DEBUG
-    ReportLiveObjects();
-#endif
+    DX12::Dx12Core2::Get()->Release();
 }
 
 void EngineLoop::Run()
@@ -95,16 +97,16 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
     //Dx12Core::Get()->Render();
 
-    if (!Dx12Core::Get()->IsWindowVisible())
-    {
-        return;
-    }
-
-    Dx12Core::Get()->Prepare();
-    DoRaytracing();
-    CopyRaytracingOutputToBackbuffer();
-
-    Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_PRESENT);
+    //if (!DX12::Dx12Core::Get()->IsWindowVisible())
+    //{
+    //    return;
+    //}
+    //
+    //DX12::Dx12Core::Get()->Prepare();
+    //DoRaytracing();
+    //CopyRaytracingOutputToBackbuffer();
+    //
+    //DX12::Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_PRESENT);
 }
 
 void EngineLoop::CreateDeviceDependentResources()
@@ -186,15 +188,15 @@ void EngineLoop::OnDeviceRestored()
 
 void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height)
 {
-    if (!Dx12Core::Get()->WindowSizeChanged(width, height, false))
-    {
-        return;
-    }
-
-    UpdateForSizeChange(width, height);
-
-    ReleaseWindowSizeDependentResources();
-    CreateWindowSizeDependentResources();
+    //if (!DX12::Dx12Core::Get()->WindowSizeChanged(width, height, false))
+    //{
+    //    return;
+    //}
+    //
+    //UpdateForSizeChange(width, height);
+    //
+    //ReleaseWindowSizeDependentResources();
+    //CreateWindowSizeDependentResources();
 }
 
 void RS::EngineLoop::RecreateD3D()
@@ -202,18 +204,18 @@ void RS::EngineLoop::RecreateD3D()
     // Give GPU a chance to finish its execution in progress.
     try
     {
-        Dx12Core::Get()->WaitForGpu();
+        DX12::Dx12Core::Get()->WaitForGpu();
     }
-    catch (HrException&)
+    catch (DX12::HrException&)
     {
         // Do nothing, currently attached adapter is unresponsive.
     }
-    Dx12Core::Get()->HandleDeviceLost();
+    DX12::Dx12Core::Get()->HandleDeviceLost();
 }
 
 void RS::EngineLoop::DoRaytracing()
 {
-    auto commandList = Dx12Core::Get()->GetCommandList();
+    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
 
     auto pDisplay = Display::Get();
 
@@ -247,21 +249,21 @@ void RS::EngineLoop::DoRaytracing()
 
 void RS::EngineLoop::CreateRaytracingInterfaces()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
-    auto commandList = Dx12Core::Get()->GetCommandList();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
 
-    ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), "Couldn't get DirectX Raytracing interface for the device.");
-    ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), "Couldn't get DirectX Raytracing interface for the command list.");
+    DX12::ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), "Couldn't get DirectX Raytracing interface for the device.");
+    DX12::ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), "Couldn't get DirectX Raytracing interface for the command list.");
 }
 
 void RS::EngineLoop::SerializeAndCreateRaytracingRootSignature(D3D12_ROOT_SIGNATURE_DESC& desc, ComPtr<ID3D12RootSignature>* rootSig)
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
     ComPtr<ID3DBlob> blob;
     ComPtr<ID3DBlob> error;
 
-    ThrowIfFailed(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error), error ? static_cast<wchar_t*>(error->GetBufferPointer()) : nullptr);
-    ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&(*rootSig))));
+    DX12::ThrowIfFailed(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error), error ? static_cast<wchar_t*>(error->GetBufferPointer()) : nullptr);
+    DX12::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&(*rootSig))));
 }
 
 void RS::EngineLoop::CreateRootSignatures()
@@ -373,16 +375,16 @@ void RS::EngineLoop::CreateRaytracingPipelineStateObject()
     pipelineConfig->Config(maxRecursionDepth);
 
 #if RS_CONFIG_DEBUG
-    PrintStateObjectDesc(raytracingPipeline);
+    DX12::PrintStateObjectDesc(raytracingPipeline);
 #endif
 
     // Create the state object.
-    ThrowIfFailed(m_dxrDevice->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
+    DX12::ThrowIfFailed(m_dxrDevice->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
 }
 
 void RS::EngineLoop::CreateDescriptorHeap()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
 
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
     // Allocate a heap for a single descriptor:
@@ -392,15 +394,15 @@ void RS::EngineLoop::CreateDescriptorHeap()
     descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     descriptorHeapDesc.NodeMask = 0;
     device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_descriptorHeap));
-    NAME_D3D12_OBJECT(m_descriptorHeap);
+    DX12::NAME_D3D12_OBJECT(m_descriptorHeap);
 
     m_descriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 void RS::EngineLoop::CreateRaytracingOutputResource()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
-    auto backbufferFormat = Dx12Core::Get()->GetBackBufferFormat();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto backbufferFormat = DX12::Dx12Core::Get()->GetBackBufferFormat();
 
     auto pDisplay = Display::Get();
 
@@ -408,9 +410,9 @@ void RS::EngineLoop::CreateRaytracingOutputResource()
     auto uavDesc = CD3DX12_RESOURCE_DESC::Tex2D(backbufferFormat, pDisplay->GetWidth(), pDisplay->GetHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
     auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    ThrowIfFailed(device->CreateCommittedResource(
+    DX12::ThrowIfFailed(device->CreateCommittedResource(
         &defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &uavDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&m_raytracingOutput)));
-    NAME_D3D12_OBJECT(m_raytracingOutput);
+    DX12::NAME_D3D12_OBJECT(m_raytracingOutput);
 
     D3D12_CPU_DESCRIPTOR_HANDLE uavDescriptorHandle;
     m_raytracingOutputResourceUAVDescriptorHeapIndex = AllocateDescriptor(&uavDescriptorHandle, m_raytracingOutputResourceUAVDescriptorHeapIndex);
@@ -422,7 +424,7 @@ void RS::EngineLoop::CreateRaytracingOutputResource()
 
 void RS::EngineLoop::BuildGeometry()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
     Index indices[] =
     {
         0, 1, 2
@@ -440,16 +442,16 @@ void RS::EngineLoop::BuildGeometry()
         { offset, offset, depthValue }
     };
 
-    AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer, L"VertexBuffer");
-    AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer, L"IndexBuffer");
+    DX12::AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer, L"VertexBuffer");
+    DX12::AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer, L"IndexBuffer");
 }
 
 void RS::EngineLoop::BuildAccelerationStructures()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
-    auto commandList = Dx12Core::Get()->GetCommandList();
-    auto commandQueue = Dx12Core::Get()->GetCommandQueue();
-    auto commandAllocator = Dx12Core::Get()->GetCommandAllocator();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
+    auto commandQueue = DX12::Dx12Core::Get()->GetCommandQueue();
+    auto commandAllocator = DX12::Dx12Core::Get()->GetCommandAllocator();
 
     // Reset the command list for the acceleration structure construction.
     commandList->Reset(commandAllocator, nullptr);
@@ -480,17 +482,17 @@ void RS::EngineLoop::BuildAccelerationStructures()
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
-    ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+    DX12::ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = topLevelInputs;
     bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
     bottomLevelInputs.pGeometryDescs = &geometryDesc;
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
-    ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+    DX12::ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
 
     ComPtr<ID3D12Resource> scratchResource;
-    AllocateUAVBuffer(device, std::max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes), &scratchResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"ScratchResource");
+    DX12::AllocateUAVBuffer(device, std::max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes), &scratchResource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, L"ScratchResource");
 
     // Allocate resources for acceleration structures.
     // Acceleration structures can only be placed in resources that are created in the default heap (or custom heap equivalent). 
@@ -502,8 +504,8 @@ void RS::EngineLoop::BuildAccelerationStructures()
     {
         D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
-        AllocateUAVBuffer(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructure, initialResourceState, L"BottomLevelAccelerationStructure");
-        AllocateUAVBuffer(device, topLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_topLevelAccelerationStructure, initialResourceState, L"TopLevelAccelerationStructure");
+        DX12::AllocateUAVBuffer(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructure, initialResourceState, L"BottomLevelAccelerationStructure");
+        DX12::AllocateUAVBuffer(device, topLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_topLevelAccelerationStructure, initialResourceState, L"TopLevelAccelerationStructure");
     }
 
     // Create an instance desc for the bottom-level acceleration structure.
@@ -512,7 +514,7 @@ void RS::EngineLoop::BuildAccelerationStructures()
     instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
     instanceDesc.InstanceMask = 1;
     instanceDesc.AccelerationStructure = m_bottomLevelAccelerationStructure->GetGPUVirtualAddress();
-    AllocateUploadBuffer(device, &instanceDesc, sizeof(instanceDesc), &instanceDescs, L"InstanceDescs");
+    DX12::AllocateUploadBuffer(device, &instanceDesc, sizeof(instanceDesc), &instanceDescs, L"InstanceDescs");
 
     // Bottom Level Acceleration Structure desc
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc = {};
@@ -542,15 +544,15 @@ void RS::EngineLoop::BuildAccelerationStructures()
     BuildAccelerationStructure(m_dxrCommandList.Get());
 
     // Kick off acceleration structure construction.
-    Dx12Core::Get()->ExecuteCommandList();
+    DX12::Dx12Core::Get()->ExecuteCommandList();
 
     // Wait for GPU to finish as the locally created temporary GPU resources will get released once we go out of scope.
-    Dx12Core::Get()->WaitForGpu();
+    DX12::Dx12Core::Get()->WaitForGpu();
 }
 
 void RS::EngineLoop::BuildShaderTables()
 {
-    auto device = Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
 
     void* rayGenShaderIdentifier;
     void* missShaderIdentifier;
@@ -567,7 +569,7 @@ void RS::EngineLoop::BuildShaderTables()
     UINT shaderIdentifierSize;
     {
         ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-        ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
+        DX12::ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
         GetShaderIdentifiers(stateObjectProperties.Get());
         shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     }
@@ -581,8 +583,8 @@ void RS::EngineLoop::BuildShaderTables()
 
         UINT numShaderRecords = 1;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
-        ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RayGenShaderTable");
-        rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize, &rootArguments, sizeof(rootArguments)));
+        DX12::ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RayGenShaderTable");
+        rayGenShaderTable.push_back(DX12::ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize, &rootArguments, sizeof(rootArguments)));
         m_rayGenShaderTable = rayGenShaderTable.GetResource();
     }
 
@@ -590,8 +592,8 @@ void RS::EngineLoop::BuildShaderTables()
     {
         UINT numShaderRecords = 1;
         UINT shaderRecordSize = shaderIdentifierSize;
-        ShaderTable missShaderTable(device, numShaderRecords, shaderRecordSize, L"MissShaderTable");
-        missShaderTable.push_back(ShaderRecord(missShaderIdentifier, shaderIdentifierSize));
+        DX12::ShaderTable missShaderTable(device, numShaderRecords, shaderRecordSize, L"MissShaderTable");
+        missShaderTable.push_back(DX12::ShaderRecord(missShaderIdentifier, shaderIdentifierSize));
         m_missShaderTable = missShaderTable.GetResource();
     }
 
@@ -599,8 +601,8 @@ void RS::EngineLoop::BuildShaderTables()
     {
         UINT numShaderRecords = 1;
         UINT shaderRecordSize = shaderIdentifierSize;
-        ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize));
+        DX12::ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
+        hitGroupShaderTable.push_back(DX12::ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize));
         m_hitGroupShaderTable = hitGroupShaderTable.GetResource();
     }
 }
@@ -630,8 +632,8 @@ void RS::EngineLoop::UpdateForSizeChange(UINT clientWidth, UINT clientHeight)
 
 void RS::EngineLoop::CopyRaytracingOutputToBackbuffer()
 {
-    auto commandList = Dx12Core::Get()->GetCommandList();
-    auto renderTarget = Dx12Core::Get()->GetRenderTarget();
+    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
+    auto renderTarget = DX12::Dx12Core::Get()->GetRenderTarget();
 
     D3D12_RESOURCE_BARRIER preCopyBarriers[2];
     preCopyBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);

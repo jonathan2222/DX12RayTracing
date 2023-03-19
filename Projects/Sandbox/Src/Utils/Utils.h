@@ -32,5 +32,24 @@ namespace RS
 			delete[] buf;
 			return r;
 		}
+
+		// Compile time function to check if a string has a certain ending.
+		static constexpr bool ContainsLastStr(std::string_view view, std::string_view ending)
+		{
+			if (view.length() >= ending.length()) {
+				return (0 == view.compare(view.length() - ending.length(), ending.length(), ending));
+			}
+			else {
+				return false;
+			}
+		}
+
+		template<typename... Args>
+		static std::string Format(fmt::format_string<Args...> fmt, Args &&...args)
+		{
+			std::string str;
+			fmt::format_to(std::back_inserter(str), fmt, std::forward<Args>(args)...);
+			return str;
+		}
 	};
 }

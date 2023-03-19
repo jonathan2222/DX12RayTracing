@@ -2,7 +2,7 @@
 
 #include "DX12/DX12Defines.h"
 
-namespace RS
+namespace RS::DX12
 {
 	class DX12Factory
 	{

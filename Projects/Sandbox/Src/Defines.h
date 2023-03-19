@@ -8,6 +8,8 @@
 #define LOG_ENABLE_WINDOWS_DEBUGGER_LOGGING 1
 #define LOG_FLUSH_INTERVAL 2 // In seconds
 
+#define FRAME_BUFFER_COUNT 3
+
 #define RS_CONFIG_DEVELOPMENT defined(RS_CONFIG_DEBUG) || defined(RS_CONFIG_RELEASE)
 #include "Utils/Logger.h"
 
@@ -43,19 +45,7 @@ typedef uint16_t	uint16;
 typedef uint32_t	uint32;
 typedef uint64_t	uint64;
 
-namespace RS::Internal
-{
-	// Compile time function to check if a string has a certain ending.
-	constexpr bool ContainsLastStr(std::string_view view, std::string_view ending)
-	{
-		if (view.length() >= ending.length()) {
-			return (0 == view.compare(view.length() - ending.length(), ending.length(), ending));
-		}
-		else {
-			return false;
-		}
-	}
-}
+#include "Utils/Utils.h"
 
 /* 
 *	Compile time bitflags relying on __LINE__ to get the right bit indexand uses compile time function to check if name ending as "Flag".
@@ -78,7 +68,7 @@ namespace RS::Internal
 	namespace field {																									\
         constexpr char* fieldName = #field;																				\
 		namespace _Internal {																							\
-			constexpr bool containsFlag = RS::Internal::ContainsLastStr(fieldName, "Flag");								\
+			constexpr bool containsFlag = RS::Utils::ContainsLastStr(fieldName, "Flag");								\
 			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
 		}																												\
 		typedef type _InternalBitFieldType;																				\

@@ -3,7 +3,7 @@
 
 #include <dxgi1_6.h>
 
-using namespace RS;
+using namespace RS::DX12;
 
 void DX12Factory::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter, bool requestHighPerformanceAdapter)
 {
@@ -67,7 +67,7 @@ void DX12Factory::GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** pp
     *ppAdapter = adapter.Detach();
 }
 
-void RS::DX12Factory::CreateSwapChain(
+void DX12Factory::CreateSwapChain(
     ComPtr<IDXGIFactory4>& factory,
     ComPtr<ID3D12CommandQueue>& commandQueue,
     HWND hwnd,

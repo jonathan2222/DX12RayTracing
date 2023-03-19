@@ -2,7 +2,7 @@
 #include "Dx12Device.h"
 #include "Utils/Utils.h"
 
-void RS::Dx12Device::Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags)
+void RS::DX12::Dx12Device::Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags)
 {
     m_D3DMinFeatureLevel = minFeatureLevel;
     m_DxgiFlags = dxgiFlags;
@@ -12,16 +12,14 @@ void RS::Dx12Device::Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags
     CreateDevice();
 }
 
-void RS::Dx12Device::Release()
+void RS::DX12::Dx12Device::Release()
 {
-    m_Factory->Release();
-    m_Adapter->Release();
-    m_Device->Release();
-
-    ReportLiveObjects();
+    DX12_RELEASE(m_Factory);
+    DX12_RELEASE(m_Adapter);
+    DX12_RELEASE(m_Device);
 }
 
-void RS::Dx12Device::CreateFactory()
+void RS::DX12::Dx12Device::CreateFactory()
 {
     bool debugDXGI = false;
 
@@ -61,7 +59,7 @@ void RS::Dx12Device::CreateFactory()
         ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&m_Factory)), "Failed to Create DXGIFactory!");
     }
 
-    // Determines whether tearing support is available for fullscreen borderless windows.
+    // If requested, determines whether tearing is supported.
     if (m_DxgiFlags & (DXGIFlag::ALLOW_TEARING | DXGIFlag::REQUIRE_TEARING_SUPPORT))
     {
         BOOL allowTearing = FALSE;
@@ -75,14 +73,14 @@ void RS::Dx12Device::CreateFactory()
 
         if (FAILED(hr) || !allowTearing)
         {
-            LOG_WARNING("Variable refresh rate displays are not supported.");
-            ThrowIfFalse((m_DxgiFlags & DXGIFlag::REQUIRE_TEARING_SUPPORT) == 0, "Sample must be run on an OS with tearing support.");
+            LOG_WARNING("Variable refresh rate (tearing) displays are not supported.");
+            ThrowIfFalse((m_DxgiFlags & DXGIFlag::REQUIRE_TEARING_SUPPORT) == 0, "Tearing is not supported in this device!");
             m_DxgiFlags &= ~DXGIFlag::ALLOW_TEARING;
         }
     }
 }
 
-void RS::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
+void RS::DX12::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
 {
     *ppAdapter = nullptr;
 
@@ -134,10 +132,11 @@ void RS::Dx12Device::FetchDX12Adapter(IDXGIAdapter1** ppAdapter)
     *ppAdapter = adapter.Detach();
 }
 
-void RS::Dx12Device::CreateDevice()
+void RS::DX12::Dx12Device::CreateDevice()
 {
     // Create the DX12 API device object.
     ThrowIfFailed(D3D12CreateDevice(m_Adapter, m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_Device)));
+    DX12_SET_DEBUG_NAME(m_Device, "D3D12 Device");
 
 #ifdef RS_CONFIG_DEBUG
     {

@@ -4,7 +4,7 @@
 #include "DX12/Factory.h"
 #include "Utils/Utils.h"
 
-using namespace RS;
+using namespace RS::DX12;
 
 namespace
 {
@@ -20,13 +20,13 @@ namespace
     }
 };
 
-std::shared_ptr<Dx12Core> RS::Dx12Core::Get()
+std::shared_ptr<Dx12Core> Dx12Core::Get()
 {
 	static std::shared_ptr<Dx12Core> s_Dx12Core = std::make_shared<Dx12Core>();
 	return s_Dx12Core;
 }
 
-void RS::Dx12Core::Init(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat, uint32 backBufferCount, D3D_FEATURE_LEVEL minFeatureLevel, uint32 flags, UINT adapterIDoverride)
+void Dx12Core::Init(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat, uint32 backBufferCount, D3D_FEATURE_LEVEL minFeatureLevel, uint32 flags, UINT adapterIDoverride)
 {
     m_BackBufferFormat = backBufferFormat;
     m_DepthBufferFormat = depthBufferFormat;
@@ -110,13 +110,13 @@ void RS::Dx12Core::Init(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFor
 //    LoadAssets();
 //}
 
-void RS::Dx12Core::Release()
+void Dx12Core::Release()
 {
     // Ensure that the GPU is no longer referencing resources that are about to be destroyed.
     WaitForGpu();
 }
 
-void RS::Dx12Core::InitializeDXGIAdapter()
+void Dx12Core::InitializeDXGIAdapter()
 {
     bool debugDXGI = false;
 
@@ -179,7 +179,7 @@ void RS::Dx12Core::InitializeDXGIAdapter()
     InitializeAdapter(&m_Adapter);
 }
 
-void RS::Dx12Core::CreateDeviceResources()
+void Dx12Core::CreateDeviceResources()
 {
     // Create the DX12 API device object.
     ThrowIfFailed(D3D12CreateDevice(m_Adapter.Get(), m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_D3DDevice)));
@@ -273,7 +273,7 @@ void RS::Dx12Core::CreateDeviceResources()
     ThrowIfFalse(m_FenceEvent.IsValid(), "CreateEvent failed");
 }
 
-void RS::Dx12Core::CreateWindowSizeDependentResources()
+void Dx12Core::CreateWindowSizeDependentResources()
 {
     if (!m_Window)
     {
@@ -446,7 +446,7 @@ void RS::Dx12Core::CreateWindowSizeDependentResources()
     m_ScissorRect.bottom = backBufferHeight;
 }
 
-void RS::Dx12Core::SetWindow(HWND window, int width, int height)
+void Dx12Core::SetWindow(HWND window, int width, int height)
 {
     m_Window = window;
 
@@ -457,7 +457,7 @@ void RS::Dx12Core::SetWindow(HWND window, int width, int height)
     m_IsWindowVisible = true;
 }
 
-bool RS::Dx12Core::WindowSizeChanged(int width, int height, bool minimized)
+bool Dx12Core::WindowSizeChanged(int width, int height, bool minimized)
 {
     m_IsWindowVisible = !minimized;
 
@@ -483,7 +483,7 @@ bool RS::Dx12Core::WindowSizeChanged(int width, int height, bool minimized)
     return true;
 }
 
-void RS::Dx12Core::HandleDeviceLost()
+void Dx12Core::HandleDeviceLost()
 {
     if (m_DeviceNotify)
     {
@@ -521,7 +521,7 @@ void RS::Dx12Core::HandleDeviceLost()
     }
 }
 
-void RS::Dx12Core::Prepare(D3D12_RESOURCE_STATES beforeState)
+void Dx12Core::Prepare(D3D12_RESOURCE_STATES beforeState)
 {
     // Reset command list and allocator.
     ThrowIfFailed(m_CommandAllocators[m_BackBufferIndex]->Reset());
@@ -535,7 +535,7 @@ void RS::Dx12Core::Prepare(D3D12_RESOURCE_STATES beforeState)
     }
 }
 
-void RS::Dx12Core::Present(D3D12_RESOURCE_STATES beforeState)
+void Dx12Core::Present(D3D12_RESOURCE_STATES beforeState)
 {
     if (beforeState != D3D12_RESOURCE_STATE_PRESENT)
     {
@@ -575,14 +575,14 @@ void RS::Dx12Core::Present(D3D12_RESOURCE_STATES beforeState)
     }
 }
 
-void RS::Dx12Core::ExecuteCommandList()
+void Dx12Core::ExecuteCommandList()
 {
     ThrowIfFailed(m_CommandList->Close());
     ID3D12CommandList* commandLists[] = { m_CommandList.Get() };
     m_CommandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), commandLists);
 }
 
-void RS::Dx12Core::WaitForGpu() noexcept
+void Dx12Core::WaitForGpu() noexcept
 {
     if (m_CommandQueue && m_Fence && m_FenceEvent.IsValid())
     {

@@ -22,7 +22,7 @@ namespace RS
         };
     }
 
-	class EngineLoop : public IDeviceNotify, public IDisplaySizeChange
+	class EngineLoop : public DX12::IDeviceNotify, public IDisplaySizeChange
 	{
 	public:
 		EngineLoop() = default;

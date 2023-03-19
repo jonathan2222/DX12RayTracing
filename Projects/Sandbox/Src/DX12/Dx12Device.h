@@ -2,7 +2,7 @@
 
 #include "DX12/DX12Defines.h"
 
-namespace RS
+namespace RS::DX12
 {
 	BEGIN_BITFLAGS_U32(DXGIFlag)
 		BITFLAG(ALLOW_TEARING)
@@ -12,8 +12,14 @@ namespace RS
 	class Dx12Device
 	{
 	public:
+		RS_NO_COPY_AND_MOVE(Dx12Device);
+		Dx12Device() = default;
+		~Dx12Device() = default;
+
 		void Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags);
 		void Release();
+
+		ID3D12Device8* GetD3D12Device() const { return m_Device; }
 
 	private:
 		void CreateFactory();
@@ -23,7 +29,7 @@ namespace RS
 	private:
 		IDXGIAdapter1*		m_Adapter = nullptr;
 		IDXGIFactory4*		m_Factory = nullptr;
-		ID3D12Device*		m_Device = nullptr;
+		ID3D12Device8*		m_Device = nullptr;
 
 		DXGIFlags			m_DxgiFlags = 0;
 		uint32				m_AdapterID = 0;

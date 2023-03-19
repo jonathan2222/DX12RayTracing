@@ -2,7 +2,7 @@
 
 #include "DX12/DX12Defines.h"
 
-namespace RS
+namespace RS::DX12
 {
 	// Provides an interface for an application that owns DeviceResources to be notified of the device being lost or created.
 	interface IDeviceNotify
