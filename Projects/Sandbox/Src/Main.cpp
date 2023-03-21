@@ -12,8 +12,6 @@ int main(int argc, char* argv[])
     RS::LaunchArguments::Init(argc, argv);
     RS::Config::Get()->Init(RS_CONFIG_FILE_PATH);
 
-    //RS::LaunchParams::logDXCalls.value;
-
     RS::DisplayDescription displayDesc = {};
     displayDesc.Title       = RS::Config::Get()->Fetch<std::string>("Display/Title", "Sandbox DX12");
     displayDesc.Width       = RS::Config::Get()->Fetch<uint32>("Display/DefaultWidth", 1920);

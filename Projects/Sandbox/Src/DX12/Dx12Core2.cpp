@@ -7,8 +7,10 @@ RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
     return pCore.get();
 }
 
-void RS::DX12::Dx12Core2::Init()
+void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
 {
+    m_Window = window;
+
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
     m_Device.Init(d3dFeatureLevel, DXGIFlag::REQUIRE_TEARING_SUPPORT);
 

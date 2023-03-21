@@ -17,15 +17,18 @@ namespace RS::DX12
 
 		static Dx12Core2* Get();
 
-		void Init();
+		void Init(HWND window, int width, int height);
 		void Release();
 
 		void Render();
 
 		ID3D12Device8* GetD3D12Device() { return m_Device.GetD3D12Device(); }
+		IDXGIFactory4* GetDXGIFactory() { return m_Device.GetDXGIFactory(); }
 		
 		uint32 GetCurrentFrameIndex() const { return m_FrameCommandList.GetFrameIndex(); };
 		void SetDeferredReleasesFlag(uint32 frameIndex) { m_DeferredReleasesFlags[frameIndex] = 1; }
+
+		const Dx12FrameCommandList* GetFrameCommandList() const { return &m_FrameCommandList; }
 
 		template<typename T>
 		void DeferredRelease(T*& resouce);
@@ -35,6 +38,7 @@ namespace RS::DX12
 	private:
 		Dx12Device				m_Device;
 		Dx12FrameCommandList	m_FrameCommandList;
+		HWND					m_Window = nullptr;
 
 		// Deferred releases of resources.
 		std::mutex				m_DeferredReleasesMutex;

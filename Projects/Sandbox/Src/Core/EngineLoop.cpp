@@ -27,7 +27,7 @@ void EngineLoop::Init()
     //m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
     //UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
     //
-    //std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
+    std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     //DX12::Dx12Core::Get()->Init(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, 3, D3D_FEATURE_LEVEL_11_0, DX12::Dx12Core::c_RequireTearingSupport);
     //
     //DX12::Dx12Core::Get()->RegisterDeviceNotify(this);
@@ -42,7 +42,7 @@ void EngineLoop::Init()
     //CreateDeviceDependentResources();
     //CreateWindowSizeDependentResources();
 
-    DX12::Dx12Core2::Get()->Init();
+    DX12::Dx12Core2::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 }
 
 void EngineLoop::Release()

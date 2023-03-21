@@ -20,6 +20,7 @@ namespace RS::DX12
 		void Release();
 
 		ID3D12Device8* GetD3D12Device() const { return m_Device; }
+		IDXGIFactory4* GetDXGIFactory() const { return m_Factory; }
 
 	private:
 		void CreateFactory();
