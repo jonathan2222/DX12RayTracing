@@ -23,13 +23,43 @@ using Microsoft::WRL::ComPtr;
 #include "Utils/Utils.h"
 #include "Core/LaunchArguments.h"
 
+#define DXCall(x)                                                                                       \
+    {                                                                                                   \
+        HRESULT hr = x;                                                                                 \
+        std::string resourceName = #x;                                                                  \
+        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());                           \
+        if (LaunchArguments::ContainsAny({LaunchParams::logAllDXCalls, LaunchParams::logDXCalls}))      \
+            LOG_DEBUG("DXCall({})", resourceName.c_str());                                              \
+    }
+
+#define DXCallVerbose(x)                                                             \
+    {                                                                                \
+        HRESULT hr = x;                                                              \
+        std::string resourceName = #x;                                               \
+        ThrowIfFailed(hr, "Failed to call DXCallVerbose({})", resourceName.c_str()); \
+        if (LaunchArguments::Contains(LaunchParams::logAllDXCalls))                  \
+            LOG_DEBUG("DXCallVerbose({})", resourceName.c_str());                    \
+    }
+
 #ifdef RS_CONFIG_DEBUG
-    #define DX12_SET_DEBUG_NAME(resource, ...)                              \
-        {                                                                   \
-            std::string _resource##_name = Utils::Format(__VA_ARGS__);      \
-            resource->SetName(Utils::ToWString(_resource##_name).c_str());  \
-            if(LaunchArguments::Contains(LaunchParams::logDXNamedObjects))  \
-                LOG_DEBUG("Named Resource: {}", _resource##_name.c_str());  \
+    /* Set the name of the DX12 resouce and make a copy of it in nameOut. 
+    *  The argument after the name copy is a format string with its arguments after.
+    *   Example: DX12_SET_DEBUG_NAME_REF(heap, heapDebugName, "My heap #{}", heapIndex);
+    */
+    #define DX12_SET_DEBUG_NAME_REF(pResource, nameOut, ...)                         \
+        {                                                                           \
+            nameOut = Utils::Format(__VA_ARGS__);                                   \
+            DXCallVerbose(pResource->SetName(Utils::ToWString(nameOut).c_str()));    \
+            if(LaunchArguments::Contains(LaunchParams::logDXNamedObjects))          \
+                LOG_DEBUG("Named Resource: {}", nameOut.c_str());                   \
+        }
+    /* Set the name of the DX12 resource. The argument after is a format string with its arguments after.
+    *   Example: DX12_SET_DEBUG_NAME(heap, "My heap #{}", heapIndex);
+    */
+    #define DX12_SET_DEBUG_NAME(pResource, ...)                               \
+        {                                                                    \
+            std::string _resource##_name = "Unname resource";                \
+            DX12_SET_DEBUG_NAME_REF(pResource, _resource##_name, __VA_ARGS__); \
         }
 #else
     #define DX12_SET_DEBUG_NAME(resource, ...)
@@ -41,23 +71,8 @@ using Microsoft::WRL::ComPtr;
         x = nullptr;            \
     }
 
-#define DXCall(x)                                                               \
-    {                                                                           \
-        HRESULT hr = x;                                                         \
-        std::string resourceName = #x;                                          \
-        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());   \
-        if (LaunchArguments::Contains(LaunchParams::logDXCallsSpam))            \
-            LOG_DEBUG("DXCall({})", resourceName.c_str());                      \
-    }
-
-#define DXCallVerbose(x)                                                                                \
-    {                                                                                                   \
-        HRESULT hr = x;                                                                                 \
-        std::string resourceName = #x;                                                                  \
-        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());                           \
-        if (LaunchArguments::ContainsAny({LaunchParams::logDXCalls, LaunchParams::logDXCallsSpam}))     \
-            LOG_DEBUG("DXCall({})", resourceName.c_str());                                              \
-    }
+#define DX12_DEVICE_PTR ID3D12Device8*
+#define DX12_FACTORY_PTR IDXGIFactory4*
 
 namespace RS::DX12
 {

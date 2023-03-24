@@ -7,7 +7,7 @@ namespace RS::DX12
 	BEGIN_BITFLAGS_U32(DXGIFlag)
 		BITFLAG(ALLOW_TEARING)
 		BITFLAG(REQUIRE_TEARING_SUPPORT)
-	END_BITFLAGS()
+	END_BITFLAGS();
 
 	class Dx12Device
 	{
@@ -19,8 +19,10 @@ namespace RS::DX12
 		void Init(D3D_FEATURE_LEVEL minFeatureLevel, DXGIFlags dxgiFlags);
 		void Release();
 
-		ID3D12Device8* GetD3D12Device() const { return m_Device; }
-		IDXGIFactory4* GetDXGIFactory() const { return m_Factory; }
+		DX12_DEVICE_PTR GetD3D12Device() const { return m_Device; }
+		DX12_FACTORY_PTR GetDXGIFactory() const { return m_Factory; }
+
+		DXGIFlags GetDXGIFlags() const { return m_DxgiFlags; }
 
 	private:
 		void CreateFactory();
@@ -29,8 +31,8 @@ namespace RS::DX12
 
 	private:
 		IDXGIAdapter1*		m_Adapter = nullptr;
-		IDXGIFactory4*		m_Factory = nullptr;
-		ID3D12Device8*		m_Device = nullptr;
+		DX12_FACTORY_PTR	m_Factory = nullptr;
+		DX12_DEVICE_PTR		m_Device = nullptr;
 
 		DXGIFlags			m_DxgiFlags = 0;
 		uint32				m_AdapterID = 0;

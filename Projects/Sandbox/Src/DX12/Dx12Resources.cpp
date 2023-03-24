@@ -28,8 +28,8 @@ void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, c
 	desc.NumDescriptors = capacity;
 	desc.Type = m_Type;
 	desc.NodeMask = 0;
-	DXCallVerbose(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_Heap)));
-	DX12_SET_DEBUG_NAME(m_Heap, name.c_str());
+	DXCall(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_Heap)));
+	DX12_SET_DEBUG_NAME_REF(m_Heap, m_DebugName, name.c_str());
 
 	m_FreeHandles = std::move(std::make_unique<uint32[]>(capacity));
 	m_Capacity = capacity;
@@ -54,7 +54,7 @@ void RS::DX12::Dx12DescriptorHeap::Release()
 	Dx12Core2::Get()->DeferredRelease(m_Heap);
 }
 
-RS::DX12::DescriprtorHandle RS::DX12::Dx12DescriptorHeap::Allocate()
+RS::DX12::Dx12DescriptorHandle RS::DX12::Dx12DescriptorHeap::Allocate()
 {
 	std::lock_guard lock{ m_Mutex };
 	RS_ASSERT_NO_MSG(m_Heap);
@@ -64,7 +64,11 @@ RS::DX12::DescriprtorHandle RS::DX12::Dx12DescriptorHeap::Allocate()
 	const uint32 offset = index * m_DescriptorSize;
 	++m_DescriptorCount;
 
-	DescriprtorHandle handle;
+#ifdef RS_CONFIG_DEBUG
+	RS_ASSERT(index != INVALID_HANDLE_INDEX, "Trying to allocate a descriptor with an invalid index! Resource: {}", m_DebugName.c_str());
+#endif
+
+	Dx12DescriptorHandle handle;
 	handle.m_Cpu.ptr = m_CpuStart.ptr + offset;
 	if (IsShaderVisible())
 	{
@@ -79,10 +83,13 @@ RS::DX12::DescriprtorHandle RS::DX12::Dx12DescriptorHeap::Allocate()
 	return handle;
 }
 
-void RS::DX12::Dx12DescriptorHeap::Free(DescriprtorHandle& handle)
+void RS::DX12::Dx12DescriptorHeap::Free(Dx12DescriptorHandle& handle)
 {
 	if (!handle.IsValid())
+	{
+		LOG_WARNING("Trying to free an invalid descriptor handle!");
 		return;
+	}
 
 	std::lock_guard lock{ m_Mutex };
 	RS_ASSERT_NO_MSG(m_Heap && m_DescriptorCount);
@@ -109,9 +116,33 @@ void RS::DX12::Dx12DescriptorHeap::ProcessDeferredFree(uint32 frameIndex)
 	{
 		for (uint32 index : indices)
 		{
+#ifdef RS_CONFIG_DEBUG
+			// Ensure that the index is in the list.
+			bool valid = ValidateFree(index);
+			if (valid)
+				LOG_WARNING("Trying to free a descriptor with an index of {} which is not avaliable! Resource: {}", index, m_DebugName.c_str());
+#endif
+
 			--m_DescriptorCount;
 			m_FreeHandles[m_DescriptorCount] = index;
 		}
 		indices.clear();
 	}
 }
+
+#ifdef RS_CONFIG_DEBUG
+bool RS::DX12::Dx12DescriptorHeap::ValidateFree(uint32 handleIndex) const
+{
+	bool found = false;
+	for (uint32 i = 0; i < m_DescriptorCount; i++)
+	{
+		if (handleIndex == m_FreeHandles[i])
+		{
+			m_FreeHandles[i] = INVALID_HANDLE_INDEX;
+			found = true;
+			break;
+		}
+	}
+	return found;
+}
+#endif

@@ -6,7 +6,7 @@
 namespace RS::DX12
 {
 	class Dx12DescriptorHeap;
-	struct DescriprtorHandle
+	struct Dx12DescriptorHandle
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE		m_Cpu{};
 		D3D12_GPU_DESCRIPTOR_HANDLE		m_Gpu{};
@@ -33,8 +33,8 @@ namespace RS::DX12
 		void Init(uint32 capacity, bool isShaderVisible, const std::string name = "");
 		void Release();
 
-		[[nodiscard]] DescriprtorHandle Allocate();
-		void Free(DescriprtorHandle& handle);
+		[[nodiscard]] Dx12DescriptorHandle Allocate();
+		void Free(Dx12DescriptorHandle& handle);
 		void ProcessDeferredFree(uint32 frameIndex);
 
 		constexpr D3D12_DESCRIPTOR_HEAP_TYPE GetType() const { return m_Type; }
@@ -47,15 +47,25 @@ namespace RS::DX12
 		constexpr bool IsShaderVisible() const { return m_GpuStart.ptr != 0; }
 
 	private:
+#ifdef RS_CONFIG_DEBUG
+		const uint32 INVALID_HANDLE_INDEX = UINT32_MAX - 1;
+		bool ValidateFree(uint32 handleIndex) const;
+#endif
+
+	private:
 		ID3D12DescriptorHeap*				m_Heap = nullptr;
 		D3D12_CPU_DESCRIPTOR_HANDLE			m_CpuStart{};
 		D3D12_GPU_DESCRIPTOR_HANDLE			m_GpuStart{};
-		std::unique_ptr<uint32[]>			m_FreeHandles{};
+		std::unique_ptr<uint32[]>			m_FreeHandles{}; // Holds free handles AFTER index [m_DescriptorCount-1]!
 		std::vector<uint32>					m_DeferredFreeIndices[FRAME_BUFFER_COUNT]{};
 		uint32								m_Capacity = 0;
 		uint32								m_DescriptorCount = 0;
 		uint32								m_DescriptorSize = 0;
 		const D3D12_DESCRIPTOR_HEAP_TYPE	m_Type;
 		std::mutex							m_Mutex;
+
+#ifdef RS_CONFIG_DEBUG
+		std::string							m_DebugName = "Unnamed Heap"; // Name of the heap
+#endif
 	};
 }

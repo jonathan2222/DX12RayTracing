@@ -1,14 +1,14 @@
 #include "PreCompiled.h"
 #include "Dx12CommandList.h"
 
-void RS::DX12::Dx12FrameCommandList::Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type)
+void RS::DX12::Dx12FrameCommandList::Init(DX12_DEVICE_PTR pDevice, D3D12_COMMAND_LIST_TYPE type)
 {
 	D3D12_COMMAND_QUEUE_DESC desc{};
 	desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	desc.NodeMask = 0; // For multiple devices.
 	desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	desc.Type = type;
-	DXCallVerbose(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_CommandQueue)));
+	DXCall(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_CommandQueue)));
 	DX12_SET_DEBUG_NAME(m_CommandQueue, "{} Command Queue", DX12::GetCommandListTypeAsString(type).data());
 
 	for (uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
@@ -19,11 +19,11 @@ void RS::DX12::Dx12FrameCommandList::Init(ID3D12Device8* pDevice, D3D12_COMMAND_
 		LOG_DEBUG("Created command allocator [{}] of type {}", i, DX12::GetCommandListTypeAsString(type).data());
 	}
 
-	DXCallVerbose(pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList)));
+	DXCall(pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList)));
 	DX12_SET_DEBUG_NAME(m_CommandList, "{} Command List", DX12::GetCommandListTypeAsString(type).data());
-	DXCallVerbose(m_CommandList->Close());
+	DXCall(m_CommandList->Close());
 
-	DXCallVerbose(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
+	DXCall(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
 	DX12_SET_DEBUG_NAME(m_Fence, "D3D12 Fence");
 
 	m_FenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
@@ -57,13 +57,13 @@ void RS::DX12::Dx12FrameCommandList::BeginFrame()
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
 	commandFrame.Wait(m_Fence, m_FenceEvent);
 
-	DXCall(commandFrame.m_CommandAllocator->Reset());
-	DXCall(m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr));
+	DXCallVerbose(commandFrame.m_CommandAllocator->Reset());
+	DXCallVerbose(m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr));
 }
 
 void RS::DX12::Dx12FrameCommandList::EndFrame()
 {
-	DXCall(m_CommandList->Close());
+	DXCallVerbose(m_CommandList->Close());
 
 	ID3D12CommandList* commandLists[]{ m_CommandList };
 	m_CommandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), &commandLists[0]);
@@ -72,8 +72,11 @@ void RS::DX12::Dx12FrameCommandList::EndFrame()
 	++m_FenceValue;
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
 	commandFrame.m_FenceValue = m_FenceValue;
-	m_CommandQueue->Signal(m_Fence, m_FenceValue);
+	DXCallVerbose(m_CommandQueue->Signal(m_Fence, m_FenceValue));
+}
 
+void RS::DX12::Dx12FrameCommandList::MoveToNextFrame()
+{
 	m_FrameIndex = (m_FrameIndex + 1) % FRAME_BUFFER_COUNT;
 }
 
@@ -88,7 +91,7 @@ void RS::DX12::Dx12FrameCommandList::Flush()
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type)
 {
-	DXCallVerbose(pDevice->CreateCommandAllocator(type, IID_PPV_ARGS(&m_CommandAllocator)));
+	DXCall(pDevice->CreateCommandAllocator(type, IID_PPV_ARGS(&m_CommandAllocator)));
 }
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Release()
@@ -105,7 +108,7 @@ void RS::DX12::Dx12FrameCommandList::CommandFrame::Wait(ID3D12Fence1* pFence, HA
 	if (pFence->GetCompletedValue() < m_FenceValue)
 	{
 		// We have the fence create an event which is signaled ones the fence's current value equals m_FenceValue.
-		DXCall(pFence->SetEventOnCompletion(m_FenceValue, fenceEvent));
+		DXCallVerbose(pFence->SetEventOnCompletion(m_FenceValue, fenceEvent));
 
 		// Wait until the fence has triggered the event.
 		WaitForSingleObjectEx(fenceEvent, INFINITE, FALSE);

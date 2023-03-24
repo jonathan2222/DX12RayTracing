@@ -106,7 +106,7 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
     //DoRaytracing();
     //CopyRaytracingOutputToBackbuffer();
     //
-    //DX12::Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_PRESENT);
+    //DX12::Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_RENDER_TARGET);
     DX12::Dx12Core2::Get()->Render();
 }
 

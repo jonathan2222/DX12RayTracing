@@ -5,6 +5,7 @@
 #include "Dx12Device.h"
 #include "Dx12CommandList.h"
 #include "Dx12Resources.h"
+#include "Dx12Surface.h"
 
 namespace RS::DX12
 {
@@ -22,13 +23,18 @@ namespace RS::DX12
 
 		void Render();
 
-		ID3D12Device8* GetD3D12Device() { return m_Device.GetD3D12Device(); }
-		IDXGIFactory4* GetDXGIFactory() { return m_Device.GetDXGIFactory(); }
+		DX12_DEVICE_PTR GetD3D12Device() { return m_Device.GetD3D12Device(); }
+		DX12_FACTORY_PTR GetDXGIFactory() { return m_Device.GetDXGIFactory(); }
 		
 		uint32 GetCurrentFrameIndex() const { return m_FrameCommandList.GetFrameIndex(); };
 		void SetDeferredReleasesFlag(uint32 frameIndex) { m_DeferredReleasesFlags[frameIndex] = 1; }
 
 		const Dx12FrameCommandList* GetFrameCommandList() const { return &m_FrameCommandList; }
+
+		Dx12DescriptorHeap* GetDescriptorHeapRTV() { return &m_DescriptorHeapRTV; }
+		Dx12DescriptorHeap* GetDescriptorHeapDSV() { return &m_DescriptorHeapDSV; }
+		Dx12DescriptorHeap* GetDescriptorHeapSRV() { return &m_DescriptorHeapSRV; }
+		Dx12DescriptorHeap* GetDescriptorHeapUAV() { return &m_DescriptorHeapUAV; }
 
 		template<typename T>
 		void DeferredRelease(T*& resouce);
@@ -36,9 +42,11 @@ namespace RS::DX12
 		void ProcessDeferredReleases(uint32 frameIndex);
 
 	private:
+		bool					m_IsReleased = false; // The first call should be treated like it has not been released.
 		Dx12Device				m_Device;
 		Dx12FrameCommandList	m_FrameCommandList;
 		HWND					m_Window = nullptr;
+		Dx12Surface				m_Surface;
 
 		// Deferred releases of resources.
 		std::mutex				m_DeferredReleasesMutex;

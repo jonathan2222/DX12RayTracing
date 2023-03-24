@@ -4,6 +4,9 @@
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
+#ifdef RS_CONFIG_DEBUG
+    RS_ASSERT(pCore.get()->m_IsReleased == false, "Trying to access a released Dx12 Core!");
+#endif
     return pCore.get();
 }
 
@@ -12,7 +15,8 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     m_Window = window;
 
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-    m_Device.Init(d3dFeatureLevel, DXGIFlag::REQUIRE_TEARING_SUPPORT);
+    DXGIFlags dxgiFlags = DXGIFlag::REQUIRE_TEARING_SUPPORT;
+    m_Device.Init(d3dFeatureLevel, dxgiFlags);
 
     m_FrameCommandList.Init(m_Device.GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 
@@ -20,10 +24,22 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     m_DescriptorHeapDSV.Init(512, false, "DSV Descriptor Heap");
     m_DescriptorHeapSRV.Init(4096, true, "SRV Descriptor Heap");
     m_DescriptorHeapUAV.Init(512, false, "UAV Descriptor Heap");
+
+    m_IsReleased = false;
+
+    // TODO: Move these outside of Dx12Core2!
+    { // Dx12Core2 users
+        m_Surface.Init(window, width, height, dxgiFlags);
+    }
 }
 
 void RS::DX12::Dx12Core2::Release()
 {
+    // TODO: Move these outside of Dx12Core2!
+    { // Dx12Core2 users
+        m_Surface.Release();
+    }
+
     m_FrameCommandList.Release();
 
     // NOTE: We don't call ProcessDeferredReleases at the end because some resources (such as swap chain) can't be released before their depending resources are released.
@@ -32,8 +48,6 @@ void RS::DX12::Dx12Core2::Release()
         ProcessDeferredReleases(i);
     }
 
-    m_Device.Release();
-
     m_DescriptorHeapRTV.Release();
     m_DescriptorHeapDSV.Release();
     m_DescriptorHeapSRV.Release();
@@ -41,6 +55,9 @@ void RS::DX12::Dx12Core2::Release()
 
     // NOTE: Some types only use deferred release for their resources during shutown/reset/clear. To finally release these resources we call ProcessDeferredReleases once more.
     ProcessDeferredReleases(0);
+
+    m_IsReleased = true;
+    m_Device.Release();
 
 #ifdef RS_CONFIG_DEBUG
     DX12::ReportLiveObjects();
@@ -58,10 +75,25 @@ void RS::DX12::Dx12Core2::Render()
         ProcessDeferredReleases(frameIndex);
     }
 
-    // Record commands...
+    m_Surface.PrepareDraw(m_FrameCommandList.GetFrameIndex(), m_FrameCommandList.GetCommandList());
 
-    // Tell GPU to exectue the command lists, appened signal command and go to the next frame.
+    // Record commands...
+    { // Might need a pipeline to start record commands! Should be passed 
+        const Dx12Surface::RenderTarget& rt = m_Surface.GetRenderTarget(m_FrameCommandList.GetFrameIndex());
+        const FLOAT clearColor[4] = { 0.5, 0.5, 0.5, 1.0 };
+        D3D12_RECT rect = {};
+        rect.left = rect.top = 0;
+        rect.right = m_Surface.GetWidth();
+        rect.bottom = m_Surface.GetHeight();
+        m_FrameCommandList.GetCommandList()->ClearRenderTargetView(rt.handle.m_Cpu, clearColor, 1, &rect);
+    }
+
+    // Tell the GPU to exectue the command lists, appened signal command and go to the next frame.
     m_FrameCommandList.EndFrame();
+
+    m_Surface.Present(m_FrameCommandList.GetFrameIndex(), m_FrameCommandList.GetCommandList());
+
+    m_FrameCommandList.MoveToNextFrame();
 }
 
 void RS::DX12::Dx12Core2::ProcessDeferredReleases(uint32 frameIndex)

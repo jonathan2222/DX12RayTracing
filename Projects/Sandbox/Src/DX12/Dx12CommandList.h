@@ -11,11 +11,12 @@ namespace RS::DX12
 		Dx12FrameCommandList() = default;
 		~Dx12FrameCommandList() = default;
 
-		void Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type);
+		void Init(DX12_DEVICE_PTR pDevice, D3D12_COMMAND_LIST_TYPE type);
 		void Release();
 
 		void BeginFrame();
 		void EndFrame();
+		void MoveToNextFrame();
 
 		void Flush();
 

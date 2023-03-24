@@ -11,13 +11,78 @@ void RS::DX12::Dx12Surface::Init(HWND window, uint32 width, uint32 height, DXGIF
     m_Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
     CreateSwapChain(window, width, height, m_Format, flags);
+
+    Dx12DescriptorHeap* pRtvDescHeap = Dx12Core2::Get()->GetDescriptorHeapRTV();
+    CreateResources(m_Format, pRtvDescHeap);
 }
 
 void RS::DX12::Dx12Surface::Release()
 {
+    Dx12DescriptorHeap* pRtvDescHeap = Dx12Core2::Get()->GetDescriptorHeapRTV();
+
 	DX12_RELEASE(m_SwapChain);
-	for(uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
-		DX12_RELEASE(m_RenderTargets[i]);
+    for (uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
+    {
+        RenderTarget rt = m_RenderTargets[i];
+        pRtvDescHeap->Free(rt.handle);
+		DX12_RELEASE(rt.pResource);
+    }
+}
+
+void RS::DX12::Dx12Surface::PrepareDraw(uint32 frameIndex, ID3D12GraphicsCommandList* pCommandList)
+{
+    RenderTarget& rt = m_RenderTargets[frameIndex];
+    D3D12_RESOURCE_STATES newState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    if (rt.state != newState)
+    {
+        // Transition the render target into the correct state to allow for drawing into it.
+        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, newState, newState);
+        pCommandList->ResourceBarrier(1, &barrier);
+        rt.state = newState;
+    }
+}
+
+void RS::DX12::Dx12Surface::Present(uint32 frameIndex, ID3D12GraphicsCommandList* pCommandList)
+{
+    uint32 index = m_SwapChain->GetCurrentBackBufferIndex();
+
+    RenderTarget& rt = m_RenderTargets[frameIndex];
+    D3D12_RESOURCE_STATES newState = D3D12_RESOURCE_STATE_PRESENT;
+    if (rt.state != newState)
+    {
+        // Transition the render target into the correct state to allow for presenting.
+        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, newState, newState);
+        pCommandList->ResourceBarrier(1, &barrier);
+        rt.state = newState;
+    }
+
+    HRESULT hr = E_FAIL;
+    if (m_Flags & DXGIFlag::ALLOW_TEARING)
+    {
+        // Recommended to always use tearing if supported when using a sync interval of 0.
+        // Note this will fail if in true 'fullscreen' mode.
+        hr = m_SwapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+    }
+    else
+    {
+        // The first argument instructs DXGI to block until VSync, putting the application
+        // to sleep until the next VSync. This ensures we don't waste any cycles rendering
+        // frames that will never be displayed to the screen.
+        hr = m_SwapChain->Present(1, 0);
+    }
+
+    // If the device was reset we must completely reinitialize the renderer.
+    if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+    {
+        DX12_DEVICE_PTR const pDevice = Dx12Core2::Get()->GetD3D12Device();
+        LOG_DEBUG("Device Lost on Present: Reason code {:#010x}", (hr == DXGI_ERROR_DEVICE_REMOVED) ? pDevice->GetDeviceRemovedReason() : hr);
+        // TODO: Handle device lost!
+        RS_ASSERT(false, "Device lost, TODO: Recreate the whole renderer!");
+    }
+    else
+    {
+        DXCallVerbose(hr, "Failed to present frame!");
+    }
 }
 
 void RS::DX12::Dx12Surface::CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DXGIFlags flags)
@@ -38,12 +103,37 @@ void RS::DX12::Dx12Surface::CreateSwapChain(HWND window, uint32 width, uint32 he
     DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenSwapChainDesc = { 0 };
     fullscreenSwapChainDesc.Windowed = TRUE;
 
-    IDXGIFactory4* const pFactory = Dx12Core2::Get()->GetDXGIFactory();
+    DX12_FACTORY_PTR const pFactory = Dx12Core2::Get()->GetDXGIFactory();
     RS_ASSERT_NO_MSG(pFactory);
     const Dx12FrameCommandList* pFrameCommandList = Dx12Core2::Get()->GetFrameCommandList();
     RS_ASSERT_NO_MSG(pFrameCommandList);
 
     ComPtr<IDXGISwapChain1> swapChain;
-    DXCallVerbose(pFactory->CreateSwapChainForHwnd(pFrameCommandList->GetCommandQueue(), window, &swapChainDesc, &fullscreenSwapChainDesc, nullptr, &swapChain));
-    DXCall(swapChain->QueryInterface(IID_PPV_ARGS(&m_SwapChain)));
+    DXCall(pFactory->CreateSwapChainForHwnd(pFrameCommandList->GetCommandQueue(), window, &swapChainDesc, &fullscreenSwapChainDesc, nullptr, &swapChain));
+    DXCallVerbose(swapChain->QueryInterface(IID_PPV_ARGS(&m_SwapChain)));
+
+    DXCallVerbose(pFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+}
+
+void RS::DX12::Dx12Surface::CreateResources(DXGI_FORMAT format, Dx12DescriptorHeap* pRTVDescHeap)
+{
+    DX12_DEVICE_PTR const pDevice = Dx12Core2::Get()->GetD3D12Device();
+    RS_ASSERT_NO_MSG(pDevice);
+    RS_ASSERT_NO_MSG(pRTVDescHeap->GetType() == D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
+    {
+        RenderTarget& rt = m_RenderTargets[i];
+        rt.handle = pRTVDescHeap->Allocate();
+
+        m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&rt.pResource));
+        DX12_SET_DEBUG_NAME(rt.pResource, "Swap Chain RTV[{}]", i);
+
+        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+        rtvDesc.Format = format;
+        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+        // Use the allocated memory that the handle points to and set the data for a RTV at that position.
+        pDevice->CreateRenderTargetView(rt.pResource, &rtvDesc, rt.handle.m_Cpu);
+    }
 }
