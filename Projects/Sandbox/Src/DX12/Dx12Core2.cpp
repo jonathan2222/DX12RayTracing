@@ -78,9 +78,9 @@ void RS::DX12::Dx12Core2::Render()
     m_Surface.PrepareDraw(m_FrameCommandList.GetCommandList());
 
     // Record commands...
-    { // Might need a pipeline to start record commands! Should be passed 
+    {
         const Dx12Surface::RenderTarget& rt = m_Surface.GetCurrentRenderTarget();
-        const FLOAT clearColor[4] = { 0.5, 0.5, 0.5, 1.0 };
+        const FLOAT clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
         D3D12_RECT rect = {};
         rect.left = rect.top = 0;
         rect.right = m_Surface.GetWidth();

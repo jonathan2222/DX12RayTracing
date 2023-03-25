@@ -19,7 +19,7 @@ namespace RS::DX12
 		void MoveToNextFrame();
 
 		void Flush();
-		void WaitForGPU();
+		void WaitForGPUQueue();
 
 		constexpr ID3D12CommandQueue* const GetCommandQueue() const { return m_CommandQueue; }
 		constexpr ID3D12GraphicsCommandList* const GetCommandList() const { return m_CommandList; }
@@ -41,9 +41,9 @@ namespace RS::DX12
 		CommandFrame					m_CommandFrames[FRAME_BUFFER_COUNT]{};
 		ID3D12CommandQueue*				m_CommandQueue = nullptr;
 
-		uint64							m_FenceValue = 0;
-		ID3D12Fence1*					m_Fence = nullptr;
-		HANDLE							m_FenceEvent = nullptr;
+		uint64							m_QueueFenceValue = 0;
+		ID3D12Fence1*					m_QueueFence = nullptr;
+		HANDLE							m_CPUFenceEvent = nullptr;
 
 		uint32							m_FrameIndex = 0; // Bound by FRAME_BUFFER_COUNT
 	};

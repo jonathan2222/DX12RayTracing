@@ -19,15 +19,16 @@ void RS::DX12::Dx12FrameCommandList::Init(DX12_DEVICE_PTR pDevice, D3D12_COMMAND
 		LOG_DEBUG("Created command allocator [{}] of type {}", i, DX12::GetCommandListTypeAsString(type).data());
 	}
 
-	DXCall(pDevice->CreateCommandList(0, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList)));
+	m_QueueFenceValue = 0;
+	DXCall(pDevice->CreateCommandList(m_QueueFenceValue, type, m_CommandFrames[0].m_CommandAllocator, nullptr, IID_PPV_ARGS(&m_CommandList)));
 	DX12_SET_DEBUG_NAME(m_CommandList, "{} Command List", DX12::GetCommandListTypeAsString(type).data());
 	DXCall(m_CommandList->Close());
 
-	DXCall(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_Fence)));
-	DX12_SET_DEBUG_NAME(m_Fence, "D3D12 Fence");
+	DXCall(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_QueueFence)));
+	DX12_SET_DEBUG_NAME(m_QueueFence, "D3D12 Fence");
 
-	m_FenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-	RS_ASSERT(m_FenceEvent, "Failed to create windows event!");
+	m_CPUFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+	RS_ASSERT(m_CPUFenceEvent, "Failed to create windows event!");
 
 }
 
@@ -36,16 +37,16 @@ void RS::DX12::Dx12FrameCommandList::Release()
 	// Wait for gpu tasks to finish.
 	Flush();
 
-	// For some reason, Flush did not wait for all gpu work, so I added a new signal here for the CPU to wait on.
-	WaitForGPU();
+	// We need to wait for the present operation too. This is because EndFrame signals before the present has occured.
+	WaitForGPUQueue();
 
-	DX12_RELEASE(m_Fence);
-	m_FenceValue = 0;
+	DX12_RELEASE(m_QueueFence);
+	m_QueueFenceValue = 0;
 	
-	if (m_FenceEvent)
+	if (m_CPUFenceEvent)
 	{
-		CloseHandle(m_FenceEvent);
-		m_FenceEvent = nullptr;
+		CloseHandle(m_CPUFenceEvent);
+		m_CPUFenceEvent = nullptr;
 	}
 
 	DX12_RELEASE(m_CommandQueue);
@@ -58,7 +59,7 @@ void RS::DX12::Dx12FrameCommandList::Release()
 void RS::DX12::Dx12FrameCommandList::BeginFrame()
 {
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
-	commandFrame.Wait(m_Fence, m_FenceEvent);
+	commandFrame.Wait(m_QueueFence, m_CPUFenceEvent);
 
 	DXCallVerbose(commandFrame.m_CommandAllocator->Reset());
 	DXCallVerbose(m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr));
@@ -73,8 +74,8 @@ void RS::DX12::Dx12FrameCommandList::EndFrame()
 
 	// Tell GPU to signal the fence when done executing the command lists.
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
-	commandFrame.m_FenceValue = ++m_FenceValue;
-	DXCallVerbose(m_CommandQueue->Signal(m_Fence, commandFrame.m_FenceValue));
+	commandFrame.m_FenceValue = ++m_QueueFenceValue;
+	DXCallVerbose(m_CommandQueue->Signal(m_QueueFence, commandFrame.m_FenceValue));
 }
 
 void RS::DX12::Dx12FrameCommandList::MoveToNextFrame()
@@ -86,21 +87,21 @@ void RS::DX12::Dx12FrameCommandList::Flush()
 {
 	for (uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
 	{
-		m_CommandFrames[i].Wait(m_Fence, m_FenceEvent);
+		m_CommandFrames[i].Wait(m_QueueFence, m_CPUFenceEvent);
 	}
 	m_FrameIndex = 0;
 }
 
-void RS::DX12::Dx12FrameCommandList::WaitForGPU()
+void RS::DX12::Dx12FrameCommandList::WaitForGPUQueue()
 {
-	uint64 fenceValue = ++m_FenceValue;
-	DXCall(m_CommandQueue->Signal(m_Fence, fenceValue));
+	uint64 fenceValue = ++m_QueueFenceValue;
+	DXCall(m_CommandQueue->Signal(m_QueueFence, fenceValue));
 
 	// We have the fence create an event which is signaled when the fence's current value equals m_FenceValue.
-	DXCallVerbose(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
+	DXCallVerbose(m_QueueFence->SetEventOnCompletion(fenceValue, m_CPUFenceEvent));
 
 	// Wait until the fence has triggered the event.
-	WaitForSingleObjectEx(m_FenceEvent, INFINITE, FALSE);
+	WaitForSingleObjectEx(m_CPUFenceEvent, INFINITE, FALSE);
 }
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type)
