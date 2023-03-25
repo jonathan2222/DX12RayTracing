@@ -27,3 +27,6 @@ cppcheck_report*
 
 # Ignore debug temporary files
 Debug/Tmp/
+
+# Ignore Direct3D12 documentations
+Docs/DX12/
