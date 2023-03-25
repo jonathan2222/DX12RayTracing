@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils/Logger.h"
+
 #include <windows.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -19,26 +21,25 @@ using Microsoft::WRL::ComPtr;
 
 #include <stdexcept>
 
-#include "Utils/Logger.h"
 #include "Utils/Utils.h"
 #include "Core/LaunchArguments.h"
 
 #define DXCall(x)                                                                                       \
     {                                                                                                   \
-        HRESULT hr = x;                                                                                 \
+        HRESULT _internal_hr = x;                                                                       \
         std::string resourceName = #x;                                                                  \
-        ThrowIfFailed(hr, "Failed to call DXCall({})", resourceName.c_str());                           \
+        ThrowIfFailed(_internal_hr, "Failed to call DXCall({})", resourceName.c_str());                 \
         if (LaunchArguments::ContainsAny({LaunchParams::logAllDXCalls, LaunchParams::logDXCalls}))      \
             LOG_DEBUG("DXCall({})", resourceName.c_str());                                              \
     }
 
-#define DXCallVerbose(x)                                                             \
-    {                                                                                \
-        HRESULT hr = x;                                                              \
-        std::string resourceName = #x;                                               \
-        ThrowIfFailed(hr, "Failed to call DXCallVerbose({})", resourceName.c_str()); \
-        if (LaunchArguments::Contains(LaunchParams::logAllDXCalls))                  \
-            LOG_DEBUG("DXCallVerbose({})", resourceName.c_str());                    \
+#define DXCallVerbose(x)                                                                        \
+    {                                                                                           \
+        HRESULT _internal_hr = x;                                                               \
+        std::string resourceName = #x;                                                          \
+        ThrowIfFailed(_internal_hr, "Failed to call DXCallVerbose({})", resourceName.c_str());  \
+        if (LaunchArguments::Contains(LaunchParams::logAllDXCalls))                             \
+            LOG_DEBUG("DXCallVerbose({})", resourceName.c_str());                               \
     }
 
 #ifdef RS_CONFIG_DEBUG

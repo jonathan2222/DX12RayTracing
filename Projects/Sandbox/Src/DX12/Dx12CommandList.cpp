@@ -36,6 +36,9 @@ void RS::DX12::Dx12FrameCommandList::Release()
 	// Wait for gpu tasks to finish.
 	Flush();
 
+	// For some reason, Flush did not wait for all gpu work, so I added a new signal here for the CPU to wait on.
+	WaitForGPU();
+
 	DX12_RELEASE(m_Fence);
 	m_FenceValue = 0;
 	
@@ -66,13 +69,12 @@ void RS::DX12::Dx12FrameCommandList::EndFrame()
 	DXCallVerbose(m_CommandList->Close());
 
 	ID3D12CommandList* commandLists[]{ m_CommandList };
-	m_CommandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), &commandLists[0]);
+	m_CommandQueue->ExecuteCommandLists(ARRAYSIZE(commandLists), commandLists);
 
 	// Tell GPU to signal the fence when done executing the command lists.
-	++m_FenceValue;
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
-	commandFrame.m_FenceValue = m_FenceValue;
-	DXCallVerbose(m_CommandQueue->Signal(m_Fence, m_FenceValue));
+	commandFrame.m_FenceValue = ++m_FenceValue;
+	DXCallVerbose(m_CommandQueue->Signal(m_Fence, commandFrame.m_FenceValue));
 }
 
 void RS::DX12::Dx12FrameCommandList::MoveToNextFrame()
@@ -87,6 +89,18 @@ void RS::DX12::Dx12FrameCommandList::Flush()
 		m_CommandFrames[i].Wait(m_Fence, m_FenceEvent);
 	}
 	m_FrameIndex = 0;
+}
+
+void RS::DX12::Dx12FrameCommandList::WaitForGPU()
+{
+	uint64 fenceValue = ++m_FenceValue;
+	DXCall(m_CommandQueue->Signal(m_Fence, fenceValue));
+
+	// We have the fence create an event which is signaled when the fence's current value equals m_FenceValue.
+	DXCallVerbose(m_Fence->SetEventOnCompletion(fenceValue, m_FenceEvent));
+
+	// Wait until the fence has triggered the event.
+	WaitForSingleObjectEx(m_FenceEvent, INFINITE, FALSE);
 }
 
 void RS::DX12::Dx12FrameCommandList::CommandFrame::Init(ID3D12Device8* pDevice, D3D12_COMMAND_LIST_TYPE type)
@@ -107,7 +121,7 @@ void RS::DX12::Dx12FrameCommandList::CommandFrame::Wait(ID3D12Fence1* pFence, HA
 	// If the current fence value on the GPU is less than the one on the CPU, then we know the GPU has not finished executing the command lists sice it has not reached the "m_CommandQueue->Signal()" command.
 	if (pFence->GetCompletedValue() < m_FenceValue)
 	{
-		// We have the fence create an event which is signaled ones the fence's current value equals m_FenceValue.
+		// We have the fence create an event which is signaled when the fence's current value equals m_FenceValue.
 		DXCallVerbose(pFence->SetEventOnCompletion(m_FenceValue, fenceEvent));
 
 		// Wait until the fence has triggered the event.

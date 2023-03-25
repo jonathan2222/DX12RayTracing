@@ -28,6 +28,10 @@ void RS::DX12::Dx12Device::CreateFactory()
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
     {
         ComPtr<ID3D12Debug> debugInterface;
+        ComPtr<ID3D12Debug1> debugInterface1;
+        //ComPtr<ID3D12Debug5> debugInterface5;
+        //ComPtr<ID3D12DebugDevice2> debugInterfaceDevice2;
+        //ComPtr<ID3D12DebugCommandList2> debugInterfaceC2;
         if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface))))
         {
             debugInterface->EnableDebugLayer();

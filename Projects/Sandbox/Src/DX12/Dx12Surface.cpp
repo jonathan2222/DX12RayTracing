@@ -16,46 +16,53 @@ void RS::DX12::Dx12Surface::Init(HWND window, uint32 width, uint32 height, DXGIF
     CreateResources(m_Format, pRtvDescHeap);
 }
 
-void RS::DX12::Dx12Surface::Release()
+void RS::DX12::Dx12Surface::ReleaseResources()
 {
     Dx12DescriptorHeap* pRtvDescHeap = Dx12Core2::Get()->GetDescriptorHeapRTV();
 
-	DX12_RELEASE(m_SwapChain);
     for (uint32 i = 0; i < FRAME_BUFFER_COUNT; i++)
     {
-        RenderTarget rt = m_RenderTargets[i];
+        RenderTarget& rt = m_RenderTargets[i];
         pRtvDescHeap->Free(rt.handle);
-		DX12_RELEASE(rt.pResource);
+        Dx12Core2::Get()->DeferredRelease(rt.pResource);
     }
 }
 
-void RS::DX12::Dx12Surface::PrepareDraw(uint32 frameIndex, ID3D12GraphicsCommandList* pCommandList)
+void RS::DX12::Dx12Surface::Release()
 {
-    RenderTarget& rt = m_RenderTargets[frameIndex];
+	DX12_RELEASE(m_SwapChain);
+}
+
+void RS::DX12::Dx12Surface::PrepareDraw(ID3D12GraphicsCommandList* pCommandList)
+{
+    m_BackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+    RenderTarget& rt = m_RenderTargets[m_BackBufferIndex];
     D3D12_RESOURCE_STATES newState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     if (rt.state != newState)
     {
         // Transition the render target into the correct state to allow for drawing into it.
-        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, newState, newState);
+        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, rt.state, newState);
         pCommandList->ResourceBarrier(1, &barrier);
         rt.state = newState;
     }
 }
 
-void RS::DX12::Dx12Surface::Present(uint32 frameIndex, ID3D12GraphicsCommandList* pCommandList)
+void RS::DX12::Dx12Surface::EndDraw(ID3D12GraphicsCommandList* pCommandList)
 {
-    uint32 index = m_SwapChain->GetCurrentBackBufferIndex();
-
-    RenderTarget& rt = m_RenderTargets[frameIndex];
+    RenderTarget& rt = m_RenderTargets[m_BackBufferIndex];
     D3D12_RESOURCE_STATES newState = D3D12_RESOURCE_STATE_PRESENT;
     if (rt.state != newState)
     {
         // Transition the render target into the correct state to allow for presenting.
-        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, newState, newState);
+        D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(rt.pResource, rt.state, newState);
         pCommandList->ResourceBarrier(1, &barrier);
         rt.state = newState;
     }
+}
 
+void RS::DX12::Dx12Surface::Present()
+{
     HRESULT hr = E_FAIL;
     if (m_Flags & DXGIFlag::ALLOW_TEARING)
     {
@@ -127,7 +134,7 @@ void RS::DX12::Dx12Surface::CreateResources(DXGI_FORMAT format, Dx12DescriptorHe
         rt.handle = pRTVDescHeap->Allocate();
 
         m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&rt.pResource));
-        DX12_SET_DEBUG_NAME(rt.pResource, "Swap Chain RTV[{}]", i);
+        DX12_SET_DEBUG_NAME_REF(rt.pResource, rt.debugName, "Swap Chain RTV[{}]", i);
 
         D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
         rtvDesc.Format = format;

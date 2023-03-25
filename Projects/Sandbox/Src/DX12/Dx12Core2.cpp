@@ -12,8 +12,6 @@ RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 
 void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
 {
-    m_Window = window;
-
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
     DXGIFlags dxgiFlags = DXGIFlag::REQUIRE_TEARING_SUPPORT;
     m_Device.Init(d3dFeatureLevel, dxgiFlags);
@@ -37,7 +35,7 @@ void RS::DX12::Dx12Core2::Release()
 {
     // TODO: Move these outside of Dx12Core2!
     { // Dx12Core2 users
-        m_Surface.Release();
+        m_Surface.ReleaseResources();
     }
 
     m_FrameCommandList.Release();
@@ -54,7 +52,9 @@ void RS::DX12::Dx12Core2::Release()
     m_DescriptorHeapUAV.Release();
 
     // NOTE: Some types only use deferred release for their resources during shutown/reset/clear. To finally release these resources we call ProcessDeferredReleases once more.
-    ProcessDeferredReleases(0);
+    ProcessDeferredReleases(GetCurrentFrameIndex());
+
+    m_Surface.Release();
 
     m_IsReleased = true;
     m_Device.Release();
@@ -75,11 +75,11 @@ void RS::DX12::Dx12Core2::Render()
         ProcessDeferredReleases(frameIndex);
     }
 
-    m_Surface.PrepareDraw(m_FrameCommandList.GetFrameIndex(), m_FrameCommandList.GetCommandList());
+    m_Surface.PrepareDraw(m_FrameCommandList.GetCommandList());
 
     // Record commands...
     { // Might need a pipeline to start record commands! Should be passed 
-        const Dx12Surface::RenderTarget& rt = m_Surface.GetRenderTarget(m_FrameCommandList.GetFrameIndex());
+        const Dx12Surface::RenderTarget& rt = m_Surface.GetCurrentRenderTarget();
         const FLOAT clearColor[4] = { 0.5, 0.5, 0.5, 1.0 };
         D3D12_RECT rect = {};
         rect.left = rect.top = 0;
@@ -88,10 +88,12 @@ void RS::DX12::Dx12Core2::Render()
         m_FrameCommandList.GetCommandList()->ClearRenderTargetView(rt.handle.m_Cpu, clearColor, 1, &rect);
     }
 
+    m_Surface.EndDraw(m_FrameCommandList.GetCommandList());
+
     // Tell the GPU to exectue the command lists, appened signal command and go to the next frame.
     m_FrameCommandList.EndFrame();
 
-    m_Surface.Present(m_FrameCommandList.GetFrameIndex(), m_FrameCommandList.GetCommandList());
+    m_Surface.Present();
 
     m_FrameCommandList.MoveToNextFrame();
 }

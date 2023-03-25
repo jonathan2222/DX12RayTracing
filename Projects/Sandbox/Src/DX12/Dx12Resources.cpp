@@ -119,7 +119,7 @@ void RS::DX12::Dx12DescriptorHeap::ProcessDeferredFree(uint32 frameIndex)
 #ifdef RS_CONFIG_DEBUG
 			// Ensure that the index is in the list.
 			bool valid = ValidateFree(index);
-			if (valid)
+			if (!valid)
 				LOG_WARNING("Trying to free a descriptor with an index of {} which is not avaliable! Resource: {}", index, m_DebugName.c_str());
 #endif
 

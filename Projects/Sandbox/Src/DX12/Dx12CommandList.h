@@ -19,6 +19,7 @@ namespace RS::DX12
 		void MoveToNextFrame();
 
 		void Flush();
+		void WaitForGPU();
 
 		constexpr ID3D12CommandQueue* const GetCommandQueue() const { return m_CommandQueue; }
 		constexpr ID3D12GraphicsCommandList* const GetCommandList() const { return m_CommandList; }

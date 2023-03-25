@@ -45,7 +45,6 @@ namespace RS::DX12
 		bool					m_IsReleased = false; // The first call should be treated like it has not been released.
 		Dx12Device				m_Device;
 		Dx12FrameCommandList	m_FrameCommandList;
-		HWND					m_Window = nullptr;
 		Dx12Surface				m_Surface;
 
 		// Deferred releases of resources.
