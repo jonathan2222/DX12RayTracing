@@ -24,22 +24,68 @@ using Microsoft::WRL::ComPtr;
 #include "Utils/Utils.h"
 #include "Core/LaunchArguments.h"
 
-#define DXCall(x)                                                                                       \
-    {                                                                                                   \
-        HRESULT _internal_hr = x;                                                                       \
-        std::string resourceName = #x;                                                                  \
-        ThrowIfFailed(_internal_hr, "Failed to call DXCall({})", resourceName.c_str());                 \
-        if (LaunchArguments::ContainsAny({LaunchParams::logAllDXCalls, LaunchParams::logDXCalls}))      \
-            LOG_DEBUG("DXCall({})", resourceName.c_str());                                              \
+#include <comdef.h> // _com_error
+
+namespace RS::_Internal
+{
+    inline std::string ParseHRESULT(HRESULT hr)
+    {
+        //_com_error err(hr);
+        //LPCTSTR errMsg = err.ErrorMessage();
+        //return Utils::ToString(errMsg);
+        switch (hr)
+        {
+#define RS_DX12_HRESULT(hrV, descV) case hrV: return Utils::Format("\thr: {} ({:#10X})\n\t\t", #hrV, (unsigned long)hrV) + std::string(descV);
+#include "Dx12HResults.h"
+#undef RS_DX12_HRESULT
+        default:
+            return Utils::Format("Unmapped error! hr: {:#10X}", (unsigned long)hr);
+        }
     }
 
-#define DXCallVerbose(x)                                                                        \
-    {                                                                                           \
-        HRESULT _internal_hr = x;                                                               \
-        std::string resourceName = #x;                                                          \
-        ThrowIfFailed(_internal_hr, "Failed to call DXCallVerbose({})", resourceName.c_str());  \
-        if (LaunchArguments::Contains(LaunchParams::logAllDXCalls))                             \
-            LOG_DEBUG("DXCallVerbose({})", resourceName.c_str());                               \
+    inline void Crash(HRESULT hr)
+    {
+#ifdef RS_CONFIG_DEBUG
+        __debugbreak();
+#elif
+        throw HrException(hr);
+#endif
+    }
+
+    template<typename StrA, typename StrB, typename StrC, typename ...Args>
+    inline void DXCallInternal(StrA callString, int line, StrB file, StrC func, std::vector<ParamID> paramIDs, HRESULT hr, Args&&... args)
+    {
+        if (FAILED(hr))
+        {
+            std::string messageStr = Utils::Format(args...);
+            std::string msgExtension = !messageStr.empty() ? "\n->\t" + messageStr : "";
+            std::string hrErrorString = ParseHRESULT(hr);
+            LOG_DETAILED(file, line, func, spdlog::level::err, "Failed to call {}{}\n{}", callString, msgExtension.c_str(), hrErrorString.c_str());
+            LOG_FLUSH();
+            Crash(hr);
+        }
+        if (LaunchArguments::ContainsAny(paramIDs))
+            LOG_DETAILED(file, line, func, spdlog::level::debug, "{}", callString);
+    }
+
+    template<typename StrA, typename StrB, typename StrC>
+    inline void DXCallInternal(StrA callString, int line, StrB file, StrC func, std::vector<ParamID> paramIDs, HRESULT hr)
+    {
+        DXCallInternal(callString, line, file, func, paramIDs, hr, "");
+    }
+}
+
+#define DXCall(...) \
+    {   \
+        std::string _callString = std::string("DXCall(") + #__VA_ARGS__ + ")"; \
+        RS::_Internal::DXCallInternal(_callString.c_str(), __LINE__, __FILE__, SPDLOG_FUNCTION, {LaunchParams::logAllDXCalls, LaunchParams::logDXCalls}, __VA_ARGS__); \
+    }
+
+#define DXCallVerbose(...) \
+    {   \
+        std::string _callString2 = #__VA_ARGS__;\
+        std::string _callString = std::string("DXCallVerbose(") + #__VA_ARGS__ + ")";\
+        RS::_Internal::DXCallInternal(_callString.c_str(), __LINE__, __FILE__, SPDLOG_FUNCTION, {LaunchParams::logAllDXCalls}, __VA_ARGS__);\
     }
 
 #ifdef RS_CONFIG_DEBUG

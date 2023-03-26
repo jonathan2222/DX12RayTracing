@@ -23,6 +23,8 @@ void RS::Display::Init(const DisplayDescription& description)
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
+	glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
+	m_HasFocus = true;
 
 	glfwSetErrorCallback(Display::ErrorCallback);
 
@@ -53,7 +55,7 @@ void RS::Display::Init(const DisplayDescription& description)
 	m_HWND = glfwGetWin32Window(m_pWindow);
 
 	glfwSetFramebufferSizeCallback(m_pWindow, Display::FrameBufferResizeCallback);
-
+	glfwSetWindowFocusCallback(m_pWindow, Display::WindowFocusCallback);
 	glfwSetInputMode(m_pWindow, GLFW_STICKY_KEYS, 1);
 	//glfwSetKeyCallback(m_pWindow, KeyCallback);
 }
@@ -101,20 +103,37 @@ DisplayDescription& Display::GetDescription()
 
 void Display::ToggleFullscreen()
 {
+	if (IsFullscreen() == !m_Description.Fullscreen)
+		return;
+
 	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
 	if (m_Description.Fullscreen)
 	{
+		m_Description.Width = m_PreWidth;
+		m_Description.Height = m_PreWidth;
+		m_Description.Fullscreen = false;
+
 		int xPos = mode->width / 2 - m_PreWidth / 2;
 		int yPos = mode->height / 2 - m_PreHeight / 2;
+		LOG_WARNING("glfwSetWindowMonitor: ({}, {}) -> ({}, {})", mode->width, mode->height, m_PreWidth, m_PreHeight);
 		glfwSetWindowMonitor(m_pWindow, NULL, xPos, yPos, m_PreWidth, m_PreHeight, GLFW_DONT_CARE);
-		m_Description.Fullscreen = false;
 	}
 	else
 	{
-		glfwSetWindowMonitor(m_pWindow, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		m_Description.Width = mode->width;
+		m_Description.Height = mode->height;
 		m_Description.Fullscreen = true;
+
+		bool isWindowed = m_Description.UseWindowedFullscreen;
+		LOG_WARNING("glfwSetWindowMonitor: ({}, {}) -> ({}, {})", m_PreWidth, m_PreHeight, m_Description.Width, m_Description.Height);
+		glfwSetWindowMonitor(m_pWindow, isWindowed ? NULL : monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
 	}
+}
+
+bool RS::Display::IsFullscreen()
+{
+	return glfwGetWindowMonitor(m_pWindow) != nullptr;
 }
 
 uint32 Display::GetWidth() const
@@ -130,6 +149,11 @@ uint32 Display::GetHeight() const
 float Display::GetAspectRatio() const
 {
 	return (float)m_Description.Width / (float)m_Description.Height;
+}
+
+bool RS::Display::HasFocus() const
+{
+	return m_HasFocus;
 }
 
 void RS::Display::SetOnSizeChangeCallback(IDisplaySizeChange* pCallback)
@@ -151,12 +175,27 @@ void RS::Display::FrameBufferResizeCallback(GLFWwindow* window, int width, int h
 	DisplayDescription& description = m_pSelf->GetDescription();
 	description.Width = width;
 	description.Height = height;
-	description.Fullscreen = false;
 
-	//Renderer::Get()->Resize((uint32)width, (uint32)height);
+	LOG_WARNING("Resize to: ({}, {})", width, height);
 
 	if (m_pSelf->m_pCallback)
 	{
-		m_pSelf->m_pCallback->OnSizeChange((uint32)width, (uint32)height);
+		m_pSelf->m_pCallback->OnSizeChange((uint32)width, (uint32)height, description.Fullscreen, description.UseWindowedFullscreen);
+	}
+}
+
+void RS::Display::WindowFocusCallback(GLFWwindow* window, int focus)
+{
+	if (focus == GLFW_TRUE)
+	{
+		// Acquired focus
+		LOG_WARNING("Acquired focus!");
+		Display::Get()->m_HasFocus = true;
+	}
+	else
+	{
+		// Lost focus
+		LOG_WARNING("Lost focus!");
+		Display::Get()->m_HasFocus = false;
 	}
 }

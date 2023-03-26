@@ -1,9 +1,14 @@
 {
     "Display": {
-      "DefaultWidth": 1920,
-      "DefaultHeight": 1080,
-      "Fullscreen": false,
-      "VSync":  false,
-      "Title": "Sandbox D3D12"
+      "InitialState": {
+        "DefaultWidth": 1920,
+        "DefaultHeight": 1080,
+        "Fullscreen": false,
+        "Title": "Sandbox D3D12"
+      },
+      "Settings": {
+        "WindowedFullscreen": false,
+        "VSync":  false
+      }
     }
 }

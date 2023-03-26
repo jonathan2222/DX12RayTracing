@@ -187,8 +187,13 @@ void EngineLoop::OnDeviceRestored()
     CreateWindowSizeDependentResources();
 }
 
-void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height)
+void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
 {
+    if (!DX12::Dx12Core2::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
+    {
+        return;
+    }
+
     //if (!DX12::Dx12Core::Get()->WindowSizeChanged(width, height, false))
     //{
     //    return;

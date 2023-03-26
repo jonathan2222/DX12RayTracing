@@ -21,6 +21,8 @@ namespace RS::DX12
 		void Init(HWND window, int width, int height);
 		void Release();
 
+		bool WindowSizeChanged(uint32 width, uint32 height, bool isFullscreen, bool windowed, bool minimized);
+
 		void Render();
 
 		DX12_DEVICE_PTR GetD3D12Device() { return m_Device.GetD3D12Device(); }
@@ -36,6 +38,8 @@ namespace RS::DX12
 		Dx12DescriptorHeap* GetDescriptorHeapSRV() { return &m_DescriptorHeapSRV; }
 		Dx12DescriptorHeap* GetDescriptorHeapUAV() { return &m_DescriptorHeapUAV; }
 
+		void ReleaseDeferredResources();
+
 		template<typename T>
 		void DeferredRelease(T*& resouce);
 	private:
@@ -46,6 +50,7 @@ namespace RS::DX12
 		Dx12Device				m_Device;
 		Dx12FrameCommandList	m_FrameCommandList;
 		Dx12Surface				m_Surface;
+		bool					m_IsWindowVisible = false;
 
 		// Deferred releases of resources.
 		std::mutex				m_DeferredReleasesMutex;

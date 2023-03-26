@@ -37,7 +37,7 @@ void RS::DX12::Dx12FrameCommandList::Release()
 	// Wait for gpu tasks to finish.
 	Flush();
 
-	// We need to wait for the present operation too. This is because EndFrame signals before the present has occured.
+	// We need to wait for the present operation too. This is because EndFrame signals before present was called.
 	WaitForGPUQueue();
 
 	DX12_RELEASE(m_QueueFence);

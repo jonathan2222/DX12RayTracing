@@ -16,6 +16,8 @@ namespace RS::DX12
 		void EndDraw(ID3D12GraphicsCommandList* pCommandList);
 		void Present();
 
+		void Resize(uint32 width, uint32 height, bool isFullscreen);
+
 		struct RenderTarget
 		{
 			Dx12DescriptorHandle	handle;
@@ -41,6 +43,8 @@ namespace RS::DX12
 		IDXGISwapChain3*	m_SwapChain = nullptr;
 		RenderTarget		m_RenderTargets[FRAME_BUFFER_COUNT]{};
 
+		bool				m_UseVSync = false;
+		bool				m_IsFullscreen = false;
 		uint32				m_BackBufferIndex = 0;
 		uint32				m_Width = 0;
 		uint32				m_Height = 0;

@@ -30,6 +30,11 @@ void RS::DX12::Dx12Surface::ReleaseResources()
 
 void RS::DX12::Dx12Surface::Release()
 {
+    // Need to go out of fullscreen before releasing the swap chain.
+    BOOL fullscreen = false;
+    HRESULT hr = m_SwapChain->SetFullscreenState(fullscreen, nullptr);
+    DXCall(hr, "Could not set fullscreen mode to false!");
+
 	DX12_RELEASE(m_SwapChain);
 }
 
@@ -68,14 +73,14 @@ void RS::DX12::Dx12Surface::Present()
     {
         // Recommended to always use tearing if supported when using a sync interval of 0.
         // Note this will fail if in true 'fullscreen' mode.
-        hr = m_SwapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+        hr = m_SwapChain->Present(m_UseVSync ? 1 : 0, m_IsFullscreen ? 0 : DXGI_PRESENT_ALLOW_TEARING);
     }
     else
     {
         // The first argument instructs DXGI to block until VSync, putting the application
         // to sleep until the next VSync. This ensures we don't waste any cycles rendering
         // frames that will never be displayed to the screen.
-        hr = m_SwapChain->Present(1, 0);
+        hr = m_SwapChain->Present(m_UseVSync ? 1 : 0, 0);
     }
 
     // If the device was reset we must completely reinitialize the renderer.
@@ -90,6 +95,54 @@ void RS::DX12::Dx12Surface::Present()
     {
         DXCallVerbose(hr, "Failed to present frame!");
     }
+}
+
+void RS::DX12::Dx12Surface::Resize(uint32 width, uint32 height, bool isFullscreen)
+{
+    // Do not forget to wait for the GPU before calling this function!
+    RS_ASSERT(m_SwapChain, "Cannot resize a swap chain when it does not exist!");
+
+    LOG_WARNING("Resize to: ({}, {}) fullscreen: {}", width, height, isFullscreen);
+
+    // Fullscreen in this case means that it is not windowed mode but the pure fullscreen mode.
+    m_IsFullscreen = isFullscreen;
+    BOOL fullscreen = m_IsFullscreen;
+    IDXGIOutput* pOutput = nullptr;
+    HRESULT hr = m_SwapChain->SetFullscreenState(fullscreen, pOutput);
+    if (hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+    {
+        LOG_WARNING("Could not promote to fullscreen");
+    }
+    else
+    {
+        DXCall(hr, "Could not set fullscreen mode!");
+    }
+
+    ReleaseResources();
+    Dx12Core2::Get()->ReleaseDeferredResources();
+
+    m_Width = width;
+    m_Height = height;
+    hr = m_SwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, width, height, m_Format, m_Flags);
+
+    if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+    {
+#ifdef RS_CONFIG_DEBUG
+        DX12_DEVICE_PTR pDevice = Dx12Core2::Get()->GetD3D12Device();
+        LOG_DEBUG("Device Lost on ResizeBuffers: Reason code {:#10X}", (hr == DXGI_ERROR_DEVICE_REMOVED) ? pDevice->GetDeviceRemovedReason() : hr);
+#endif
+        // TODO: If the device was removed for any reason, a new device and swap chain will need to be created.
+        RS_ASSERT(false, "Device lost, todo: Create new device and swap chain with its resources! ");
+
+        return;
+    }
+    else
+    {
+        DXCall(hr, "Could not resize swap chain buffers!");
+    }
+
+    Dx12DescriptorHeap* pRtvDescHeap = Dx12Core2::Get()->GetDescriptorHeapRTV();
+    CreateResources(m_Format, pRtvDescHeap);
 }
 
 void RS::DX12::Dx12Surface::CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DXGIFlags flags)

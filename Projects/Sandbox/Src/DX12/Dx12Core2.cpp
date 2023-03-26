@@ -1,6 +1,8 @@
 #include "PreCompiled.h"
 #include "Dx12Core2.h"
 
+#include "Core/Display.h"
+
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
@@ -27,6 +29,7 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
 
     // TODO: Move these outside of Dx12Core2!
     { // Dx12Core2 users
+        m_IsWindowVisible = true;
         m_Surface.Init(window, width, height, dxgiFlags);
     }
 }
@@ -41,10 +44,7 @@ void RS::DX12::Dx12Core2::Release()
     m_FrameCommandList.Release();
 
     // NOTE: We don't call ProcessDeferredReleases at the end because some resources (such as swap chain) can't be released before their depending resources are released.
-    for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)
-    {
-        ProcessDeferredReleases(i);
-    }
+    ReleaseDeferredResources();
 
     m_DescriptorHeapRTV.Release();
     m_DescriptorHeapDSV.Release();
@@ -55,6 +55,7 @@ void RS::DX12::Dx12Core2::Release()
     ProcessDeferredReleases(GetCurrentFrameIndex());
 
     m_Surface.Release();
+    m_IsWindowVisible = false;
 
     m_IsReleased = true;
     m_Device.Release();
@@ -62,6 +63,22 @@ void RS::DX12::Dx12Core2::Release()
 #ifdef RS_CONFIG_DEBUG
     DX12::ReportLiveObjects();
 #endif
+}
+
+bool RS::DX12::Dx12Core2::WindowSizeChanged(uint32 width, uint32 height, bool isFullscreen, bool windowed, bool minimized)
+{
+    m_IsWindowVisible = width != 0 && height != 0 && !minimized;
+    if (!m_IsWindowVisible)
+    {
+        return false;
+    }
+    LOG_WARNING("Resize to: ({}, {}) isFullscreen: {}, windowed: {}", width, height, isFullscreen, windowed);
+
+    m_FrameCommandList.Flush();
+    m_FrameCommandList.WaitForGPUQueue();
+    m_Surface.Resize(width, height, isFullscreen && !windowed);
+
+    return true;
 }
 
 void RS::DX12::Dx12Core2::Render()
@@ -93,9 +110,19 @@ void RS::DX12::Dx12Core2::Render()
     // Tell the GPU to exectue the command lists, appened signal command and go to the next frame.
     m_FrameCommandList.EndFrame();
 
-    m_Surface.Present();
+    if (Display::Get()->HasFocus())
+        m_Surface.Present();
 
     m_FrameCommandList.MoveToNextFrame();
+}
+
+void RS::DX12::Dx12Core2::ReleaseDeferredResources()
+{
+    for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)
+    {
+        m_DeferredReleasesFlags[i] = 0;
+        ProcessDeferredReleases(i);
+    }
 }
 
 void RS::DX12::Dx12Core2::ProcessDeferredReleases(uint32 frameIndex)

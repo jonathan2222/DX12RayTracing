@@ -47,7 +47,7 @@ namespace RS
 
 		void OnDeviceLost() override;
 		void OnDeviceRestored() override;
-        void OnSizeChange(uint32 width, uint32 height) override;
+        void OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed) override;
 
         void RecreateD3D();
         void DoRaytracing();

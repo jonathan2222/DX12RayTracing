@@ -33,15 +33,16 @@ namespace RS
 }
 
 #ifdef RS_CONFIG_DEVELOPMENT
+#define LOG_DETAILED(file, line, func, level, ...) RS::Logger::GetMultiLogger()->log(spdlog::source_loc{file, line, func}, level, __VA_ARGS__)
 	#if LOG_DEBUG_ENABLED
-		#define LOG_DEBUG(...)	SPDLOG_LOGGER_DEBUG(RS::Logger::GetMultiLogger(), __VA_ARGS__)
+		#define LOG_DEBUG(...)	LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::debug, __VA_ARGS__)
 	#else
 		#define LOG_DEBUG(...)
 	#endif
-#define LOG_INFO(...)		SPDLOG_LOGGER_INFO(RS::Logger::GetMultiLogger(), __VA_ARGS__)
-#define LOG_WARNING(...)	SPDLOG_LOGGER_WARN(RS::Logger::GetMultiLogger(), __VA_ARGS__)
-#define LOG_ERROR(...)		SPDLOG_LOGGER_ERROR(RS::Logger::GetMultiLogger(), __VA_ARGS__)
-#define LOG_CRITICAL(...)	SPDLOG_LOGGER_CRITICAL(RS::Logger::GetMultiLogger(), __VA_ARGS__)
+#define LOG_INFO(...)		LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::info, __VA_ARGS__)
+#define LOG_WARNING(...)	LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::warn, __VA_ARGS__)
+#define LOG_ERROR(...)		LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::err, __VA_ARGS__)
+#define LOG_CRITICAL(...)	LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::critical, __VA_ARGS__)
 #define LOG_SUCCESS(...)	LOG_INFO(__VA_ARGS__)
 #define LOG_FLUSH(...)		RS::Logger::Flush()
 #else
