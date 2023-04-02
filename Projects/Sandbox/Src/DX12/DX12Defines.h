@@ -45,6 +45,8 @@ namespace RS::_Internal
 
     inline void Crash(HRESULT hr)
     {
+        RS_UNUSED(hr);
+
 #ifdef RS_CONFIG_DEBUG
         __debugbreak();
 #elif

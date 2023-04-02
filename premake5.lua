@@ -78,15 +78,28 @@ workspace "RayTracingProjectD3D12"
 
 	filter {}
 
+function FixSlashes(s)
+	return s:gsub("\\", "/")
+end
+
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}-%{cfg.platform}"
 
+wksLocation = "%{wks.location}"
+
 includeDir = {}
-includeDir["glfw"] 		= "%{wks.location}/Externals/glfw/include"
-includeDir["imgui"] 	= "%{wks.location}/Externals/imgui"
-includeDir["glm"] 		= "%{wks.location}/Externals/glm/"
-includeDir["spdlog"] 	= "%{wks.location}/Externals/spdlog/include"
-includeDir["stb"] 		= "%{wks.location}/Externals/stb/"
-includeDir["json"] 		= "%{wks.location}/Externals/json/single_include"
+includeDir["glfw"] 				= "%{wks.location}/Externals/glfw/include"
+includeDir["dxc"] 				= "%{wks.location}/Externals/dxc/inc"
+includeDir["imgui"] 			= "%{wks.location}/Externals/imgui"
+includeDir["glm"] 				= "%{wks.location}/Externals/glm/"
+includeDir["spdlog"] 			= "%{wks.location}/Externals/spdlog/include"
+includeDir["stb"] 				= "%{wks.location}/Externals/stb/"
+includeDir["json"] 				= "%{wks.location}/Externals/json/single_include"
+
+libDir = {}
+libDir["dxc"]					= "%{wks.location}/Externals/dxc/lib/"
+
+dllDir = {}
+dllDir["dxc"]					= "%{wks.location}\\Externals\\dxc\\Bin\\"
 
 group "Externals"
 	include "Externals/glfw"

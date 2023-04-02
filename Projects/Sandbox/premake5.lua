@@ -27,9 +27,10 @@ project "Sandbox"
 	--Includes
     includedirs { "Src", "$(IntDir)CompiledShaders\\" }
 
-    sysincludedirs
+    externalincludedirs
 	{
 		"%{includeDir.glm}",
+		"%{includeDir.dxc}",
 		"%{includeDir.imgui}",
 		"%{includeDir.spdlog}",
 		"%{includeDir.stb}",
@@ -44,6 +45,15 @@ project "Sandbox"
 		shaderheaderfileoutput "$(IntDir)CompiledShaders\\%(Filename).hlsl.h"
 	filter {}
 
+	function S(s)
+		return s:gsub("/", "\\")
+	end
+
+	filter {"system:windows"}
+		--D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Projects\Sandbox
+		postbuildcommands {"xcopy /y /d %{dllDir.dxc}dxil.dll %{wks.location}Build\\bin\\" .. outputdir .. "\\%{prj.name}\\"}
+	filter {}
+
 	filter "configurations:Debug"
 		links
 		{
@@ -52,7 +62,7 @@ project "Sandbox"
 			"d3d12.lib",
 			"dxgi.lib",
 			"dxguid.lib",
-			"d3dcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib"
 		}
 
 	filter "configurations:Release"
@@ -62,7 +72,7 @@ project "Sandbox"
 			"imgui",
 			"d3d12.lib",
 			"dxgi.lib",
-			"d3dcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib"
 		}
 	filter "configurations:Production"
 		links
@@ -71,7 +81,7 @@ project "Sandbox"
 			"imgui",
 			"d3d12.lib",
 			"dxgi.lib",
-			"d3dcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib"
 		}
 	filter {}
 

@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#define RS_UNUSED(x) ((void*)x)
+
 #define LOG_DEBUG_ENABLED 1
 #define LOG_ENABLE_WINDOWS_DEBUGGER_LOGGING 1
 #define LOG_FLUSH_INTERVAL 2 // In seconds
@@ -50,7 +52,7 @@ typedef uint64_t	uint64;
 #include "Utils/Utils.h"
 
 /* 
-*	Compile time bitflags relying on __LINE__ to get the right bit indexand uses compile time function to check if name ending as "Flag".
+*	Compile time bitflags relying on __LINE__ to get the right bit index and uses compile time function to check if name is ending with "Flag".
 *	A bitflag name must have 'Flag' as an ending. This allows it to create a typedef for the flags type.
 *	Example:
 *		BEGIN_BITFLAGS_U32(MyFlag)
@@ -59,7 +61,8 @@ typedef uint64_t	uint64;
 *			BITFLAG(C)
 *		END_BITFLAGS()
 * 
-*	This creates a struct called MyFlag which holds constant values of type uint32. The values are A = 1, B = 2 and C = 4. It also adds a flag for zero called NONE automatically.
+*	This creates a struct called MyFlag which holds constant values of type uint32. The values are A = 1, B = 2 and C = 4.
+*	It also adds a flag for zero called NONE automatically and a flag called COUNT. NONE is always 0 and COUNT is the number of user defined flags. In this example it is 3.
 *	One can create a flags variable by doing:
 *		MyFlags tmp = MyFlag::B;
 *	Note the added 's' at the end of the type. This is done to clarify that many flags can be in the same variable.
@@ -78,7 +81,7 @@ typedef uint64_t	uint64;
 			typedef type BitFieldType;																					\
 			template<BitFieldType N>																					\
 			struct FlagStruct {																							\
-			static_assert(N < (sizeof(type) * 8), "N is too big"); \
+			static_assert(N < (sizeof(type) * 8), "N is too big");														\
 				enum : type { value = 1 << N };																			\
 			};																											\
 			template<>																									\
@@ -90,4 +93,8 @@ typedef uint64_t	uint64;
 #define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
 #define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
 #define BITFLAG(flag) inline static constexpr _Internal::BitFieldType flag = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
-#define END_BITFLAGS() };
+#define END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; };
+
+// Check if power of 2 and treat 0 as false.
+#define IS_POWER_OF_2(x) (x && !(x & (x - 1)))
+#define IS_SINGLE_FLAG(flags) IS_POWER_OF_2(flags)

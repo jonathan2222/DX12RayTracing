@@ -3,6 +3,8 @@
 
 #include "Core/Display.h"
 
+#include "DX12/Shader.h"
+
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
@@ -32,6 +34,68 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
         m_IsWindowVisible = true;
         m_Surface.Init(window, width, height, dxgiFlags);
     }
+
+    {
+        LOG_INFO("Compiling with AUTO, reading folder 'TestFolder'");
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "TestFolder";
+        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    {
+        LOG_INFO("Compiling with GEOMETRY, reading 'testName'");
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "testName";
+        shaderDesc.typeFlags = Shader::TypeFlag::GEOMETRY;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    {
+        LOG_INFO("Compiling with PIXEL | VERTEX, reading 'testName'");
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "testName";
+        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    LOG_INFO("Compiling with AUTO, reading 'tmpShaders.hlsl'");
+    Shader shader1;
+    Shader::Description shaderDesc1;
+    shaderDesc1.path = "tmpShaders.hlsl";
+    shaderDesc1.typeFlags = Shader::TypeFlag::AUTO;
+    shader1.Create(shaderDesc1);
+    shader1.Release();
+
+    LOG_INFO("Compiling with COMPUTE, reading 'tmpShaders.hlsl'");
+    Shader shader2;
+    Shader::Description shaderDesc2;
+    shaderDesc2.path = "tmpShaders.hlsl";
+    shaderDesc2.typeFlags = Shader::TypeFlag::COMPUTE;
+    shader2.Create(shaderDesc2);
+    shader2.Release();
+
+    LOG_INFO("Compiling with PIXEL, reading 'tmpShaders.hlsl'");
+    Shader shader3;
+    Shader::Description shaderDesc3;
+    shaderDesc3.path = "tmpShaders.hlsl";
+    shaderDesc3.typeFlags = Shader::TypeFlag::PIXEL;
+    shader3.Create(shaderDesc3);
+    shader3.Release();
+
+    LOG_INFO("Compiling with PIXEL | VERTEX | GEOMETRY, reading 'tmpShaders.hlsl'");
+    Shader shader;
+    Shader::Description shaderDesc;
+    shaderDesc.path = "tmpShaders.hlsl";
+    shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX | Shader::TypeFlag::GEOMETRY;
+    shader.Create(shaderDesc);
+    shader.Release();
 }
 
 void RS::DX12::Dx12Core2::Release()
@@ -92,7 +156,8 @@ void RS::DX12::Dx12Core2::Render()
         ProcessDeferredReleases(frameIndex);
     }
 
-    m_Surface.PrepareDraw(m_FrameCommandList.GetCommandList());
+    ID3D12GraphicsCommandList* pCommandList = m_FrameCommandList.GetCommandList();
+    m_Surface.PrepareDraw(pCommandList);
 
     // Record commands...
     {
@@ -102,10 +167,10 @@ void RS::DX12::Dx12Core2::Render()
         rect.left = rect.top = 0;
         rect.right = m_Surface.GetWidth();
         rect.bottom = m_Surface.GetHeight();
-        m_FrameCommandList.GetCommandList()->ClearRenderTargetView(rt.handle.m_Cpu, clearColor, 1, &rect);
+        pCommandList->ClearRenderTargetView(rt.handle.m_Cpu, clearColor, 1, &rect);
     }
 
-    m_Surface.EndDraw(m_FrameCommandList.GetCommandList());
+    m_Surface.EndDraw(pCommandList);
 
     // Tell the GPU to exectue the command lists, appened signal command and go to the next frame.
     m_FrameCommandList.EndFrame();
@@ -114,6 +179,10 @@ void RS::DX12::Dx12Core2::Render()
         m_Surface.Present();
 
     m_FrameCommandList.MoveToNextFrame();
+}
+
+void RS::DX12::Dx12Core2::Transition()
+{
 }
 
 void RS::DX12::Dx12Core2::ReleaseDeferredResources()

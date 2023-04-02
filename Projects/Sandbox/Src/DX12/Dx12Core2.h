@@ -38,8 +38,17 @@ namespace RS::DX12
 		Dx12DescriptorHeap* GetDescriptorHeapSRV() { return &m_DescriptorHeapSRV; }
 		Dx12DescriptorHeap* GetDescriptorHeapUAV() { return &m_DescriptorHeapUAV; }
 
-		void ReleaseDeferredResources();
+		// ---- Context Commands ----
+		void Transition(); // TODO: Implement
+		void Clear() {} // TODO: Implement
+		void Draw() {} // TODO: Implement
+		void Dispatch() {} // TODO: Implement
+		void DrawIndirect() {} // TODO: Implement
+		void DispatchIndirect() {} // TODO: Implement
+		// Etc.
 
+		// ---- Release Functions ----
+		void ReleaseDeferredResources();
 		template<typename T>
 		void DeferredRelease(T*& resouce);
 	private:

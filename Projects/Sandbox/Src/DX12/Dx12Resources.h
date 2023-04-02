@@ -22,7 +22,7 @@ namespace RS::DX12
 #endif
 	};
 
-	// TODO: Remember that this heap might be called from different threads!
+	// Note: Remember that this heap might be called from different threads!
 	class Dx12DescriptorHeap
 	{
 	public:
@@ -67,5 +67,19 @@ namespace RS::DX12
 #ifdef RS_CONFIG_DEBUG
 		std::string							m_DebugName = "Unnamed Heap"; // Name of the heap
 #endif
+	};
+
+	class Dx12Buffer
+	{
+		// TODO: Implement this!
+	};
+
+	class Dx12Texture
+	{
+	public:
+		// TODO: Implement this!
+		// Might want to do a separate texture class for textures on a render target.
+	private:
+
 	};
 }
