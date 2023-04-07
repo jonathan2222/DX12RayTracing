@@ -93,7 +93,8 @@ typedef uint64_t	uint64;
 #define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
 #define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
 #define BITFLAG(flag) inline static constexpr _Internal::BitFieldType flag = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
-#define END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; };
+#define END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; \
+	inline static constexpr _Internal::BitFieldType MASK = (1 << COUNT) - 1; };
 
 // Check if power of 2 and treat 0 as false.
 #define IS_POWER_OF_2(x) (x && !(x & (x - 1)))

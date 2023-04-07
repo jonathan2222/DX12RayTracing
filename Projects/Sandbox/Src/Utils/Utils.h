@@ -58,5 +58,29 @@ namespace RS
 			fmt::format_to(std::back_inserter(str), fmt, std::forward<Args>(args)...);
 			return str;
 		}
+
+		// Bit manipulations
+
+		// Check if power of 2 and treat 0 as false. (with other words, check if only one bit is set)
+		template<typename T>
+		static bool IsPowerOfTwo(T x)
+		{
+			return x && !(x & (x - 1));
+		}
+
+		template<typename T>
+		static T IndexOfPow2Bit(T x)
+		{
+			if (!IsPowerOfTwo<T>(x))
+				return (T)-1;
+
+			T i = 1, pos = 0;
+			while (!(i & x))
+			{
+				i = i << 1;
+				++pos;
+			}
+			return pos;
+		}
 	};
 }

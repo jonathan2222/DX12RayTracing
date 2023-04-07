@@ -46,6 +46,16 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     }
 
     {
+        LOG_INFO("Compiling with PIXEL | VERTEX, reading folder 'TestFolder2'");
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "TestFolder2";
+        shaderDesc.typeFlags = Shader::TypeFlag::VERTEX | Shader::TypeFlag::PIXEL;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    {
         LOG_INFO("Compiling with GEOMETRY, reading 'testName'");
         Shader shader;
         Shader::Description shaderDesc;
