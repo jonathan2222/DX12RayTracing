@@ -33,111 +33,133 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     { // Dx12Core2 users
         m_IsWindowVisible = true;
         m_Surface.Init(window, width, height, dxgiFlags);
+
+        m_Pipeline.Init();
+
+        struct Vertex
+        {
+            float position[4];
+            float color[4];
+        };
+
+        float aspectRatio = (float)Display::Get()->GetWidth() / Display::Get()->GetHeight();
+        Vertex triangleVertices[] =
+        {
+            { { 0.0f, 0.25f * aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { -0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+        };
+    
+        const UINT vertexBufferSize = sizeof(triangleVertices);
+        m_VertexBuffer.Create((uint8*)&triangleVertices[0], sizeof(Vertex), vertexBufferSize);
     }
 
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "TestFolder";
-        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "TestFolder2";
-        shaderDesc.typeFlags = Shader::TypeFlag::VERTEX | Shader::TypeFlag::PIXEL;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "testName";
-        shaderDesc.typeFlags = Shader::TypeFlag::GEOMETRY;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "testName";
-        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "tmpShaders.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "tmpShaders.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::COMPUTE;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "tmpShaders.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "tmpShaders.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX | Shader::TypeFlag::GEOMETRY;
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "customEntryPoints.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
-        shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::PIXEL, "PSMain" });
-        shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::VERTEX, "VSMain" });
-        shader.Create(shaderDesc);
-        shader.Release();
-    }
-
-    {
-        Shader shader;
-        Shader shaderVertex;
-        Shader::Description shaderDesc;
-        shaderDesc.path = "tmpShaders.hlsl";
-        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL;
-        shader.Create(shaderDesc);
-
-        shaderDesc.typeFlags = Shader::TypeFlag::VERTEX;
-        shaderVertex.Create(shaderDesc);
-
-        shader.Combine(shaderVertex);
-        shader.Release();
-    }
+    // ---------- Tests ----------
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "TestFolder";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Auto;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "TestFolder2";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Vertex | Shader::TypeFlag::Pixel;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "testName";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Geometry;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "testName";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "tmpShaders.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Auto;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "tmpShaders.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Compute;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "tmpShaders.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Pixel;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "tmpShaders.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex | Shader::TypeFlag::Geometry;
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "customEntryPoints.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Auto;
+    //    shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::Pixel, "PSMain" });
+    //    shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::Vertex, "VSMain" });
+    //    shader.Create(shaderDesc);
+    //    shader.Release();
+    //}
+    //
+    //{
+    //    Shader shader;
+    //    Shader shaderVertex;
+    //    Shader::Description shaderDesc;
+    //    shaderDesc.path = "tmpShaders.hlsl";
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Pixel;
+    //    shader.Create(shaderDesc);
+    //
+    //    shaderDesc.typeFlags = Shader::TypeFlag::Vertex;
+    //    shaderVertex.Create(shaderDesc);
+    //
+    //    shader.Combine(shaderVertex);
+    //    shader.Release();
+    //}
 }
 
 void RS::DX12::Dx12Core2::Release()
 {
     // TODO: Move these outside of Dx12Core2!
     { // Dx12Core2 users
+        m_VertexBuffer.Release();
+        m_Pipeline.Release();
         m_Surface.ReleaseResources();
     }
 
@@ -184,7 +206,7 @@ bool RS::DX12::Dx12Core2::WindowSizeChanged(uint32 width, uint32 height, bool is
 void RS::DX12::Dx12Core2::Render()
 {
     // Wait for the current frame's commands to finish, then resets both the command list and the command allocator.
-    m_FrameCommandList.BeginFrame();
+    m_FrameCommandList.BeginFrame(m_Pipeline.GetPipelineState());
 
     const uint32 frameIndex = GetCurrentFrameIndex();
     if (m_DeferredReleasesFlags[frameIndex])
@@ -198,12 +220,33 @@ void RS::DX12::Dx12Core2::Render()
     // Record commands...
     {
         const Dx12Surface::RenderTarget& rt = m_Surface.GetCurrentRenderTarget();
+
+        pCommandList->SetGraphicsRootSignature(m_Pipeline.GetRootSignature());
+        D3D12_VIEWPORT viewport{};
+        viewport.MaxDepth = 1;
+        viewport.MinDepth = 0;
+        viewport.TopLeftX = viewport.TopLeftY = 0;
+        viewport.Width = Display::Get()->GetWidth();
+        viewport.Height = Display::Get()->GetHeight();
+        pCommandList->RSSetViewports(1, &viewport);
+        D3D12_RECT scissorRect{};
+        scissorRect.left = scissorRect.top = 0;
+        scissorRect.right = viewport.Width;
+        scissorRect.bottom = viewport.Height;
+        pCommandList->RSSetScissorRects(1, &scissorRect);
+
+        pCommandList->OMSetRenderTargets(1, &rt.handle.m_Cpu, false, nullptr);
+
         const FLOAT clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
         D3D12_RECT rect = {};
         rect.left = rect.top = 0;
         rect.right = m_Surface.GetWidth();
         rect.bottom = m_Surface.GetHeight();
         pCommandList->ClearRenderTargetView(rt.handle.m_Cpu, clearColor, 1, &rect);
+
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pCommandList->IASetVertexBuffers(0, 1, &m_VertexBuffer.view);
+        pCommandList->DrawInstanced(3, 1, 0, 0);
     }
 
     m_Surface.EndDraw(pCommandList);

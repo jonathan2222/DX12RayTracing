@@ -146,3 +146,45 @@ bool RS::DX12::Dx12DescriptorHeap::ValidateFree(uint32 handleIndex) const
 	return found;
 }
 #endif
+
+void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 stride, uint32 size)
+{
+	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
+	RS_ASSERT_NO_MSG(pDevice);
+
+	DXCall(pDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(size),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&pResource)));
+
+	// Copy the triangle data to the vertex buffer.
+	UINT8* pDataBegin;
+	CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+	DXCall(pResource->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin)));
+	memcpy(pDataBegin, pInitialData, size);
+	pResource->Unmap(0, nullptr);
+	
+	// Initialize the vertex buffer view.
+	view.BufferLocation = pResource->GetGPUVirtualAddress();
+	view.StrideInBytes = stride;
+	view.SizeInBytes = size;
+}
+
+void RS::DX12::Dx12Buffer::Release()
+{
+	DX12_RELEASE(pResource);
+	view.BufferLocation = 0;
+	view.SizeInBytes = 0;
+	view.StrideInBytes = 0;
+}
+
+void RS::DX12::Dx12Buffer::Map()
+{
+}
+
+void RS::DX12::Dx12Buffer::Unmap()
+{
+}

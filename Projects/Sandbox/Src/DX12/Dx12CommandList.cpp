@@ -56,13 +56,13 @@ void RS::DX12::Dx12FrameCommandList::Release()
 		m_CommandFrames[i].Release();
 }
 
-void RS::DX12::Dx12FrameCommandList::BeginFrame()
+void RS::DX12::Dx12FrameCommandList::BeginFrame(ID3D12PipelineState* pPipelineState)
 {
 	CommandFrame& commandFrame = m_CommandFrames[m_FrameIndex];
 	commandFrame.Wait(m_QueueFence, m_CPUFenceEvent);
 
 	DXCallVerbose(commandFrame.m_CommandAllocator->Reset());
-	DXCallVerbose(m_CommandList->Reset(commandFrame.m_CommandAllocator, nullptr));
+	DXCallVerbose(m_CommandList->Reset(commandFrame.m_CommandAllocator, pPipelineState));
 }
 
 void RS::DX12::Dx12FrameCommandList::EndFrame()

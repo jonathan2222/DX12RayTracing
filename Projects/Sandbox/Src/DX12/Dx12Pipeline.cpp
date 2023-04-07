@@ -2,6 +2,7 @@
 #include "Dx12Pipeline.h"
 
 #include "DX12/Dx12Core2.h"
+#include "Shader.h"
 
 void RS::DX12::Dx12Pipeline::Init()
 {
@@ -16,22 +17,12 @@ void RS::DX12::Dx12Pipeline::Release()
 
 void RS::DX12::Dx12Pipeline::CreatePipeline()
 {
-	ComPtr<ID3DBlob> vertexShader;
-	ComPtr<ID3DBlob> vertexShaderErrorMsg;
-	ComPtr<ID3DBlob> pixelShader;
-	ComPtr<ID3DBlob> pixelShaderErrorMsg;
-
-#ifdef RS_CONFIG_DEBUG
-	// Enable better shader debugging with the graphics debugging tools.
-	INT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION | D3DCOMPILE_DEBUG_NAME_FOR_SOURCE;
-#else
-	compileFlags = 0;
-#endif
-
-	std::wstring shaderPath = Utils::ToWString(RS_SHADER_PATH + std::string("tmpShaders.hlsl"));
-	//DXCall(D3DCompileFromFile(shaderPath.c_str(), nullptr, nullptr, "VSMain", "vs_6_0", compileFlags, 0, &vertexShader, &vertexShaderErrorMsg));
-	//DXCall(D3DCompileFromFile(shaderPath.c_str(), nullptr, nullptr, "PSMain", "ps_6_0", compileFlags, 0, &pixelShader, &pixelShaderErrorMsg));
-
+	Shader shader;
+	Shader::Description shaderDesc{};
+	shaderDesc.path = "tmpShaders.hlsl";
+	shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex;
+	shader.Create(shaderDesc);
+	
 	DX12_DEVICE_PTR pDevice = Dx12Core2::Get()->GetD3D12Device();
 
 	// Create an empty root signature.
@@ -66,14 +57,20 @@ void RS::DX12::Dx12Pipeline::CreatePipeline()
 	inputLayoutDesc.NumElements = inputElementDescs.size();
 	inputLayoutDesc.pInputElementDescs = inputElementDescs.data();
 
+	auto GetShaderBytecode = [&](IDxcBlob* shaderObject)->CD3DX12_SHADER_BYTECODE {
+		if (shaderObject)
+			return CD3DX12_SHADER_BYTECODE(shaderObject->GetBufferPointer(), shaderObject->GetBufferSize());
+		return CD3DX12_SHADER_BYTECODE(nullptr, 0);
+	};
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
 	psoDesc.InputLayout = inputLayoutDesc;
 	psoDesc.pRootSignature = m_RootSignature;
-	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-	//psoDesc.DS
-	//psoDesc.HS
-	//psoDesc.GS
+	psoDesc.VS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Vertex, true));
+	psoDesc.PS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Pixel, true));
+	psoDesc.DS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Domain, true));
+	psoDesc.HS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Hull, true));
+	psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Geometry, true));
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState.DepthEnable = FALSE;
@@ -94,4 +91,6 @@ void RS::DX12::Dx12Pipeline::CreatePipeline()
 	psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
 #endif
 	DXCall(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PipelineState)));
+
+	shader.Release();
 }

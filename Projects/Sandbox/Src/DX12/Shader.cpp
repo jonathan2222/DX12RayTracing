@@ -182,6 +182,25 @@ bool RS::DX12::Shader::Combine(Shader& other)
 	return true;
 }
 
+IDxcBlob* RS::DX12::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) const
+{
+	if (!Utils::IsPowerOfTwo(type))
+	{
+		LOG_ERROR("Trying to fetch shader blob using multiple types! Type: {}", TypesToString(type));
+		return nullptr;
+	}
+
+	for (const PartData& part : m_ShaderParts)
+	{
+		if (part.type & type)
+			return part.pShaderObject;
+	}
+
+	if (!supressWarnings)
+		LOG_WARNING("Fetching non-existing shader blob type! Type: {}", TypesToString(type));
+	return nullptr;
+}
+
 bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& filePath, TypeFlags& remainingTypesToCompile, TypeFlags& finalTypes, TypeFlags& totalTypesSeen, bool isTheOnlyFile)
 {
 	// Load shader and its types.
@@ -207,7 +226,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 
 	// Fetch types to compile.
 	TypeFlags currentTypes = remainingTypesToCompile;
-	if (currentTypes == TypeFlag::AUTO)
+	if (currentTypes == TypeFlag::Auto)
 	{
 		currentTypes = typesInFile;
 
@@ -230,7 +249,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 			result &= CompileShaderPart(file, typeToCheck) ? 1 : 0;
 			if (result)
 			{
-				if (remainingTypesToCompile != TypeFlag::AUTO)
+				if (remainingTypesToCompile != TypeFlag::Auto)
 					remainingTypesToCompile = remainingTypesToCompile & ~typeToCheck;
 				finalTypes |= typeToCheck;
 			}
@@ -281,7 +300,7 @@ RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File&
 				if (cIndex == len) // Match!!
 				{
 					uint32 typeFlag = 1 << typeIndex;
-					if ((TypeFlag::MASK & typeFlag) && !(typeFlag & TypeFlag::AUTO))
+					if ((TypeFlag::MASK & typeFlag) && !(typeFlag & TypeFlag::Auto))
 					{
 						types |= typeFlag;
 						if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
@@ -338,12 +357,12 @@ bool RS::DX12::Shader::ValidateShaderTypes(TypeFlags types) const
 		LOG_ERROR("Invalid shader types. Zero shader types were used!");
 		return false;
 	}
-	else if (types == TypeFlag::AUTO)
+	else if (types == TypeFlag::Auto)
 	{
 		return true;
 	}
 
-	if ((types & TypeFlag::COMPUTE) && (types & ~TypeFlag::COMPUTE))
+	if ((types & TypeFlag::Compute) && (types & ~TypeFlag::Compute))
 	{
 		LOG_ERROR("Cannot have a compute shader together with other types!");
 		return false;
@@ -360,7 +379,7 @@ bool RS::DX12::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToComp
 		LOG_WARNING("There are one or more shader types that are unused in the files! Unused types: {}, Path {}", unusedTypes, m_ShaderPath);
 	}
 
-	if (remainingTypesToCompile != TypeFlag::AUTO && remainingTypesToCompile != TypeFlag::NONE)
+	if (remainingTypesToCompile != TypeFlag::Auto && remainingTypesToCompile != TypeFlag::NONE)
 	{
 		std::string remainingTypesToCompileStr = TypesToString(remainingTypesToCompile);
 		LOG_ERROR("Could not find all types. Remaining types are left! Remaining types: {}, Path: {}", remainingTypesToCompileStr, m_ShaderPath);
@@ -591,7 +610,7 @@ std::string RS::DX12::Shader::TypesToString(TypeFlags types) const
 		}
 	}
 
-	if (types & TypeFlag::AUTO)
+	if (types & TypeFlag::Auto)
 	{
 		result += (processedCount++ == 0 ? "" : " | ") + std::string("AUTO");
 	}

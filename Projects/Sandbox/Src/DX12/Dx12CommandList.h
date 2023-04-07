@@ -14,7 +14,7 @@ namespace RS::DX12
 		void Init(DX12_DEVICE_PTR pDevice, D3D12_COMMAND_LIST_TYPE type);
 		void Release();
 
-		void BeginFrame();
+		void BeginFrame(ID3D12PipelineState* pPipelineState);
 		void EndFrame();
 		void MoveToNextFrame();
 

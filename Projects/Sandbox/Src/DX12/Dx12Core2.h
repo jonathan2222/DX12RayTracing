@@ -7,6 +7,8 @@
 #include "Dx12Resources.h"
 #include "Dx12Surface.h"
 
+#include "Dx12Pipeline.h"
+
 namespace RS::DX12
 {
 	class Dx12Core2
@@ -71,6 +73,9 @@ namespace RS::DX12
 		Dx12DescriptorHeap		m_DescriptorHeapDSV{ D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
 		Dx12DescriptorHeap		m_DescriptorHeapSRV{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
 		Dx12DescriptorHeap		m_DescriptorHeapUAV{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
+
+		Dx12Pipeline			m_Pipeline;
+		Dx12Buffer				m_VertexBuffer;
 	};
 
 	template<typename T>

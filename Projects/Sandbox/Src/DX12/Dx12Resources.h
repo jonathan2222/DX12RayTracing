@@ -71,7 +71,16 @@ namespace RS::DX12
 
 	class Dx12Buffer
 	{
-		// TODO: Implement this!
+	public:
+		void Create(uint8* pInitialData, uint32 stride, uint32 size);
+		void Release();
+
+		void Map();
+		void Unmap();
+
+		Dx12DescriptorHandle handle;
+		D3D12_VERTEX_BUFFER_VIEW view;
+		ID3D12Resource* pResource = nullptr;
 	};
 
 	class Dx12Texture
