@@ -5,6 +5,59 @@
 
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
+
+namespace RS::DX12::_ShaderInternal
+{
+	struct ShaderTypeInfo
+	{
+		Shader::TypeFlags type;
+		char* name;
+		char* defaultEntryPoint;
+		char* typeStr; // e.g vs gs ps etc.
+		char* extension;
+	};
+
+#define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) {type, name, defaultEntryPoint, typeStr, extension},
+	constexpr ShaderTypeInfo g_ShaderTypeInfos[] = {
+#include "ShaderTypes.h"
+	};
+#undef DEF_SHADER_TYPE
+
+#define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) name,
+	constexpr char* g_ShaderTypeNames[] = {
+#include "ShaderTypes.h"
+	};
+#undef DEF_SHADER_TYPE
+
+#define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) defaultEntryPoint,
+	constexpr char* g_ShaderTypeDefaultEntryPoints[] = {
+#include "ShaderTypes.h"
+	};
+#undef DEF_SHADER_TYPE
+
+#define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) typeStr,
+	constexpr char* g_ShaderTypeStrs[] = {
+#include "ShaderTypes.h"
+	};
+#undef DEF_SHADER_TYPE
+
+#define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) extension,
+	constexpr char* g_ShaderTypeExtensions[] = {
+	".hlsl",
+#include "ShaderTypes.h"
+	};
+#undef DEF_SHADER_TYPE
+}
+
+RS::DX12::Shader::~Shader()
+{
+	for (auto& part : m_ShaderParts)
+	{
+		if (part.pPDBData || part.pPDBPathFromCompiler || part.pReflection || part.pShaderObject || part.type)
+			LOG_ERROR("Shader part was not released!");
+	}
+}
 
 bool RS::DX12::Shader::Create(const Description& description)
 {
@@ -13,8 +66,10 @@ bool RS::DX12::Shader::Create(const Description& description)
 
 	m_ShaderPath = RS_SHADER_PATH + description.path; // Mainly for debug purposes.
 
-	const std::vector<std::pair<TypeFlags, std::string>> customEntryPoints;
-	ConstructEntryPointsArray(customEntryPoints);
+	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
+		LOG_INFO("Compiling shader with types: {}, Path: {}", TypesToString(description.typeFlags), m_ShaderPath);
+
+	ConstructEntryPointsArray(description.customEntryPoints);
 
 	// Path can be a path to a folder or a path with a filename (including or excluding the extension). Like this:
 	// shaderPasses/coolShaderPass or shaderPasses/coolShaderPass.ps (for pixel shader) or a generic shaderPasses/coolShaderPass.hlsl
@@ -89,9 +144,23 @@ void RS::DX12::Shader::Release()
 		DX12_RELEASE(part.pShaderObject);
 		part.type = TypeFlag::NONE;
 	}
+	m_ShaderPath = "";
 }
 
-bool RS::DX12::Shader::Combine(const Shader& other)
+void RS::DX12::Shader::Invalidate()
+{
+	for (PartData& part : m_ShaderParts)
+	{
+		part.pPDBData = nullptr;
+		part.pPDBPathFromCompiler = nullptr;;
+		part.pReflection = nullptr;
+		part.pShaderObject = nullptr;
+		part.type = TypeFlag::NONE;
+	}
+	m_ShaderPath = "";
+}
+
+bool RS::DX12::Shader::Combine(Shader& other)
 {
 	TypeFlags overlappingTypes = m_Types & other.m_Types;
 	if (overlappingTypes)
@@ -106,6 +175,9 @@ bool RS::DX12::Shader::Combine(const Shader& other)
 
 	// TODO: Might want to split this into an array?
 	m_ShaderPath += other.m_ShaderPath;
+	m_Types |= other.m_Types;
+
+	other.Invalidate();
 
 	return true;
 }
@@ -121,8 +193,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 
 	File file = ReadFile(filePath.string());
 
-	const std::vector<std::pair<TypeFlags, std::string>> customEntryPoints;
-	TypeFlags typesInFile = GetShaderTypesFromFile(file, customEntryPoints);
+	TypeFlags typesInFile = GetShaderTypesFromFile(file);
 
 	totalTypesSeen |= typesInFile;
 
@@ -130,7 +201,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 	if (typesInFile & finalTypes)
 	{
 		std::string duplicateTypesStr = TypesToString(typesInFile & finalTypes);
-		LOG_WARNING("Duplicate types found! Choosing the first one. Duplicate types: {}, FilePath: {}", duplicateTypesStr, filePath.string());
+		LOG_WARNING("Duplicate types found! Choosing the first one. Current Duplicate types: {}, FilePath: {}", duplicateTypesStr, filePath.string());
 		typesInFile = typesInFile & ~(typesInFile & finalTypes);
 	}
 
@@ -156,7 +227,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 		TypeFlags typeToCheck = 1 << typeIndex;
 		if ((typeToCheck & currentTypes) & typesInFile)
 		{
-			result &= CreateShaderPart(file, typeToCheck) ? 1 : 0;
+			result &= CompileShaderPart(file, typeToCheck) ? 1 : 0;
 			if (result)
 			{
 				if (remainingTypesToCompile != TypeFlag::AUTO)
@@ -174,11 +245,14 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 	return result != 0;
 }
 
-RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File& file, const std::vector<std::pair<TypeFlags, std::string>>& customEntryPoints) const
+RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File& file) const
 {
 	TypeFlags types = TypeFlag::NONE;
 	if (!file.pData || file.size == 0)
 		return types;
+
+	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
+		LOG_INFO("Parsing file: {}", file.name);
 
 	// TODO: Make this code pretty. By using tokens and loop through them to check if they match. Then we can extend it to preprocess the shaders with more functionality.
 
@@ -188,23 +262,30 @@ RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File&
 		entryPointStringsToSearch[i] = m_EntryPointStrings[i].empty() ? "" : m_EntryPointStrings[i] + '(';
 
 	uint32 cIndex = 0;
+	std::unordered_set<uint8> typeIndexMatches;
 	for (uint64 i = 0; i < file.size; ++i)
 	{
 		char c = ((char*)file.pData)[i];
 		bool found = false;
 		for (uint8 typeIndex = 0; typeIndex < typeCount; ++typeIndex)
 		{
-			uint32 len = entryPointStringsToSearch[typeIndex].length();
+			uint32 len = (uint32)entryPointStringsToSearch[typeIndex].length();
 			if (len > 0 && cIndex < len && c == entryPointStringsToSearch[typeIndex][cIndex])
 			{
+				if (cIndex != 0 && !typeIndexMatches.count(typeIndex))
+					continue;
+
 				found = true;
 				cIndex++;
+				typeIndexMatches.insert(typeIndex);
 				if (cIndex == len) // Match!!
 				{
 					uint32 typeFlag = 1 << typeIndex;
 					if ((TypeFlag::MASK & typeFlag) && !(typeFlag & TypeFlag::AUTO))
 					{
 						types |= typeFlag;
+						if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
+							LOG_INFO("\tFound type {}", TypesToString(typeFlag));
 					}
 					else
 					{
@@ -214,7 +295,11 @@ RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File&
 				break;
 			}
 		}
-		if (!found) cIndex = 0;
+		if (!found)
+		{
+			cIndex = 0;
+			typeIndexMatches.clear();
+		}
 	}
 
 	return types;
@@ -269,6 +354,12 @@ bool RS::DX12::Shader::ValidateShaderTypes(TypeFlags types) const
 
 bool RS::DX12::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToCompile, TypeFlags finalTypes, TypeFlags totalTypesSeen) const
 {
+	if ((totalTypesSeen & (~finalTypes)) != TypeFlag::NONE)
+	{
+		std::string unusedTypes = TypesToString(totalTypesSeen & (~finalTypes));
+		LOG_WARNING("There are one or more shader types that are unused in the files! Unused types: {}, Path {}", unusedTypes, m_ShaderPath);
+	}
+
 	if (remainingTypesToCompile != TypeFlag::AUTO && remainingTypesToCompile != TypeFlag::NONE)
 	{
 		std::string remainingTypesToCompileStr = TypesToString(remainingTypesToCompile);
@@ -276,11 +367,6 @@ bool RS::DX12::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToComp
 		return false;
 	}
 
-	if ((totalTypesSeen & finalTypes) != TypeFlag::NONE)
-	{
-		std::string unusedTypes = TypesToString(totalTypesSeen & finalTypes);
-		LOG_WARNING("There are one or more shader types that are unused in the files! Unused types: {}, Path {}", unusedTypes, m_ShaderPath);
-	}
 	return true;
 }
 
@@ -303,7 +389,7 @@ bool RS::DX12::Shader::CheckIfOnlyOneTypeIsSet(TypeFlags type) const
 	return Utils::IsPowerOfTwo(type);
 }
 
-bool RS::DX12::Shader::CreateShaderPart(const File& file, TypeFlags type)
+bool RS::DX12::Shader::CompileShaderPart(const File& file, TypeFlags type)
 {
 	std::string typeStr = TypesToString(type);
 	if (!CheckIfOnlyOneTypeIsSet(type))
@@ -322,6 +408,7 @@ bool RS::DX12::Shader::CreateShaderPart(const File& file, TypeFlags type)
 		DXCallVerbose(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler)));
 	}
 
+	std::wstring sourceName = file.name.empty() ? L"" : Utils::ToWString(file.name);
 	std::wstring entryPoint = L"Main";
 	std::wstring version = L"6_0";
 	std::vector<LPCWSTR> arguments;
@@ -357,11 +444,20 @@ bool RS::DX12::Shader::CreateShaderPart(const File& file, TypeFlags type)
 	//arguments.push_back(L"<reflectionPath>");
 	arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
 
+	if (!file.name.empty())
+	{
+		arguments.push_back(DXC_ARG_DEBUG_NAME_FOR_SOURCE);
+		arguments.push_back(sourceName.c_str());
+	}
+
 	//for (const std::wstring& define : defines)
 	//{
 	//	arguments.push_back(L"-D");
 	//	arguments.push_back(define.c_str());
 	//}
+
+	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
+		LOG_INFO("Compiling shader part {}", typeStr);
 
 	DxcBuffer sourceBuffer;
 	sourceBuffer.Ptr = file.pData;
@@ -382,13 +478,13 @@ bool RS::DX12::Shader::CreateShaderPart(const File& file, TypeFlags type)
 		if (errorMsgs && errorMsgs->GetStringLength())
 		{
 			const char* compileErrors = (const char*)errorMsgs->GetStringPointer();
-			LOG_ERROR("Failed to compile shader part! Type: {}, Path: {}\nCompile returned HRESULT: {:#10x}, Errors/Warnings:\n{}", typeStr, m_ShaderPath, hr, compileErrors);
+			LOG_ERROR("Failed to compile shader part! Type: {}, Path: {}\nCompile returned HRESULT: {:#10x}, Errors/Warnings:\n{}", typeStr, file.name, hr, compileErrors);
 			return false;
 		}
 
 		if (FAILED(hr))
 		{
-			LOG_ERROR("Failed to compile shader! Type: {}, Path: {}", typeStr, m_ShaderPath);
+			LOG_ERROR("Failed to compile shader! Type: {}, Path: {}", typeStr, file.name);
 			return false;
 		}
 	}
@@ -440,6 +536,14 @@ void RS::DX12::Shader::ConstructEntryPointsArray(const std::vector<std::pair<Typ
 		else
 			m_EntryPointStrings[i] = it->second;
 	}
+
+	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
+	{
+		std::string entryPoints;
+		for (uint32 i = 0; i < m_EntryPointStrings.size(); i++)
+			entryPoints += (i == 0 ? "" : ", ") + m_EntryPointStrings[i];
+		LOG_INFO("Using entry point set: {}", entryPoints);
+	}
 }
 
 RS::DX12::Shader::File RS::DX12::Shader::ReadFile(const std::string& path) const
@@ -450,6 +554,9 @@ RS::DX12::Shader::File RS::DX12::Shader::ReadFile(const std::string& path) const
 		LOG_ERROR("Shader file does not exist! Path: {}", path.c_str());
 		return file;
 	}
+
+	// For debug purposes.
+	file.name = path;
 
 	std::ifstream stream(path, std::ios::binary | std::ios::ate);
 	if (stream.is_open())
@@ -475,12 +582,18 @@ std::string RS::DX12::Shader::TypesToString(TypeFlags types) const
 	std::string result;
 
 	const uint32 typeCountWihtoutAUTO = TypeFlag::COUNT - 1;
-	for (uint32 typeIndex = 0, processedCount = 0; typeIndex < typeCountWihtoutAUTO; typeIndex++)
+	uint32 processedCount = 0;
+	for (uint32 typeIndex = 0; typeIndex < typeCountWihtoutAUTO; typeIndex++)
 	{
 		if ((1 << typeIndex) & types)
 		{
 			result += (processedCount++ == 0 ? "" : " | ") + std::string(_ShaderInternal::g_ShaderTypeNames[typeIndex]);
 		}
+	}
+
+	if (types & TypeFlag::AUTO)
+	{
+		result += (processedCount++ == 0 ? "" : " | ") + std::string("AUTO");
 	}
 
 	if (!result.empty())

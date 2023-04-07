@@ -36,7 +36,6 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     }
 
     {
-        LOG_INFO("Compiling with AUTO, reading folder 'TestFolder'");
         Shader shader;
         Shader::Description shaderDesc;
         shaderDesc.path = "TestFolder";
@@ -46,7 +45,6 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     }
 
     {
-        LOG_INFO("Compiling with PIXEL | VERTEX, reading folder 'TestFolder2'");
         Shader shader;
         Shader::Description shaderDesc;
         shaderDesc.path = "TestFolder2";
@@ -56,7 +54,6 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     }
 
     {
-        LOG_INFO("Compiling with GEOMETRY, reading 'testName'");
         Shader shader;
         Shader::Description shaderDesc;
         shaderDesc.path = "testName";
@@ -66,7 +63,6 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     }
 
     {
-        LOG_INFO("Compiling with PIXEL | VERTEX, reading 'testName'");
         Shader shader;
         Shader::Description shaderDesc;
         shaderDesc.path = "testName";
@@ -75,37 +71,67 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
         shader.Release();
     }
 
-    LOG_INFO("Compiling with AUTO, reading 'tmpShaders.hlsl'");
-    Shader shader1;
-    Shader::Description shaderDesc1;
-    shaderDesc1.path = "tmpShaders.hlsl";
-    shaderDesc1.typeFlags = Shader::TypeFlag::AUTO;
-    shader1.Create(shaderDesc1);
-    shader1.Release();
+    {
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "tmpShaders.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
 
-    LOG_INFO("Compiling with COMPUTE, reading 'tmpShaders.hlsl'");
-    Shader shader2;
-    Shader::Description shaderDesc2;
-    shaderDesc2.path = "tmpShaders.hlsl";
-    shaderDesc2.typeFlags = Shader::TypeFlag::COMPUTE;
-    shader2.Create(shaderDesc2);
-    shader2.Release();
+    {
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "tmpShaders.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::COMPUTE;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
 
-    LOG_INFO("Compiling with PIXEL, reading 'tmpShaders.hlsl'");
-    Shader shader3;
-    Shader::Description shaderDesc3;
-    shaderDesc3.path = "tmpShaders.hlsl";
-    shaderDesc3.typeFlags = Shader::TypeFlag::PIXEL;
-    shader3.Create(shaderDesc3);
-    shader3.Release();
+    {
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "tmpShaders.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
 
-    LOG_INFO("Compiling with PIXEL | VERTEX | GEOMETRY, reading 'tmpShaders.hlsl'");
-    Shader shader;
-    Shader::Description shaderDesc;
-    shaderDesc.path = "tmpShaders.hlsl";
-    shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX | Shader::TypeFlag::GEOMETRY;
-    shader.Create(shaderDesc);
-    shader.Release();
+    {
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "tmpShaders.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL | Shader::TypeFlag::VERTEX | Shader::TypeFlag::GEOMETRY;
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    {
+        Shader shader;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "customEntryPoints.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::AUTO;
+        shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::PIXEL, "PSMain" });
+        shaderDesc.customEntryPoints.push_back({ Shader::TypeFlag::VERTEX, "VSMain" });
+        shader.Create(shaderDesc);
+        shader.Release();
+    }
+
+    {
+        Shader shader;
+        Shader shaderVertex;
+        Shader::Description shaderDesc;
+        shaderDesc.path = "tmpShaders.hlsl";
+        shaderDesc.typeFlags = Shader::TypeFlag::PIXEL;
+        shader.Create(shaderDesc);
+
+        shaderDesc.typeFlags = Shader::TypeFlag::VERTEX;
+        shaderVertex.Create(shaderDesc);
+
+        shader.Combine(shaderVertex);
+        shader.Release();
+    }
 }
 
 void RS::DX12::Dx12Core2::Release()
