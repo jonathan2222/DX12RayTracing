@@ -24,8 +24,8 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
 
     m_DescriptorHeapRTV.Init(512, false, "RTV Descriptor Heap");
     m_DescriptorHeapDSV.Init(512, false, "DSV Descriptor Heap");
-    m_DescriptorHeapSRV.Init(4096, true, "SRV Descriptor Heap");
-    m_DescriptorHeapUAV.Init(512, false, "UAV Descriptor Heap");
+    m_DescriptorHeapGPUResources.Init(4096, true, "CBV/SRV/UAV Descriptor Heap");
+    m_DescriptorHeapSamplers.Init(128, true, "Sampler Descriptor Heap");
 
     m_IsReleased = false;
 
@@ -38,7 +38,7 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
 
         struct Vertex
         {
-            float position[4];
+            float position[3];
             float color[4];
         };
 
@@ -52,6 +52,13 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
     
         const UINT vertexBufferSize = sizeof(triangleVertices);
         m_VertexBuffer.Create((uint8*)&triangleVertices[0], sizeof(Vertex), vertexBufferSize);
+
+        const uint32 size = Display::Get()->GetWidth()* Display::Get()->GetHeight() * 4;
+        float miscData[4] = { 1.0, 0.0, 0.0, 1.0};
+        m_ConstantBuffer.Create((uint8*)miscData, 4 * sizeof(float));
+        m_ConstantBuffer.CreateView(m_DescriptorHeapGPUResources.Allocate());
+
+        m_FrameCommandList.WaitForGPUQueue();
     }
 
     // ---------- Tests ----------
@@ -170,8 +177,8 @@ void RS::DX12::Dx12Core2::Release()
 
     m_DescriptorHeapRTV.Release();
     m_DescriptorHeapDSV.Release();
-    m_DescriptorHeapSRV.Release();
-    m_DescriptorHeapUAV.Release();
+    m_DescriptorHeapGPUResources.Release();
+    m_DescriptorHeapSamplers.Release();
 
     // NOTE: Some types only use deferred release for their resources during shutown/reset/clear. To finally release these resources we call ProcessDeferredReleases once more.
     ProcessDeferredReleases(GetCurrentFrameIndex());
@@ -222,9 +229,10 @@ void RS::DX12::Dx12Core2::Render()
         const Dx12Surface::RenderTarget& rt = m_Surface.GetCurrentRenderTarget();
 
         pCommandList->SetGraphicsRootSignature(m_Pipeline.GetRootSignature());
+        pCommandList->SetPipelineState(m_Pipeline.GetPipelineState());
         D3D12_VIEWPORT viewport{};
-        viewport.MaxDepth = 1;
-        viewport.MinDepth = 0;
+        viewport.MaxDepth = 0;
+        viewport.MinDepth = 1;
         viewport.TopLeftX = viewport.TopLeftY = 0;
         viewport.Width = Display::Get()->GetWidth();
         viewport.Height = Display::Get()->GetHeight();
@@ -246,6 +254,17 @@ void RS::DX12::Dx12Core2::Render()
 
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->IASetVertexBuffers(0, 1, &m_VertexBuffer.view);
+
+        const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
+        pCommandList->SetGraphicsRoot32BitConstants(0, 4, tint, 0);
+
+        ID3D12DescriptorHeap* pHeaps[2] = { m_DescriptorHeapGPUResources.GetHeap(), m_DescriptorHeapSamplers.GetHeap()};
+        pCommandList->SetDescriptorHeaps(2, pHeaps); // Max 2 types of heaps can be bind (only CBV/SRV/UAV and Sampler)
+
+        pCommandList->SetGraphicsRootConstantBufferView(1, m_ConstantBuffer.pUploadHeap->GetGPUVirtualAddress());
+
+        //pCommandList->SetComputeRootDescriptorTable(2, );
+
         pCommandList->DrawInstanced(3, 1, 0, 0);
     }
 
@@ -283,8 +302,8 @@ void RS::DX12::Dx12Core2::ProcessDeferredReleases(uint32 frameIndex)
 
     m_DescriptorHeapRTV.ProcessDeferredFree(frameIndex);
     m_DescriptorHeapDSV.ProcessDeferredFree(frameIndex);
-    m_DescriptorHeapSRV.ProcessDeferredFree(frameIndex);
-    m_DescriptorHeapUAV.ProcessDeferredFree(frameIndex);
+    m_DescriptorHeapGPUResources.ProcessDeferredFree(frameIndex);
+    m_DescriptorHeapSamplers.ProcessDeferredFree(frameIndex);
 
     std::vector<IUnknown*>& resources = m_DeferredReleases[frameIndex];
     if (!resources.empty())

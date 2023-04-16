@@ -15,6 +15,7 @@ namespace RS::DX12
 
 	private:
 		void CreatePipeline();
+		void CreateRootSignature();
 
 	private:
 		ID3D12PipelineState* m_PipelineState = nullptr;

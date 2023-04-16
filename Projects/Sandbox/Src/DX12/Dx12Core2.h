@@ -37,8 +37,8 @@ namespace RS::DX12
 
 		Dx12DescriptorHeap* GetDescriptorHeapRTV() { return &m_DescriptorHeapRTV; }
 		Dx12DescriptorHeap* GetDescriptorHeapDSV() { return &m_DescriptorHeapDSV; }
-		Dx12DescriptorHeap* GetDescriptorHeapSRV() { return &m_DescriptorHeapSRV; }
-		Dx12DescriptorHeap* GetDescriptorHeapUAV() { return &m_DescriptorHeapUAV; }
+		Dx12DescriptorHeap* GetDescriptorHeapGPUResources() { return &m_DescriptorHeapGPUResources; }
+		Dx12DescriptorHeap* GetDescriptorHeapSamplers() { return &m_DescriptorHeapSamplers; }
 
 		// ---- Context Commands ----
 		void Transition(); // TODO: Implement
@@ -71,11 +71,12 @@ namespace RS::DX12
 		// Resources
 		Dx12DescriptorHeap		m_DescriptorHeapRTV{ D3D12_DESCRIPTOR_HEAP_TYPE_RTV };
 		Dx12DescriptorHeap		m_DescriptorHeapDSV{ D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
-		Dx12DescriptorHeap		m_DescriptorHeapSRV{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
-		Dx12DescriptorHeap		m_DescriptorHeapUAV{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
+		Dx12DescriptorHeap		m_DescriptorHeapGPUResources{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
+		Dx12DescriptorHeap		m_DescriptorHeapSamplers{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER };
 
 		Dx12Pipeline			m_Pipeline;
-		Dx12Buffer				m_VertexBuffer;
+		Dx12VertexBuffer		m_VertexBuffer;
+		Dx12Buffer				m_ConstantBuffer;
 	};
 
 	template<typename T>

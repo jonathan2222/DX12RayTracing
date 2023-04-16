@@ -201,6 +201,25 @@ IDxcBlob* RS::DX12::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) 
 	return nullptr;
 }
 
+ID3D12ShaderReflection* RS::DX12::Shader::GetReflection(TypeFlags type, bool supressWarnings) const
+{
+	if (!Utils::IsPowerOfTwo(type))
+	{
+		LOG_ERROR("Trying to fetch shader reflection using multiple types! Type: {}", TypesToString(type));
+		return nullptr;
+	}
+
+	for (const PartData& part : m_ShaderParts)
+	{
+		if (part.type & type)
+			return part.pReflection;
+	}
+
+	if (!supressWarnings)
+		LOG_WARNING("Fetching non-existing shader reflection type! Type: {}", TypesToString(type));
+	return nullptr;
+}
+
 bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& filePath, TypeFlags& remainingTypesToCompile, TypeFlags& finalTypes, TypeFlags& totalTypesSeen, bool isTheOnlyFile)
 {
 	// Load shader and its types.

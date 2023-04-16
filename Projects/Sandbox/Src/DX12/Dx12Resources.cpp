@@ -50,7 +50,7 @@ void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, c
 
 void RS::DX12::Dx12DescriptorHeap::Release()
 {
-	RS_ASSERT_NO_MSG(!m_DescriptorCount);
+	RS_ASSERT(!m_DescriptorCount, "Descriptors are still left in the heap. You might have forgotten to call Free on the descriptor handle?");
 	Dx12Core2::Get()->DeferredRelease(m_Heap);
 }
 
@@ -147,11 +147,12 @@ bool RS::DX12::Dx12DescriptorHeap::ValidateFree(uint32 handleIndex) const
 }
 #endif
 
-void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 stride, uint32 size)
+void RS::DX12::Dx12VertexBuffer::Create(uint8* pInitialData, uint32 stride, uint32 size)
 {
 	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
 	RS_ASSERT_NO_MSG(pDevice);
 
+	// TODO: Change to using a default heap and upload the data to it using a upload heap. Can be separate function?
 	DXCall(pDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
@@ -160,7 +161,7 @@ void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 stride, uint32 siz
 		nullptr,
 		IID_PPV_ARGS(&pResource)));
 
-	// Copy the triangle data to the vertex buffer.
+	// Copy the vertex data to the vertex buffer.
 	UINT8* pDataBegin;
 	CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
 	DXCall(pResource->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin)));
@@ -173,7 +174,7 @@ void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 stride, uint32 siz
 	view.SizeInBytes = size;
 }
 
-void RS::DX12::Dx12Buffer::Release()
+void RS::DX12::Dx12VertexBuffer::Release()
 {
 	DX12_RELEASE(pResource);
 	view.BufferLocation = 0;
@@ -181,10 +182,189 @@ void RS::DX12::Dx12Buffer::Release()
 	view.StrideInBytes = 0;
 }
 
+void RS::DX12::Dx12VertexBuffer::Map()
+{
+	LOG_ERROR("Map is not implemented!");
+}
+
+void RS::DX12::Dx12VertexBuffer::Unmap()
+{
+	LOG_ERROR("Map is not implemented!");
+}
+
+void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 size)
+{
+	m_Size = size;
+
+	// If using placed resources
+	//m_AlignedSize = Utils::AlignUp(size, (uint32)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
+	RS_ASSERT_NO_MSG(pDevice);
+
+	DXCall(pDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(Utils::AlignUp(m_Size, (uint64)1024*64)),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr, // we do not have use an optimized clear value for constant buffers
+		IID_PPV_ARGS(&pUploadHeap)));
+
+	UINT8* pDataBegin;
+	CD3DX12_RANGE readRange(0, 0);
+	DXCall(pUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin)));
+	memcpy(pDataBegin, pInitialData, size);
+	pUploadHeap->Unmap(0, nullptr);
+	DX12_SET_DEBUG_NAME(pUploadHeap, "CB Upload heap.");
+}
+
+void RS::DX12::Dx12Buffer::Release()
+{
+	Dx12Core2::Get()->DeferredRelease(pUploadHeap);
+}
+
+void RS::DX12::Dx12Buffer::CreateView(Dx12DescriptorHandle handle)
+{
+	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
+	RS_ASSERT_NO_MSG(pDevice);
+
+	//D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+	//uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	//uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	//uavDesc.Buffer.CounterOffsetInBytes = 0;
+	//uavDesc.Buffer.FirstElement = 0;
+	//uavDesc.Buffer.StructureByteStride = m_Stride;
+	//uavDesc.Buffer.NumElements = m_Size / m_Stride;
+	//pDevice->CreateUnorderedAccessView(pResource, nullptr, &uavDesc, handle.m_Cpu);
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
+	cbvDesc.BufferLocation = pUploadHeap->GetGPUVirtualAddress();
+	// Constant buffer size is required to be 256-byte aligned.
+	cbvDesc.SizeInBytes = Utils::AlignUp(m_Size, (uint64)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	pDevice->CreateConstantBufferView(&cbvDesc, handle.m_Cpu);
+}
+
 void RS::DX12::Dx12Buffer::Map()
 {
+	LOG_ERROR("Not implemented");
 }
 
 void RS::DX12::Dx12Buffer::Unmap()
 {
+	LOG_ERROR("Not implemented");
+}
+
+void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format)
+{
+	m_Format = format;
+
+	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
+	RS_ASSERT_NO_MSG(pDevice);
+
+	// Texture destination resource.
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Alignment = 0;
+	resourceDesc.Width = (UINT64)width;
+	resourceDesc.Height = height;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.MipLevels = 1;
+	resourceDesc.Format = format;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.SampleDesc.Quality = 0;
+	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	{
+		D3D12_HEAP_PROPERTIES heapProps{};
+		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+		heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+		heapProps.CreationNodeMask = 1;
+		heapProps.VisibleNodeMask = 1;
+
+		D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		D3D12_CLEAR_VALUE clearValue{};
+		float pinkColor[4] = { 1.0, 0.0, 1.0, 1.0 };
+		memcpy(clearValue.Color, pinkColor, sizeof(float) * 4);
+		clearValue.Format = format;
+		clearValue.DepthStencil.Depth = 0.0; // Think about these values more...
+		clearValue.DepthStencil.Stencil = 0.0;
+		DXCall(pDevice->CreateCommittedResource(
+			&heapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&resourceDesc,
+			initialState,
+			&clearValue,
+			IID_PPV_ARGS(&pResource)));
+	}
+
+	// Texture Upload resource
+	{
+		const uint32 subresourceCount = resourceDesc.DepthOrArraySize * resourceDesc.MipLevels;
+		const uint64 uploadBufferStep = GetRequiredIntermediateSize(pResource, 0, subresourceCount);
+		const uint64 uploadBufferSize = uploadBufferStep;
+
+		CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+		auto uploadDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+		DXCall(pDevice->CreateCommittedResource(
+			&heapProps,
+			D3D12_HEAP_FLAG_NONE,
+			&uploadDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&pUploadHeap)));
+
+		uint32 numChannels = GetChannelCountFromFormat(format);
+
+		// Copy data to the intermediate upload heap and then schedule a copy from the upload heap to the texture resource.
+		D3D12_SUBRESOURCE_DATA textureData = {};
+		textureData.pData = pInitialData;
+		textureData.RowPitch = static_cast<LONG_PTR>(numChannels * resourceDesc.Width);
+		textureData.SlicePitch = textureData.RowPitch * resourceDesc.Height;
+
+		ID3D12GraphicsCommandList* pCommandList = Dx12Core2::Get()->GetFrameCommandList()->GetCommandList();
+		UpdateSubresources(pCommandList, pResource, pUploadHeap, 0, 0, subresourceCount, &textureData);
+
+		// Assume use in shader.
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			pResource,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+		pCommandList->ResourceBarrier(1, &barrier);
+	}
+}
+
+void RS::DX12::Dx12Texture::Release()
+{
+	Dx12Core2::Get()->DeferredRelease(pResource);
+	Dx12Core2::Get()->DeferredRelease(pUploadHeap);
+}
+
+void RS::DX12::Dx12Texture::CreateView(Dx12DescriptorHandle handle)
+{
+	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
+	RS_ASSERT_NO_MSG(pDevice);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+	desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	desc.Format = m_Format;
+	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	desc.Texture2D.MipLevels = 1;
+	desc.Texture2D.MostDetailedMip = 0;
+	desc.Texture2D.PlaneSlice = 0;
+	desc.Texture2D.ResourceMinLODClamp = 0.0f; // Allow access of all mipmap levels.
+
+	pDevice->CreateShaderResourceView(pResource, &desc, handle.m_Cpu);
+}
+
+void RS::DX12::Dx12Texture::Map()
+{
+	LOG_ERROR("Not implemented");
+}
+
+void RS::DX12::Dx12Texture::Unmap()
+{
+	LOG_ERROR("Not implemented");
 }

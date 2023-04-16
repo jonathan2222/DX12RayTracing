@@ -69,7 +69,7 @@ namespace RS::DX12
 #endif
 	};
 
-	class Dx12Buffer
+	class Dx12VertexBuffer
 	{
 	public:
 		void Create(uint8* pInitialData, uint32 stride, uint32 size);
@@ -78,9 +78,27 @@ namespace RS::DX12
 		void Map();
 		void Unmap();
 
-		Dx12DescriptorHandle handle;
 		D3D12_VERTEX_BUFFER_VIEW view;
 		ID3D12Resource* pResource = nullptr;
+	};
+
+	// Note: A buffer should be able to update as another is used in a frame. TODO: Do something about this.
+	// TODO: Make another one for structured buffers.
+	class Dx12Buffer
+	{
+	public:
+		void Create(uint8* pInitialData, uint32 size);
+		void Release();
+
+		void CreateView(Dx12DescriptorHandle handle);
+
+		void Map();
+		void Unmap();
+
+		Dx12DescriptorHandle handle;
+		ID3D12Resource* pUploadHeap = nullptr;
+
+		uint64 m_Size;
 	};
 
 	class Dx12Texture
@@ -88,7 +106,19 @@ namespace RS::DX12
 	public:
 		// TODO: Implement this!
 		// Might want to do a separate texture class for textures on a render target.
-	private:
+		void Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format);
+		void Release();
 
+		void CreateView(Dx12DescriptorHandle handle);
+
+		void Map();
+		void Unmap();
+
+		Dx12DescriptorHandle handle;
+		ID3D12Resource* pResource = nullptr;
+		ID3D12Resource* pUploadHeap = nullptr;
+
+	private:
+		DXGI_FORMAT m_Format = DXGI_FORMAT_UNKNOWN;
 	};
 }

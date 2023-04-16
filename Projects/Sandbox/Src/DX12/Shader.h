@@ -43,6 +43,7 @@ namespace RS::DX12
 		bool Combine(Shader& other);
 
 		IDxcBlob* GetShaderBlob(TypeFlags type, bool supressWarnings = false) const;
+		ID3D12ShaderReflection* GetReflection(TypeFlags type, bool supressWarnings = false) const;
 
 	private:
 		struct File
