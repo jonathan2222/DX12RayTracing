@@ -11,8 +11,8 @@ void RS::DX12::Dx12Pipeline::Init()
 
 void RS::DX12::Dx12Pipeline::Release()
 {
-	DX12_RELEASE(m_PipelineState);
-	DX12_RELEASE(m_RootSignature);
+	Dx12Core2::Get()->DeferredRelease(m_PipelineState);
+	Dx12Core2::Get()->DeferredRelease(m_RootSignature);
 }
 
 void RS::DX12::Dx12Pipeline::CreatePipeline()

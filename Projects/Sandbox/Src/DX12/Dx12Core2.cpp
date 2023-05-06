@@ -70,7 +70,7 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
         } textIndex;
         
         m_ConstantBuffer.Create((uint8*)&textIndex, sizeof(textIndex));
-        m_ConstantBuffer.CreateView(m_DescriptorHeapGPUResources.Allocate());
+        m_ConstantBuffer.CreateView();
 
         // Load image
         {
@@ -89,9 +89,9 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
                 }
             }
             m_FrameCommandList.BeginFrame(nullptr);
-            m_Texture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM));
+            m_Texture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM), "FlyToYTourDeam Texture Resource");
             m_FrameCommandList.EndFrame();
-            m_Texture.CreateView(m_DescriptorHeapGPUResources.Allocate());
+            m_Texture.CreateView();
             stbi_image_free(data);
             data = nullptr;
         }
@@ -113,9 +113,9 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
                 }
             }
             m_FrameCommandList.BeginFrame(nullptr);
-            m_NullTexture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM));
+            m_NullTexture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM), "Null Texture Resource");
             m_FrameCommandList.EndFrame();
-            m_NullTexture.CreateView(m_DescriptorHeapGPUResources.Allocate());
+            m_NullTexture.CreateView();
             stbi_image_free(data);
             data = nullptr;
         }

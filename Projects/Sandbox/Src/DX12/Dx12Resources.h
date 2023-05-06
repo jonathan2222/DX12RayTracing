@@ -16,10 +16,13 @@ namespace RS::DX12
 		constexpr uint32 GetIndex() const { return m_Index; }
 
 #ifdef RS_CONFIG_DEBUG
+		void SetDebugName(const std::string& name);
+
 	private:
 		friend class Dx12DescriptorHeap;
 		Dx12DescriptorHeap* m_Container{ nullptr };
 		uint32				m_Index{ UINT32_MAX };
+		uint32				m_FreeIndex { UINT32_MAX };
 #endif
 	};
 
@@ -49,6 +52,7 @@ namespace RS::DX12
 
 	private:
 #ifdef RS_CONFIG_DEBUG
+		friend class Dx12DescriptorHandle;
 		const uint32 INVALID_HANDLE_INDEX = UINT32_MAX - 1;
 		bool ValidateFree(uint32 handleIndex) const;
 #endif
@@ -67,13 +71,14 @@ namespace RS::DX12
 
 #ifdef RS_CONFIG_DEBUG
 		std::string							m_DebugName = "Unnamed Heap"; // Name of the heap
+		std::vector<std::string>			m_DescriptorNames;
 #endif
 	};
 
 	class Dx12VertexBuffer
 	{
 	public:
-		void Create(uint8* pInitialData, uint32 stride, uint32 size);
+		void Create(uint8* pInitialData, uint32 stride, uint32 size, const char* debugName = nullptr);
 		void Release();
 
 		void Map();
@@ -88,34 +93,42 @@ namespace RS::DX12
 	class Dx12Buffer
 	{
 	public:
-		void Create(uint8* pInitialData, uint32 size);
+		void Create(uint8* pInitialData, uint32 size, const char* debugName = nullptr);
 		void Release();
 
-		void CreateView(Dx12DescriptorHandle handle);
-
-		void Map();
-		void Unmap();
-
-		Dx12DescriptorHandle handle;
-		ID3D12Resource* pUploadHeap = nullptr;
-
-		uint64 m_Size;
-	};
-
-	class Dx12Texture
-	{
-	public:
-		// TODO: Implement this!
-		// Might want to do a separate texture class for textures on a render target.
-		void Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format);
-		void Release();
-
-		void CreateView(Dx12DescriptorHandle handle);
+		void CreateView();
 
 		void Map();
 		void Unmap();
 
 		uint32 GetDescriptorIndex() const { return m_Handle.GetIndex(); }
+		Dx12DescriptorHandle GetHandle() const { return m_Handle; }
+
+		ID3D12Resource* pUploadHeap = nullptr;
+
+	private:
+		Dx12DescriptorHandle m_Handle;
+		uint64 m_Size;
+
+#ifdef RS_CONFIG_DEBUG
+		std::string m_DebugName;
+#endif
+	};
+
+	class Dx12Texture
+	{
+	public:
+		// Might want to do a separate texture class for textures on a render target.
+		void Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format, const char* debugName = nullptr);
+		void Release();
+
+		void CreateView();
+
+		void Map();
+		void Unmap();
+
+		uint32 GetDescriptorIndex() const { return m_Handle.GetIndex(); }
+		Dx12DescriptorHandle GetHandle() const { return m_Handle; }
 
 		ID3D12Resource* pResource = nullptr;
 		ID3D12Resource* pUploadHeap = nullptr;
@@ -123,5 +136,9 @@ namespace RS::DX12
 	private:
 		DXGI_FORMAT m_Format = DXGI_FORMAT_UNKNOWN;
 		Dx12DescriptorHandle m_Handle;
+
+#ifdef RS_CONFIG_DEBUG
+		std::string m_DebugName;
+#endif
 	};
 }

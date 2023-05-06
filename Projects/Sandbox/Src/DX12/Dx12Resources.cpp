@@ -5,6 +5,13 @@
 #include "DX12Defines.h"
 #include "Dx12Core2.h"
 
+#ifdef RS_CONFIG_DEBUG
+void RS::DX12::Dx12DescriptorHandle::SetDebugName(const std::string& name)
+{
+	m_Container->m_DescriptorNames[m_FreeIndex] = name;
+}
+#endif
+
 void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, const std::string name)
 {
 	std::lock_guard lock{ m_Mutex };
@@ -41,6 +48,7 @@ void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, c
 #ifdef RS_CONFIG_DEBUG
 	for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)
 		RS_ASSERT(m_DeferredFreeIndices[i].empty() == true, "There should be no deferred data to free at this point.");
+	m_DescriptorNames.resize(m_Capacity, "");
 #endif
 
 	m_DescriptorSize = pDevice->GetDescriptorHandleIncrementSize(m_Type);
@@ -50,7 +58,23 @@ void RS::DX12::Dx12DescriptorHeap::Init(uint32 capacity, bool isShaderVisible, c
 
 void RS::DX12::Dx12DescriptorHeap::Release()
 {
-	RS_ASSERT(!m_DescriptorCount, "Descriptors are still left in the heap. You might have forgotten to call Free on the descriptor handle?");
+#ifdef RS_CONFIG_DEBUG
+	if (m_DescriptorCount > 0)
+	{
+		LOG_CRITICAL("Descriptors are still left in the heap ({}). You might have forgotten to call Free on the descriptor handle?", m_DebugName.c_str());
+		std::string str;
+		for (uint32 i = 0; i < m_DescriptorCount; ++i)
+		{
+			if (i == 0)
+				str += '\n';
+			str += "->\t" + m_DescriptorNames[i] + " (" + std::to_string(m_FreeHandles[i]) + ")\n";
+		}
+		LOG_CRITICAL("Descriptor indices: {}", str.c_str());
+		LOG_FLUSH();
+	}
+#endif
+	RS_ASSERT_NO_MSG(!m_DescriptorCount);
+
 	Dx12Core2::Get()->DeferredRelease(m_Heap);
 }
 
@@ -78,6 +102,8 @@ RS::DX12::Dx12DescriptorHandle RS::DX12::Dx12DescriptorHeap::Allocate()
 #ifdef RS_CONFIG_DEBUG
 	handle.m_Container = this;
 	handle.m_Index = index;
+	handle.m_FreeIndex = m_DescriptorCount - 1;
+	m_DescriptorNames[handle.m_FreeIndex] = "Occupied";
 #endif
 
 	return handle;
@@ -121,6 +147,7 @@ void RS::DX12::Dx12DescriptorHeap::ProcessDeferredFree(uint32 frameIndex)
 			bool valid = ValidateFree(index);
 			if (!valid)
 				LOG_WARNING("Trying to free a descriptor with an index of {} which is not avaliable! Resource: {}", index, m_DebugName.c_str());
+			m_DescriptorNames[m_DescriptorCount - 1] = "";
 #endif
 
 			--m_DescriptorCount;
@@ -147,7 +174,7 @@ bool RS::DX12::Dx12DescriptorHeap::ValidateFree(uint32 handleIndex) const
 }
 #endif
 
-void RS::DX12::Dx12VertexBuffer::Create(uint8* pInitialData, uint32 stride, uint32 size)
+void RS::DX12::Dx12VertexBuffer::Create(uint8* pInitialData, uint32 stride, uint32 size, const char* debugName)
 {
 	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
 	RS_ASSERT_NO_MSG(pDevice);
@@ -160,6 +187,7 @@ void RS::DX12::Dx12VertexBuffer::Create(uint8* pInitialData, uint32 stride, uint
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&pResource)));
+	DX12_SET_DEBUG_NAME(pResource, debugName ? debugName : "Vertex buffer");
 
 	// Copy the vertex data to the vertex buffer.
 	UINT8* pDataBegin;
@@ -176,7 +204,7 @@ void RS::DX12::Dx12VertexBuffer::Create(uint8* pInitialData, uint32 stride, uint
 
 void RS::DX12::Dx12VertexBuffer::Release()
 {
-	DX12_RELEASE(pResource);
+	Dx12Core2::Get()->DeferredRelease(pResource);
 	view.BufferLocation = 0;
 	view.SizeInBytes = 0;
 	view.StrideInBytes = 0;
@@ -192,7 +220,7 @@ void RS::DX12::Dx12VertexBuffer::Unmap()
 	LOG_ERROR("Map is not implemented!");
 }
 
-void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 size)
+void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 size, const char* debugName)
 {
 	m_Size = size;
 
@@ -215,15 +243,16 @@ void RS::DX12::Dx12Buffer::Create(uint8* pInitialData, uint32 size)
 	DXCall(pUploadHeap->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin)));
 	memcpy(pDataBegin, pInitialData, size);
 	pUploadHeap->Unmap(0, nullptr);
-	DX12_SET_DEBUG_NAME(pUploadHeap, "CB Upload heap.");
+	DX12_SET_DEBUG_NAME_REF(pUploadHeap, m_DebugName, debugName ? debugName : "CB Upload heap");
 }
 
 void RS::DX12::Dx12Buffer::Release()
 {
+	Dx12Core2::Get()->GetDescriptorHeapGPUResources()->Free(m_Handle);
 	Dx12Core2::Get()->DeferredRelease(pUploadHeap);
 }
 
-void RS::DX12::Dx12Buffer::CreateView(Dx12DescriptorHandle handle)
+void RS::DX12::Dx12Buffer::CreateView()
 {
 	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
 	RS_ASSERT_NO_MSG(pDevice);
@@ -237,11 +266,17 @@ void RS::DX12::Dx12Buffer::CreateView(Dx12DescriptorHandle handle)
 	//uavDesc.Buffer.NumElements = m_Size / m_Stride;
 	//pDevice->CreateUnorderedAccessView(pResource, nullptr, &uavDesc, handle.m_Cpu);
 
+	m_Handle = Dx12Core2::Get()->GetDescriptorHeapGPUResources()->Allocate();
+
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
 	cbvDesc.BufferLocation = pUploadHeap->GetGPUVirtualAddress();
 	// Constant buffer size is required to be 256-byte aligned.
 	cbvDesc.SizeInBytes = Utils::AlignUp(m_Size, (uint64)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-	pDevice->CreateConstantBufferView(&cbvDesc, handle.m_Cpu);
+	pDevice->CreateConstantBufferView(&cbvDesc, m_Handle.m_Cpu);
+
+#ifdef RS_CONFIG_DEBUG
+	m_Handle.SetDebugName(m_DebugName);
+#endif
 }
 
 void RS::DX12::Dx12Buffer::Map()
@@ -254,7 +289,7 @@ void RS::DX12::Dx12Buffer::Unmap()
 	LOG_ERROR("Not implemented");
 }
 
-void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format)
+void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 height, DXGI_FORMAT format, const char* debugName)
 {
 	m_Format = format;
 
@@ -298,6 +333,7 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 			initialState,
 			nullptr,
 			IID_PPV_ARGS(&pResource)));
+		DX12_SET_DEBUG_NAME_REF(pResource, m_DebugName, debugName ? debugName : "Texture resource");
 	}
 
 	// Texture Upload resource
@@ -315,6 +351,7 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&pUploadHeap)));
+		DX12_SET_DEBUG_NAME(pUploadHeap, "{} Upload Heap", debugName ? debugName : "Texture resource");
 
 		uint32 numChannels = GetChannelCountFromFormat(format);
 
@@ -342,11 +379,12 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 
 void RS::DX12::Dx12Texture::Release()
 {
+	Dx12Core2::Get()->GetDescriptorHeapGPUResources()->Free(m_Handle);
 	Dx12Core2::Get()->DeferredRelease(pResource);
 	Dx12Core2::Get()->DeferredRelease(pUploadHeap);
 }
 
-void RS::DX12::Dx12Texture::CreateView(Dx12DescriptorHandle handle)
+void RS::DX12::Dx12Texture::CreateView()
 {
 	ID3D12Device* const pDevice = Dx12Core2::Get()->GetD3D12Device();
 	RS_ASSERT_NO_MSG(pDevice);
@@ -360,9 +398,13 @@ void RS::DX12::Dx12Texture::CreateView(Dx12DescriptorHandle handle)
 	desc.Texture2D.PlaneSlice = 0;
 	desc.Texture2D.ResourceMinLODClamp = 0.0f; // Allow access of all mipmap levels.
 
-	pDevice->CreateShaderResourceView(pResource, &desc, handle.m_Cpu);
+	m_Handle = Dx12Core2::Get()->GetDescriptorHeapGPUResources()->Allocate();
 
-	m_Handle = handle;
+	pDevice->CreateShaderResourceView(pResource, &desc, m_Handle.m_Cpu);
+
+#ifdef RS_CONFIG_DEBUG
+	m_Handle.SetDebugName(m_DebugName);
+#endif
 }
 
 void RS::DX12::Dx12Texture::Map()
