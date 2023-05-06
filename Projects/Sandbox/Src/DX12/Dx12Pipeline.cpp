@@ -55,6 +55,7 @@ void RS::DX12::Dx12Pipeline::CreatePipeline()
 		inputElementDescs.push_back(inputElementDesc);
 
 		inputElementDescs.push_back({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 	}
 
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -125,16 +126,20 @@ void RS::DX12::Dx12Pipeline::CreateRootSignature()
 	uint32 currentShaderRegisterUAV = 0;
 	uint32 currentShaderRegisterSampler = 0;
 
+	const uint32 cbvRegSpace = 1;
+	const uint32 srvRegSpace = 2;
+	const uint32 uavRegSpace = 3;
+	const uint32 BINDLESS_RESOURCE_MAX_SIZE = 10;
+
 	CD3DX12_ROOT_PARAMETER1 rootParameters[3] { };
-	rootParameters[0].InitAsConstants(4, currentShaderRegisterCBV++, registerSpace, D3D12_SHADER_VISIBILITY_ALL);
+	rootParameters[0].InitAsConstants(4*2, currentShaderRegisterCBV++, registerSpace, D3D12_SHADER_VISIBILITY_ALL);
 	rootParameters[1].InitAsConstantBufferView(currentShaderRegisterCBV++, registerSpace, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 
 	CD3DX12_DESCRIPTOR_RANGE1 descRanges[3];
-	descRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 10, currentShaderRegisterCBV, registerSpace, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	currentShaderRegisterCBV += descRanges[0].NumDescriptors;
-	descRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 10, currentShaderRegisterSRV, registerSpace, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	descRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 10, currentShaderRegisterUAV, registerSpace, D3D12_DESCRIPTOR_RANGE_FLAG_NONE, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
-	// Cannot have samplers in the same table as other resource types.
+	descRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, BINDLESS_RESOURCE_MAX_SIZE, 0, cbvRegSpace, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0);
+	descRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, BINDLESS_RESOURCE_MAX_SIZE, 0, srvRegSpace, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0);
+	descRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, BINDLESS_RESOURCE_MAX_SIZE, 0, uavRegSpace, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0);
+	// Cannot have samplers in the same table as other resource types. Think about how descriptor heaps work.
 	rootParameters[2].InitAsDescriptorTable(3u, static_cast<const D3D12_DESCRIPTOR_RANGE1*>(descRanges), D3D12_SHADER_VISIBILITY_ALL);
 
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1];

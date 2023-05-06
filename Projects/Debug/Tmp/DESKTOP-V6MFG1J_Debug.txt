@@ -1,0 +1,15 @@
+[16:20:12.787] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Sandbox\Sandbox.exe
+[16:20:12.788] [LaunchArguments.cpp:15] [info] Launch arguments: 
+[16:20:12.789] [Config.cpp:37] [warning] Failed to load engine config!
+[16:20:12.789] [Config.h:77] [warning] Did not find "Display/InitialState/Title" in config map! Using default value: Sandbox DX12
+[16:20:12.789] [Config.h:77] [warning] Did not find "Display/InitialState/DefaultWidth" in config map! Using default value: 1920
+[16:20:12.790] [Config.h:77] [warning] Did not find "Display/InitialState/DefaultHeight" in config map! Using default value: 1080
+[16:20:12.790] [Config.h:77] [warning] Did not find "Display/InitialState/Fullscreen" in config map! Using default value: false
+[16:20:12.790] [Config.h:77] [warning] Did not find "Display/Settings/WindowedFullscreen" in config map! Using default value: false
+[16:20:12.790] [Config.h:77] [warning] Did not find "Display/Settings/VSync" in config map! Using default value: true
+[16:20:13.554] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
+[16:20:13.858] [Dx12CommandList.cpp:19] [debug] Created command allocator [0] of type Direct
+[16:20:13.858] [Dx12CommandList.cpp:19] [debug] Created command allocator [1] of type Direct
+[16:20:13.858] [Dx12CommandList.cpp:19] [debug] Created command allocator [2] of type Direct
+[16:20:13.865] [Shader.cpp:111] [error] Could not find shader file! Path: ../../Assets/Shaders/tmpShaders.hlsl
+[16:20:13.866] [Shader.cpp:219] [warning] Fetching non-existing shader reflection type! Type: PIXEL

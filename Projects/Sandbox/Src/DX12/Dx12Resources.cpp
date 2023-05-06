@@ -275,7 +275,7 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	{
+	{ // TODO: Make it possible to use placed heaps.
 		D3D12_HEAP_PROPERTIES heapProps{};
 		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 		heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -285,18 +285,18 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 
 		D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COPY_DEST;
 
-		D3D12_CLEAR_VALUE clearValue{};
-		float pinkColor[4] = { 1.0, 0.0, 1.0, 1.0 };
-		memcpy(clearValue.Color, pinkColor, sizeof(float) * 4);
-		clearValue.Format = format;
-		clearValue.DepthStencil.Depth = 0.0; // Think about these values more...
-		clearValue.DepthStencil.Stencil = 0.0;
+		//D3D12_CLEAR_VALUE clearValue{};
+		//float pinkColor[4] = { 1.0, 0.0, 1.0, 1.0 };
+		//memcpy(clearValue.Color, pinkColor, sizeof(float) * 4);
+		//clearValue.Format = format;
+		//clearValue.DepthStencil.Depth = 0.0; // Think about these values more...
+		//clearValue.DepthStencil.Stencil = 0.0;
 		DXCall(pDevice->CreateCommittedResource(
 			&heapProps,
 			D3D12_HEAP_FLAG_NONE,
 			&resourceDesc,
 			initialState,
-			&clearValue,
+			nullptr,
 			IID_PPV_ARGS(&pResource)));
 	}
 
@@ -324,7 +324,8 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 		textureData.RowPitch = static_cast<LONG_PTR>(numChannels * resourceDesc.Width);
 		textureData.SlicePitch = textureData.RowPitch * resourceDesc.Height;
 
-		ID3D12GraphicsCommandList* pCommandList = Dx12Core2::Get()->GetFrameCommandList()->GetCommandList();
+		Dx12FrameCommandList* pFrameCommandList = Dx12Core2::Get()->GetFrameCommandList();
+		ID3D12GraphicsCommandList* pCommandList = pFrameCommandList->GetCommandList();
 		UpdateSubresources(pCommandList, pResource, pUploadHeap, 0, 0, subresourceCount, &textureData);
 
 		// Assume use in shader.
@@ -333,6 +334,9 @@ void RS::DX12::Dx12Texture::Create(uint8* pInitialData, uint32 width, uint32 hei
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 		pCommandList->ResourceBarrier(1, &barrier);
+
+		// TODO: Remove this, we do not want to flush every time we upload data!
+		pFrameCommandList->Flush();
 	}
 }
 
@@ -357,6 +361,8 @@ void RS::DX12::Dx12Texture::CreateView(Dx12DescriptorHandle handle)
 	desc.Texture2D.ResourceMinLODClamp = 0.0f; // Allow access of all mipmap levels.
 
 	pDevice->CreateShaderResourceView(pResource, &desc, handle.m_Cpu);
+
+	m_Handle = handle;
 }
 
 void RS::DX12::Dx12Texture::Map()

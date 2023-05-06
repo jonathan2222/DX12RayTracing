@@ -13,6 +13,7 @@ namespace RS::DX12
 
 		constexpr bool IsValid() const { return m_Cpu.ptr != 0; }
 		constexpr bool IsShaderVisible() const { return m_Gpu.ptr != 0; }
+		constexpr uint32 GetIndex() const { return m_Index; }
 
 #ifdef RS_CONFIG_DEBUG
 	private:
@@ -114,11 +115,13 @@ namespace RS::DX12
 		void Map();
 		void Unmap();
 
-		Dx12DescriptorHandle handle;
+		uint32 GetDescriptorIndex() const { return m_Handle.GetIndex(); }
+
 		ID3D12Resource* pResource = nullptr;
 		ID3D12Resource* pUploadHeap = nullptr;
 
 	private:
 		DXGI_FORMAT m_Format = DXGI_FORMAT_UNKNOWN;
+		Dx12DescriptorHandle m_Handle;
 	};
 }

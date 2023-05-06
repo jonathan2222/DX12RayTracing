@@ -5,6 +5,10 @@
 
 #include "DX12/Shader.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_FAILURE_USERMSG
+#include <stb_image.h>
+
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
@@ -40,23 +44,81 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
         {
             float position[3];
             float color[4];
+            float uv[2];
         };
 
+        float scale = 0.25f;
         float aspectRatio = (float)Display::Get()->GetWidth() / Display::Get()->GetHeight();
         Vertex triangleVertices[] =
         {
-            { { 0.0f, 0.25f * aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+            { { -scale, +scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
+            { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+            { { -scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
+
+            { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+            { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
+            { { -scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
         };
     
         const UINT vertexBufferSize = sizeof(triangleVertices);
         m_VertexBuffer.Create((uint8*)&triangleVertices[0], sizeof(Vertex), vertexBufferSize);
 
         const uint32 size = Display::Get()->GetWidth()* Display::Get()->GetHeight() * 4;
-        float miscData[4] = { 1.0, 0.0, 0.0, 1.0};
-        m_ConstantBuffer.Create((uint8*)miscData, 4 * sizeof(float));
+        struct ConstantBufferData
+        {
+            float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
+        } textIndex;
+        
+        m_ConstantBuffer.Create((uint8*)&textIndex, sizeof(textIndex));
         m_ConstantBuffer.CreateView(m_DescriptorHeapGPUResources.Allocate());
+
+        // Load image
+        {
+            std::string texturePath = RS_TEXTURE_PATH +std::string("flyToYourDream.jpg");
+            int w, h, n;
+            const int requestedChannelCount = 4;
+            uint8* data = stbi_load(texturePath.c_str(), &w, &h, &n, requestedChannelCount);
+            RS_ASSERT(data, "Could not load texture! Reason: {}", stbi_failure_reason());
+            { // Flip image in y
+                std::vector<uint8> buffer(w * requestedChannelCount);
+                for (int y = 0; y < h/2; y++)
+                {
+                    int top = y * w * requestedChannelCount;
+                    int bot = (h - y - 1) * w * requestedChannelCount;
+                    std::swap_ranges(data + top, data + top + buffer.size(), data + bot);
+                }
+            }
+            m_FrameCommandList.BeginFrame(nullptr);
+            m_Texture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM));
+            m_FrameCommandList.EndFrame();
+            m_Texture.CreateView(m_DescriptorHeapGPUResources.Allocate());
+            stbi_image_free(data);
+            data = nullptr;
+        }
+
+        // Load Null image
+        {
+            std::string texturePath = RS_TEXTURE_PATH + std::string("NullTexture.png");
+            int w, h, n;
+            const int requestedChannelCount = 4;
+            uint8* data = stbi_load(texturePath.c_str(), &w, &h, &n, requestedChannelCount);
+            RS_ASSERT(data, "Could not load texture! Reason: {}", stbi_failure_reason());
+            { // Flip image in y
+                std::vector<uint8> buffer(w * requestedChannelCount);
+                for (int y = 0; y < h / 2; y++)
+                {
+                    int top = y * w * requestedChannelCount;
+                    int bot = (h - y - 1) * w * requestedChannelCount;
+                    std::swap_ranges(data + top, data + top + buffer.size(), data + bot);
+                }
+            }
+            m_FrameCommandList.BeginFrame(nullptr);
+            m_NullTexture.Create(data, w, h, GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, FormatType::UNORM));
+            m_FrameCommandList.EndFrame();
+            m_NullTexture.CreateView(m_DescriptorHeapGPUResources.Allocate());
+            stbi_image_free(data);
+            data = nullptr;
+        }
 
         m_FrameCommandList.WaitForGPUQueue();
     }
@@ -165,6 +227,10 @@ void RS::DX12::Dx12Core2::Release()
 {
     // TODO: Move these outside of Dx12Core2!
     { // Dx12Core2 users
+        m_NullTexture.Release();
+        m_Texture.Release();
+        m_ConstantBuffer.Release();
+
         m_VertexBuffer.Release();
         m_Pipeline.Release();
         m_Surface.ReleaseResources();
@@ -255,17 +321,26 @@ void RS::DX12::Dx12Core2::Render()
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->IASetVertexBuffers(0, 1, &m_VertexBuffer.view);
 
-        const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
-        pCommandList->SetGraphicsRoot32BitConstants(0, 4, tint, 0);
+        struct RootConstData
+        {
+            const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
+            uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1};
+        } rootConstData;
+        rootConstData.texIndex[0] = m_Texture.GetDescriptorIndex();
+        rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = m_NullTexture.GetDescriptorIndex();
+        pCommandList->SetGraphicsRoot32BitConstants(0, 4*2, &rootConstData, 0);
 
         ID3D12DescriptorHeap* pHeaps[2] = { m_DescriptorHeapGPUResources.GetHeap(), m_DescriptorHeapSamplers.GetHeap()};
-        pCommandList->SetDescriptorHeaps(2, pHeaps); // Max 2 types of heaps can be bind (only CBV/SRV/UAV and Sampler)
+        pCommandList->SetDescriptorHeaps(2, pHeaps); // Max 2 types of heaps can be bound (only CBV/SRV/UAV and Sampler)
 
         pCommandList->SetGraphicsRootConstantBufferView(1, m_ConstantBuffer.pUploadHeap->GetGPUVirtualAddress());
+        
+        // Set heap pointer for Bindless resources.
+        pCommandList->SetGraphicsRootDescriptorTable(2, m_DescriptorHeapGPUResources.GetGpuStart());
 
         //pCommandList->SetComputeRootDescriptorTable(2, );
 
-        pCommandList->DrawInstanced(3, 1, 0, 0);
+        pCommandList->DrawInstanced(6, 1, 0, 0);
     }
 
     m_Surface.EndDraw(pCommandList);

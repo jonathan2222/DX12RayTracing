@@ -33,7 +33,7 @@ namespace RS::DX12
 		uint32 GetCurrentFrameIndex() const { return m_FrameCommandList.GetFrameIndex(); };
 		void SetDeferredReleasesFlag(uint32 frameIndex) { m_DeferredReleasesFlags[frameIndex] = 1; }
 
-		const Dx12FrameCommandList* GetFrameCommandList() const { return &m_FrameCommandList; }
+		Dx12FrameCommandList* GetFrameCommandList() { return &m_FrameCommandList; }
 
 		Dx12DescriptorHeap* GetDescriptorHeapRTV() { return &m_DescriptorHeapRTV; }
 		Dx12DescriptorHeap* GetDescriptorHeapDSV() { return &m_DescriptorHeapDSV; }
@@ -77,6 +77,8 @@ namespace RS::DX12
 		Dx12Pipeline			m_Pipeline;
 		Dx12VertexBuffer		m_VertexBuffer;
 		Dx12Buffer				m_ConstantBuffer;
+		Dx12Texture				m_Texture;
+		Dx12Texture				m_NullTexture;
 	};
 
 	template<typename T>

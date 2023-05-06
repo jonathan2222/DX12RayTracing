@@ -206,6 +206,284 @@ namespace RS::DX12
         }
     }
 
+    enum class FormatType
+    {
+        TYPELESS,
+        UNORM,
+        UINT,
+        SNORM,
+        SINT,
+        FLOAT,
+        UNORM_SRGB
+    };
+
+    constexpr DXGI_FORMAT GetDXGIFormat(uint8 numChannels, uint8 channelSize, FormatType type)
+    {
+        switch (type)
+        {
+        case RS::DX12::FormatType::TYPELESS:
+        {
+            if (channelSize == 32)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R32G32B32A32_TYPELESS;
+                case 3: return DXGI_FORMAT_R32G32B32_TYPELESS;
+                case 2: return DXGI_FORMAT_R32G32_TYPELESS;
+                case 1: return DXGI_FORMAT_R32_TYPELESS;
+                default:
+                    RS_ASSERT(false, "TYPELESS 32 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_TYPELESS;
+                case 2: return DXGI_FORMAT_R16G16_TYPELESS;
+                case 1: return DXGI_FORMAT_R16_TYPELESS;
+                default:
+                    RS_ASSERT(false, "TYPELESS 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+                case 2: return DXGI_FORMAT_R8G8_TYPELESS;
+                case 1: return DXGI_FORMAT_R8_TYPELESS;
+                default:
+                    RS_ASSERT(false, "TYPELESS 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for TYPELESS formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::UNORM:
+        {
+            if (channelSize == 32)
+            {
+                RS_ASSERT(false, "UNORM 32 bit does not support {} channels!", numChannels);
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_UNORM;
+                case 2: return DXGI_FORMAT_R16G16_UNORM;
+                case 1: return DXGI_FORMAT_R16_UNORM;
+                default:
+                    RS_ASSERT(false, "UNORM 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_UNORM;
+                case 2: return DXGI_FORMAT_R8G8_UNORM;
+                case 1: return DXGI_FORMAT_R8_UNORM;
+                default:
+                    RS_ASSERT(false, "UNORM 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for UNORM formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::UINT:
+        {
+            if (channelSize == 32)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R32G32B32A32_UINT;
+                case 3: return DXGI_FORMAT_R32G32B32_UINT;
+                case 2: return DXGI_FORMAT_R32G32_UINT;
+                case 1: return DXGI_FORMAT_R32_UINT;
+                default:
+                    RS_ASSERT(false, "UINT 32 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_UINT;
+                case 2: return DXGI_FORMAT_R16G16_UINT;
+                case 1: return DXGI_FORMAT_R16_UINT;
+                default:
+                    RS_ASSERT(false, "UINT 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_UINT;
+                case 2: return DXGI_FORMAT_R8G8_UINT;
+                case 1: return DXGI_FORMAT_R8_UINT;
+                default:
+                    RS_ASSERT(false, "UINT 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for UINT formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::SNORM:
+        {
+            if (channelSize == 32)
+            {
+                RS_ASSERT(false, "SNORM 32 bit does not support {} channels!", numChannels);
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_SNORM;
+                case 2: return DXGI_FORMAT_R16G16_SNORM;
+                case 1: return DXGI_FORMAT_R16_SNORM;
+                default:
+                    RS_ASSERT(false, "SNORM 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_SNORM;
+                case 2: return DXGI_FORMAT_R8G8_SNORM;
+                case 1: return DXGI_FORMAT_R8_SNORM;
+                default:
+                    RS_ASSERT(false, "SNORM 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for SNORM formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::SINT:
+        {
+            if (channelSize == 32)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R32G32B32A32_SINT;
+                case 3: return DXGI_FORMAT_R32G32B32_SINT;
+                case 2: return DXGI_FORMAT_R32G32_SINT;
+                case 1: return DXGI_FORMAT_R32_SINT;
+                default:
+                    RS_ASSERT(false, "SINT 32 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_SINT;
+                case 2: return DXGI_FORMAT_R16G16_SINT;
+                case 1: return DXGI_FORMAT_R16_SINT;
+                default:
+                    RS_ASSERT(false, "SINT 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_SINT;
+                case 2: return DXGI_FORMAT_R8G8_SINT;
+                case 1: return DXGI_FORMAT_R8_SINT;
+                default:
+                    RS_ASSERT(false, "SINT 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for SINT formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::FLOAT:
+        {
+            if (channelSize == 32)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+                case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
+                case 2: return DXGI_FORMAT_R32G32_FLOAT;
+                case 1: return DXGI_FORMAT_R32_FLOAT;
+                default:
+                    RS_ASSERT(false, "FLOAT 32 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 16)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+                case 2: return DXGI_FORMAT_R16G16_FLOAT;
+                case 1: return DXGI_FORMAT_R16_FLOAT;
+                default:
+                    RS_ASSERT(false, "FLOAT 16 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else if (channelSize == 8)
+            {
+                RS_ASSERT(false, "FLOAT 8 bit does not support {} channels!", numChannels);
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for FLOAT formats! ChannelSize:", channelSize);
+            break;
+        }
+        case RS::DX12::FormatType::UNORM_SRGB:
+        {
+            if (channelSize == 32)
+            {
+                RS_ASSERT(false, "UNORM_SRGB 32 bit does not support {} channels!", numChannels);
+            }
+            else if (channelSize == 16)
+            {
+                RS_ASSERT(false, "UNORM_SRGB 16 bit does not support {} channels!", numChannels);
+            }
+            else if (channelSize == 8)
+            {
+                switch (numChannels)
+                {
+                case 4: return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+                default:
+                    RS_ASSERT(false, "UNORM_SRGB 8 bit does not support {} channels!", numChannels);
+                    break;
+                }
+            }
+            else
+                RS_ASSERT(false, "Channel size is not supported for UNORM_SRGB formats! ChannelSize:", channelSize);
+            break;
+        }
+        default:
+            RS_ASSERT(false, "Type cannot be converted to DXGI_Format! Type:", (uint32)type);
+            break;
+        }
+        return DXGI_FORMAT_UNKNOWN;
+    }
+
     constexpr std::string_view GetCommandListTypeAsString(D3D12_COMMAND_LIST_TYPE type)
     {
         switch (type)
