@@ -5,6 +5,8 @@
 #include <functional>
 
 #include "DX12/Dx12Resources.h"
+#include "GUI/IconsFontAwesome6.h"
+#include "GUI/ImGuiNotify.h"
 
 namespace RS
 {
@@ -32,15 +34,18 @@ namespace RS
 		float GetGuiScale();
 
 	private:
+		void InternalInit();
 		void InternalResize();
 		void ReScale(uint32 width, uint32 height);
 
 	private:
-		bool									m_IsReleased = false; // The first call should be treated like it has not been released.
-		std::vector<std::function<void(void)>>	s_DrawCalls;
-		std::mutex								s_Mutex;
-		bool									s_ShouldRescale = false;
-		float									s_Scale = 1.f;
+		bool									m_IsReleased = true;
+		std::vector<std::function<void(void)>>	m_DrawCalls;
+		std::mutex								m_Mutex;
+		bool									m_ShouldRescale = false;
+		float									m_Scale = 1.f;
 		DX12::Dx12DescriptorHandle				m_ImGuiFontDescriptorHandle;
+		uint32									m_OldWidth;
+		uint32									m_OldHeight;
 	};
 }

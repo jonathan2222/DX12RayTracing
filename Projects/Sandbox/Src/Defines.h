@@ -27,10 +27,12 @@
 #endif
 
 #define RS_LOG_FILE_PATH "../../Debug/Tmp/"
-#define RS_CONFIG_FILE_PATH "../../Assets/Config/EngineConfig.json"
-#define RS_SHADER_PATH "../../Assets/Shaders/"
-#define RS_TEXTURE_PATH "../../Assets/Textures/"
-#define RS_MODEL_PATH "../../Assets/Models/"
+#define RS_ASSETS_PATH "../../Assets/"
+#define RS_CONFIG_FILE_PATH RS_ASSETS_PATH "Config/EngineConfig.json"
+#define RS_SHADER_PATH RS_ASSETS_PATH "Shaders/"
+#define RS_TEXTURE_PATH RS_ASSETS_PATH "Textures/"
+#define RS_MODEL_PATH RS_ASSETS_PATH "Models/"
+#define RS_FONT_PATH RS_ASSETS_PATH "Fonts/"
 
 #define RS_UNREFERENCED_VARIABLE(v) (void)v
 #define FLAG(x) (1 << x)

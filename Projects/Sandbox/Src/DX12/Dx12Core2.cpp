@@ -283,6 +283,7 @@ bool RS::DX12::Dx12Core2::WindowSizeChanged(uint32 width, uint32 height, bool is
     m_FrameCommandList.Flush();
     m_FrameCommandList.WaitForGPUQueue();
     m_Surface.Resize(width, height, isFullscreen && !windowed);
+    ImGuiRenderer::Get()->Resize();
 
     return true;
 }
@@ -355,9 +356,70 @@ void RS::DX12::Dx12Core2::Render()
     }
 
     static bool show_demo_window = true;
+    static bool show_test = true;
+    static uint32_t position = ImGuiToastPos_BottomRight;
     ImGuiRenderer::Get()->Draw([&]() {
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
+
+        if (show_test)
+        {
+            ImGui::Begin("Dear ImGui Test", &show_test);
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), u8"\uF06A"); // Warning
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), u8"\uF057"); // Error
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), u8"\uF058"); // Success
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), u8"\uF059"); // Info
+
+            if (ImGui::Button("Warning"))
+                ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! %d", 0x1337 });
+            if (ImGui::Button("Success"))
+                ImGui::InsertNotification({ ImGuiToastType_Success, 3000, "Hello World! This is a success! %s", "We can also format here:)" });
+            if (ImGui::Button("Error"))
+                ImGui::InsertNotification({ ImGuiToastType_Error, 3000, "Hello World! This is an error! 0x%X", 0xDEADBEEF });
+            if (ImGui::Button("Info"))
+                ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Hello World! This is an info!" });
+            if (ImGui::Button("Info Long"))
+                ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation" });
+
+            if (ImGui::Button("Custom title"))
+            {
+                // Now using a custom title...
+                ImGuiToast toast(ImGuiToastType_Success, 3000); // <-- content can also be passed here as above
+                toast.set_title("This is a %s title", "wonderful");
+                toast.set_content("Lorem ipsum dolor sit amet");
+                ImGui::InsertNotification(toast);
+            }
+
+            if (ImGui::Button("No dismiss"))
+            {
+                ImGui::InsertNotification({ ImGuiToastType_Error, NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
+                    {
+                        ImGui::InsertNotification({ ImGuiToastType_Info, "Signaled" });
+                    }
+                ).dismissOnSignal();
+            }
+
+            if (ImGui::BeginPopupContextWindow())
+            {
+                if (ImGui::MenuItem("Top-left", NULL, position == ImGuiToastPos_TopLeft)) { position = ImGuiToastPos_TopLeft; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Top-Center", NULL, position == ImGuiToastPos_TopCenter)) { position = ImGuiToastPos_TopCenter; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Top-right", NULL, position == ImGuiToastPos_TopRight)) { position = ImGuiToastPos_TopRight; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetToastPosition(position); }
+                ImGui::EndPopup();
+            }
+
+            ImGui::End();
+        }
+
+        // Render toasts on top of everything, at the end of your code!
+        // You should push style vars here
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
+        ImGui::RenderNotifications(); // <-- Here we render all notifications
+        ImGui::PopStyleVar(1); // Don't forget to Pop()
+        ImGui::PopStyleColor(1);
     });
 
     // ImGui
