@@ -2,7 +2,6 @@
 #include "ImGuiAdapter.h"
 
 #include <imgui.h>
-#include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_dx12.h>
 
 #ifdef _WIN32

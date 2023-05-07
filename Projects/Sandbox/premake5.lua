@@ -1,5 +1,5 @@
 function GetFiles(path)
-	return path .. "**.hpp", path .. "**.h", path .. "**.cpp", path .. "**.c", "%{includeDir.imgui}/backends/imgui_impl_glfw.cpp", "%{includeDir.imgui}/backends/imgui_impl_dx12.cpp"
+	return path .. "**.hpp", path .. "**.h", path .. "**.cpp", path .. "**.c", "%{includeDir.imgui}/backends/imgui_impl_dx12.cpp"
 end
 
 project "Sandbox"
