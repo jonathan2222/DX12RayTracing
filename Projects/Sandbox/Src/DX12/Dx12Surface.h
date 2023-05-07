@@ -34,6 +34,7 @@ namespace RS::DX12
 
 		uint32 GetWidth() const { return m_Width; }
 		uint32 GetHeight() const { return m_Height; }
+		DXGI_FORMAT GetFormat() const { return m_Format; }
 
 	private:
 		void CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DXGIFlags flags);

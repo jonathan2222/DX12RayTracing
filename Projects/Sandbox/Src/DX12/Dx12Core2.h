@@ -40,6 +40,8 @@ namespace RS::DX12
 		Dx12DescriptorHeap* GetDescriptorHeapGPUResources() { return &m_DescriptorHeapGPUResources; }
 		Dx12DescriptorHeap* GetDescriptorHeapSamplers() { return &m_DescriptorHeapSamplers; }
 
+		Dx12Surface* GetMainSurface() { return &m_Surface; }
+
 		// ---- Context Commands ----
 		void Transition(); // TODO: Implement
 		void Clear() {} // TODO: Implement
@@ -73,6 +75,8 @@ namespace RS::DX12
 		Dx12DescriptorHeap		m_DescriptorHeapDSV{ D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
 		Dx12DescriptorHeap		m_DescriptorHeapGPUResources{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV };
 		Dx12DescriptorHeap		m_DescriptorHeapSamplers{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER };
+
+		Dx12DescriptorHandle	m_ImGuiFontDescriptorHandle;
 
 		Dx12Pipeline			m_Pipeline;
 		Dx12VertexBuffer		m_VertexBuffer;

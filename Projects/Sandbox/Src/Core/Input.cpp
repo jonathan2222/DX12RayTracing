@@ -3,8 +3,8 @@
 
 #include "Core/Display.h"
 
-//#include "GUI/ImGuiAdapter.h"
-//#include "Renderer/ImGuiRenderer.h"
+#include "GUI/ImGuiAdapter.h"
+#include "Render/ImGuiRenderer.h"
 
 using namespace RS;
 
@@ -137,7 +137,7 @@ void Input::CenterMouse() const
 
 void Input::LockMouse() const
 {
-    //ImGuiAdapter::DisableInput();
+    ImGuiAdapter::DisableInput();
 
     GLFWwindow* wnd = static_cast<GLFWwindow*>(Display::Get()->GetGLFWWindow());
     glfwSetInputMode(wnd, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -148,7 +148,7 @@ void Input::LockMouse() const
 
 void Input::UnlockMouse() const
 {
-    //ImGuiAdapter::EnableInput();
+    ImGuiAdapter::EnableInput();
 
     GLFWwindow* wnd = static_cast<GLFWwindow*>(Display::Get()->GetGLFWWindow());
     glfwSetInputMode(wnd, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -241,7 +241,7 @@ void Input::KeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int 
     RS_UNREFERENCED_VARIABLE(wnd);
     RS_UNREFERENCED_VARIABLE(scancode);
     RS_UNREFERENCED_VARIABLE(mods);
-    //if (!ImGuiRenderer::WantKeyInput())
+    if (!ImGuiRenderer::Get()->WantKeyInput())
     {
         Key ymKey = (Key)key;
         if (action == GLFW_PRESS)
@@ -265,7 +265,7 @@ void Input::MouseButtonCallback(GLFWwindow* window, int button, int action, int 
 {
     RS_UNREFERENCED_VARIABLE(window);
     RS_UNREFERENCED_VARIABLE(mods);
-    //if (!ImGuiRenderer::WantKeyInput())
+    if (!ImGuiRenderer::Get()->WantKeyInput())
     {
         MB ymButton = (MB)button;
         if (action == GLFW_PRESS)
@@ -279,7 +279,7 @@ void Input::MouseButtonCallback(GLFWwindow* window, int button, int action, int 
 void Input::MouseScrollCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
     RS_UNREFERENCED_VARIABLE(window);
-    //if (!ImGuiRenderer::WantKeyInput())
+    if (!ImGuiRenderer::Get()->WantKeyInput())
     {
         s_ScrollDelta.x = (float)xOffset;
         s_ScrollDelta.y = (float)yOffset;

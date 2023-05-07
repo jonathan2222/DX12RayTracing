@@ -9,6 +9,8 @@
 #define STBI_FAILURE_USERMSG
 #include <stb_image.h>
 
+#include "Render/ImGuiRenderer.h"
+
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
@@ -38,6 +40,9 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
         m_IsWindowVisible = true;
         m_Surface.Init(window, width, height, dxgiFlags);
 
+        // ImGui
+        ImGuiRenderer::Get()->Init();
+
         m_Pipeline.Init();
 
         struct Vertex
@@ -59,7 +64,7 @@ void RS::DX12::Dx12Core2::Init(HWND window, int width, int height)
             { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
             { { -scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
         };
-    
+ 
         const UINT vertexBufferSize = sizeof(triangleVertices);
         m_VertexBuffer.Create((uint8*)&triangleVertices[0], sizeof(Vertex), vertexBufferSize);
 
@@ -231,6 +236,9 @@ void RS::DX12::Dx12Core2::Release()
         m_Texture.Release();
         m_ConstantBuffer.Release();
 
+        // ImGui
+        ImGuiRenderer::Get()->FreeDescriptor();
+
         m_VertexBuffer.Release();
         m_Pipeline.Release();
         m_Surface.ReleaseResources();
@@ -248,6 +256,9 @@ void RS::DX12::Dx12Core2::Release()
 
     // NOTE: Some types only use deferred release for their resources during shutown/reset/clear. To finally release these resources we call ProcessDeferredReleases once more.
     ProcessDeferredReleases(GetCurrentFrameIndex());
+
+    // ImGui
+    ImGuiRenderer::Get()->Release();
 
     m_Surface.Release();
     m_IsWindowVisible = false;
@@ -342,6 +353,15 @@ void RS::DX12::Dx12Core2::Render()
 
         pCommandList->DrawInstanced(6, 1, 0, 0);
     }
+
+    static bool show_demo_window = true;
+    ImGuiRenderer::Get()->Draw([&]() {
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+    });
+
+    // ImGui
+    ImGuiRenderer::Get()->Render();
 
     m_Surface.EndDraw(pCommandList);
 
