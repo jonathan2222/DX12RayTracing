@@ -11,6 +11,8 @@
 
 #include "Render/ImGuiRenderer.h"
 
+#include "GUI/LogNotifier.h"
+
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
     static std::unique_ptr<RS::DX12::Dx12Core2> pCore{ std::make_unique<RS::DX12::Dx12Core2>() };
@@ -290,6 +292,14 @@ bool RS::DX12::Dx12Core2::WindowSizeChanged(uint32 width, uint32 height, bool is
 
 void RS::DX12::Dx12Core2::Render()
 {
+    int r = rand();
+    if (r % 100 == 0)
+        NOTIFY_DEBUG("Test A");
+    if (r % 500 == 0)
+        NOTIFY_ERROR("Test B. {:#10X}", 0xF8AB29);
+    if (r % 1000 == 0)
+        NOTIFY_CRITICAL("Test C");
+
     // Wait for the current frame's commands to finish, then resets both the command list and the command allocator.
     m_FrameCommandList.BeginFrame(m_Pipeline.GetPipelineState());
 
@@ -377,6 +387,11 @@ void RS::DX12::Dx12Core2::Render()
             if (ImGui::Button("Info Long"))
                 ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation" });
 
+            if (ImGui::Button("Critical"))
+                ImGui::InsertNotification({ ImGuiToastType_Critical, "Hello World! This is an info!" });
+            if (ImGui::Button("Debug"))
+                ImGui::InsertNotification({ ImGuiToastType_Debug, "Hello World! This is an info!" });
+
             if (ImGui::Button("Custom title"))
             {
                 // Now using a custom title...
@@ -388,7 +403,7 @@ void RS::DX12::Dx12Core2::Render()
 
             if (ImGui::Button("No dismiss"))
             {
-                ImGui::InsertNotification({ ImGuiToastType_Error, NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
+                ImGui::InsertNotification({ ImGuiToastType_Error, IMGUI_NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
                     {
                         ImGui::InsertNotification({ ImGuiToastType_Info, "Signaled" });
                     }

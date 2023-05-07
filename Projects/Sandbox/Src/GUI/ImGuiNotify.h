@@ -12,6 +12,8 @@
 	* Bring to front (for some reason it was disabled).
 	* Changed formatting to use Utils::Format (using fmt style formatting).
 	* Changed functions to be templated instead of using va_list.
+	* Made adding and removing notifications thread safe.
+	* Added IMGUI prefix as to not interfere with other macros.
 **/
 
 #ifndef IMGUI_NOTIFY
@@ -22,24 +24,26 @@
 #include <string>
 #include <imgui.h>
 #include <functional>
+#include <mutex>
+#include <unordered_map>
 
-#define NOTIFY_MAX_MSG_LENGTH			4096		// Max message content length
-#define NOTIFY_PADDING_X				20.f		// Bottom-left X padding
-#define NOTIFY_PADDING_Y				20.f		// Bottom-left Y padding
-#define NOTIFY_PADDING_MESSAGE_Y		10.f		// Padding Y between each message
-#define NOTIFY_FADE_IN_OUT_TIME			150			// Fade in and out duration
-#define NOTIFY_DEFAULT_DISMISS			3000		// Auto dismiss after X ms (default, applied only of no data provided in constructors)
-#define NOTIFY_OPACITY					1.0f		// 0-1 Toast opacity
-#define NOTIFY_TOAST_FLAGS				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing
+#define IMGUI_NOTIFY_MAX_MSG_LENGTH			4096		// Max message content length
+#define IMGUI_NOTIFY_PADDING_X				20.f		// Bottom-left X padding
+#define IMGUI_NOTIFY_PADDING_Y				20.f		// Bottom-left Y padding
+#define IMGUI_NOTIFY_PADDING_MESSAGE_Y		10.f		// Padding Y between each message
+#define IMGUI_NOTIFY_FADE_IN_OUT_TIME			150			// Fade in and out duration
+#define IMGUI_NOTIFY_DEFAULT_DISMISS			3000		// Auto dismiss after X ms (default, applied only of no data provided in constructors)
+#define IMGUI_NOTIFY_OPACITY					1.0f		// 0-1 Toast opacity
+#define IMGUI_NOTIFY_TOAST_FLAGS				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing
 // Comment out if you don't want any separator between title and content
-//#define NOTIFY_USE_SEPARATOR
+//#define IMGUI_NOTIFY_USE_SEPARATOR
 
-#define NOTIFY_NO_DISMISS				-1
-#define NOTIFY_REMOVE_BUTTON			1 // Mouse buttons: 0=left, 1=right, 2=middle
-#define NOTIFY_SIGNAL_BUTTON			0 // Mouse buttons: 0=left, 1=right, 2=middle
+#define IMGUI_NOTIFY_NO_DISMISS				-1
+#define IMGUI_NOTIFY_REMOVE_BUTTON			1 // Mouse buttons: 0=left, 1=right, 2=middle
+#define IMGUI_NOTIFY_SIGNAL_BUTTON			0 // Mouse buttons: 0=left, 1=right, 2=middle
 
-#define NOTIFY_INLINE					inline
-#define NOTIFY_NULL_OR_EMPTY(str)		(!str ||! strlen(str))
+#define IMGUI_NOTIFY_INLINE					inline
+#define IMGUI_NOTIFY_NULL_OR_EMPTY(str)		(!str ||! strlen(str))
 
 typedef int ImGuiToastType;
 typedef int ImGuiToastPhase;
@@ -51,7 +55,9 @@ enum ImGuiToastType_
 	ImGuiToastType_Success,
 	ImGuiToastType_Warning,
 	ImGuiToastType_Error,
+	ImGuiToastType_Critical,
 	ImGuiToastType_Info,
+	ImGuiToastType_Debug,
 	ImGuiToastType_COUNT
 };
 
@@ -85,44 +91,47 @@ class ImGuiToast
 {
 private:
 	ImGuiToastType				type = ImGuiToastType_None;
-	char						title[NOTIFY_MAX_MSG_LENGTH];
-	char						content[NOTIFY_MAX_MSG_LENGTH];
-	int							dismiss_time = NOTIFY_DEFAULT_DISMISS;
+	char						title[IMGUI_NOTIFY_MAX_MSG_LENGTH];
+	char						content[IMGUI_NOTIFY_MAX_MSG_LENGTH];
+	int							dismiss_time = IMGUI_NOTIFY_DEFAULT_DISMISS;
 	uint64_t					creation_time = 0;
 	std::function<void(void)>	callback;
 	uint32_t					flags = 0;
+	uint64						id = 0;
 
+	IMGUI_NOTIFY_INLINE static uint64 generator = 0;
+	IMGUI_NOTIFY_INLINE static std::mutex idGeneratorMutex;
 public:
-	NOTIFY_INLINE auto signal() -> void { if (callback) callback(); }
+	IMGUI_NOTIFY_INLINE auto signal() -> void { if (callback) callback(); }
 
-	NOTIFY_INLINE ImGuiToast& bind(std::function<void(void)> callback) { this->callback = callback; return *this; }
+	IMGUI_NOTIFY_INLINE ImGuiToast& bind(std::function<void(void)> callback) { this->callback = callback; return *this; }
 
-	NOTIFY_INLINE ImGuiToast& dismissOnSignal() { flags |= ImGuiToastFlag_DismissOnSignal; return *this;}
+	IMGUI_NOTIFY_INLINE ImGuiToast& dismissOnSignal() { flags |= ImGuiToastFlag_DismissOnSignal; return *this;}
 
 public:
 
 	template<typename... Args>
-	NOTIFY_INLINE auto set_title(const char* format, Args&&...args) -> void
+	IMGUI_NOTIFY_INLINE auto set_title(const char* format, Args&&...args) -> void
 	{
 		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
 		strcpy(this->title, str.data());
 	}
 
 	template<typename... Args>
-	NOTIFY_INLINE auto set_content(const char* format, Args&&...args) -> void
+	IMGUI_NOTIFY_INLINE auto set_content(const char* format, Args&&...args) -> void
 	{
 		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
 		strcpy(this->content, str.data());
 	}
 
-	NOTIFY_INLINE auto set_type(const ImGuiToastType& type) -> void { IM_ASSERT(type < ImGuiToastType_COUNT); this->type = type; };
+	IMGUI_NOTIFY_INLINE auto set_type(const ImGuiToastType& type) -> void { IM_ASSERT(type < ImGuiToastType_COUNT); this->type = type; };
 
 public:
 	// Getters
 
-	NOTIFY_INLINE auto get_title() -> char* { return this->title; };
+	IMGUI_NOTIFY_INLINE auto get_title() -> char* { return this->title; };
 
-	NOTIFY_INLINE auto get_default_title() -> char*
+	IMGUI_NOTIFY_INLINE auto get_default_title() -> char*
 	{
 		if (!strlen(this->title))
 		{
@@ -136,17 +145,21 @@ public:
 				return "Warning";
 			case ImGuiToastType_Error:
 				return "Error";
+			case ImGuiToastType_Critical:
+				return "Critical";
 			case ImGuiToastType_Info:
 				return "Info";
+			case ImGuiToastType_Debug:
+				return "Debug";
 			}
 		}
 
 		return this->title;
 	};
 
-	NOTIFY_INLINE auto get_type() -> const ImGuiToastType& { return this->type; };
+	IMGUI_NOTIFY_INLINE auto get_type() -> const ImGuiToastType& { return this->type; };
 
-	NOTIFY_INLINE auto get_color() -> const ImVec4&
+	IMGUI_NOTIFY_INLINE auto get_color() -> const ImVec4&
 	{
 		switch (this->type)
 		{
@@ -157,13 +170,17 @@ public:
 		case ImGuiToastType_Warning:
 			return { 255, 255, 0, 255 }; // Yellow
 		case ImGuiToastType_Error:
-			return { 255, 0, 0, 255 }; // Error
+			return { 255, 0, 0, 255 }; // Red
+		case ImGuiToastType_Critical:
+			return { 127, 0, 0, 255 }; // Dark red
 		case ImGuiToastType_Info:
-			return { 0, 157, 255, 255 }; // Blue
+			return { 0, 157, 255, 255 }; // Light Blue
+		case ImGuiToastType_Debug:
+			return { 0, 127, 0, 255 }; // Dark Green
 		}
 	}
 
-	NOTIFY_INLINE auto get_icon() -> const char*
+	IMGUI_NOTIFY_INLINE auto get_icon() -> const char*
 	{
 		switch (this->type)
 		{
@@ -175,32 +192,36 @@ public:
 			return u8"\uF06A";
 		case ImGuiToastType_Error:
 			return u8"\uF057";
+		case ImGuiToastType_Critical:
+			return u8"\uF05B";
 		case ImGuiToastType_Info:
 			return u8"\uF059";
+		case ImGuiToastType_Debug:
+			return u8"\uF188";// u8"\uE490";
 		}
 	}
 
-	NOTIFY_INLINE auto get_content() -> char* { return this->content; };
+	IMGUI_NOTIFY_INLINE auto get_content() -> char* { return this->content; };
 
-	NOTIFY_INLINE auto get_elapsed_time() { return GetTickCount64() - this->creation_time; }
+	IMGUI_NOTIFY_INLINE auto get_elapsed_time() { return GetTickCount64() - this->creation_time; }
 
-	NOTIFY_INLINE auto get_phase() -> const ImGuiToastPhase&
+	IMGUI_NOTIFY_INLINE auto get_phase() -> const ImGuiToastPhase&
 	{
 		const auto elapsed = get_elapsed_time();
 
-		if (this->dismiss_time == NOTIFY_NO_DISMISS)
+		if (this->dismiss_time == IMGUI_NOTIFY_NO_DISMISS)
 		{
 			return ImGuiToastPhase_Wait;
 		}
-		else if (elapsed > NOTIFY_FADE_IN_OUT_TIME + this->dismiss_time + NOTIFY_FADE_IN_OUT_TIME)
+		else if (elapsed > IMGUI_NOTIFY_FADE_IN_OUT_TIME + this->dismiss_time + IMGUI_NOTIFY_FADE_IN_OUT_TIME)
 		{
 			return ImGuiToastPhase_Expired;
 		}
-		else if (elapsed > NOTIFY_FADE_IN_OUT_TIME + this->dismiss_time)
+		else if (elapsed > IMGUI_NOTIFY_FADE_IN_OUT_TIME + this->dismiss_time)
 		{
 			return ImGuiToastPhase_FadeOut;
 		}
-		else if (elapsed > NOTIFY_FADE_IN_OUT_TIME)
+		else if (elapsed > IMGUI_NOTIFY_FADE_IN_OUT_TIME)
 		{
 			return ImGuiToastPhase_Wait;
 		}
@@ -210,29 +231,46 @@ public:
 		}
 	}
 
-	NOTIFY_INLINE auto get_fade_percent() -> const float
+	IMGUI_NOTIFY_INLINE auto get_fade_percent() -> const float
 	{
 		const auto phase = get_phase();
 		const auto elapsed = get_elapsed_time();
 
 		if (phase == ImGuiToastPhase_FadeIn)
 		{
-			return ((float)elapsed / (float)NOTIFY_FADE_IN_OUT_TIME) * NOTIFY_OPACITY;
+			return ((float)elapsed / (float)IMGUI_NOTIFY_FADE_IN_OUT_TIME) * IMGUI_NOTIFY_OPACITY;
 		}
 		else if (phase == ImGuiToastPhase_FadeOut)
 		{
-			return (1.f - (((float)elapsed - (float)NOTIFY_FADE_IN_OUT_TIME - (float)this->dismiss_time) / (float)NOTIFY_FADE_IN_OUT_TIME)) * NOTIFY_OPACITY;
+			return (1.f - (((float)elapsed - (float)IMGUI_NOTIFY_FADE_IN_OUT_TIME - (float)this->dismiss_time) / (float)IMGUI_NOTIFY_FADE_IN_OUT_TIME)) * IMGUI_NOTIFY_OPACITY;
 		}
 
-		return 1.f * NOTIFY_OPACITY;
+		return 1.f * IMGUI_NOTIFY_OPACITY;
 	}
 
-	NOTIFY_INLINE auto get_flags() -> uint32_t { return flags; }
+	IMGUI_NOTIFY_INLINE auto get_flags() const -> uint32_t { return this->flags; }
+	IMGUI_NOTIFY_INLINE auto get_id() const -> uint64 { return this->id; }
 
 public:
 	// Constructors
+	ImGuiToast() // Added to make vector.reserve happpy
+	{
+		this->type = ImGuiToastType_None;
+		this->dismiss_time = IMGUI_NOTIFY_DEFAULT_DISMISS;
+		this->creation_time = GetTickCount64();
 
-	ImGuiToast(ImGuiToastType type, int dismiss_time = NOTIFY_DEFAULT_DISMISS)
+		memset(this->title, 0, sizeof(this->title));
+		memset(this->content, 0, sizeof(this->content));
+
+		uint64 generatedID = 0;
+		{
+			std::lock_guard<std::mutex> lock(idGeneratorMutex);
+			generatedID = ++this->generator;
+		}
+		this->id = generatedID;
+	}
+
+	ImGuiToast(ImGuiToastType type, int dismiss_time = IMGUI_NOTIFY_DEFAULT_DISMISS)
 	{
 		IM_ASSERT(type < ImGuiToastType_COUNT);
 
@@ -242,47 +280,61 @@ public:
 
 		memset(this->title, 0, sizeof(this->title));
 		memset(this->content, 0, sizeof(this->content));
+
+		uint64 generatedID = 0;
+		{
+			std::lock_guard<std::mutex> lock(idGeneratorMutex);
+			generatedID = ++this->generator;
+		}
+		this->id = generatedID;
 	}
 
-	//ImGuiToast(ImGuiToastType type, const char* format, ...) : ImGuiToast(type) { NOTIFY_FORMAT(this->set_content, format); }
 	template<typename... Args>
-	ImGuiToast(ImGuiToastType type, const char* format, Args&&...args) : ImGuiToast(type) { this->set_content(format, std::forward<Args>(args)...); }
+	ImGuiToast(ImGuiToastType type, const char* format, Args&&...args)
+		: ImGuiToast(type)
+	{ 
+		this->dismiss_time = type == ImGuiToastType_Critical ? IMGUI_NOTIFY_NO_DISMISS : IMGUI_NOTIFY_DEFAULT_DISMISS;
+		this->set_content(format, std::forward<Args>(args)...);
+	}
 
-	//ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, ...) : ImGuiToast(type, dismiss_time) { NOTIFY_FORMAT(this->set_content, format); }
 	template<typename... Args>
-	ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, Args&&...args) : ImGuiToast(type, dismiss_time) { this->set_content(format, std::forward<Args>(args)...); }
+	ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, Args&&...args)
+		: ImGuiToast(type, dismiss_time)
+	{
+		this->set_content(format, std::forward<Args>(args)...);
+	}
 
 };
 
 namespace ImGui
 {
-	NOTIFY_INLINE uint32_t GetDefaultNotificationPosition() { return ImGuiToastPos_TopRight; }
+	IMGUI_NOTIFY_INLINE uint32_t GetDefaultNotificationPosition() { return ImGuiToastPos_TopRight; }
 
 	namespace _Internal
 	{
-		NOTIFY_INLINE uint32_t notificationPosition = GetDefaultNotificationPosition();
+		IMGUI_NOTIFY_INLINE uint32_t notificationPosition = GetDefaultNotificationPosition();
 
-		NOTIFY_INLINE ImVec2 GetWinPos(float height, const ImVec2& vpSize)
+		IMGUI_NOTIFY_INLINE ImVec2 GetWinPos(float height, const ImVec2& vpSize)
 		{
 			switch (notificationPosition)
 			{
 			case ImGuiToastPos_TopLeft:
-				return ImVec2(NOTIFY_PADDING_X, NOTIFY_PADDING_Y + height);
+				return ImVec2(IMGUI_NOTIFY_PADDING_X, IMGUI_NOTIFY_PADDING_Y + height);
 			case ImGuiToastPos_TopRight:
-				return ImVec2(vpSize.x - NOTIFY_PADDING_X, NOTIFY_PADDING_Y + height);
+				return ImVec2(vpSize.x - IMGUI_NOTIFY_PADDING_X, IMGUI_NOTIFY_PADDING_Y + height);
 			case ImGuiToastPos_TopCenter:
-				return ImVec2(vpSize.x / 2 - NOTIFY_PADDING_X, NOTIFY_PADDING_Y + height);
+				return ImVec2(vpSize.x / 2 - IMGUI_NOTIFY_PADDING_X, IMGUI_NOTIFY_PADDING_Y + height);
 			case ImGuiToastPos_BottomCenter:
-				return ImVec2(vpSize.x / 2 - NOTIFY_PADDING_X, vpSize.y - NOTIFY_PADDING_Y - height);
+				return ImVec2(vpSize.x / 2 - IMGUI_NOTIFY_PADDING_X, vpSize.y - IMGUI_NOTIFY_PADDING_Y - height);
 			case ImGuiToastPos_BottomLeft:
-				return ImVec2(NOTIFY_PADDING_X, vpSize.y - NOTIFY_PADDING_Y - height);
+				return ImVec2(IMGUI_NOTIFY_PADDING_X, vpSize.y - IMGUI_NOTIFY_PADDING_Y - height);
 			case ImGuiToastPos_BottomRight:
 			default:
-				return ImVec2(vpSize.x - NOTIFY_PADDING_X, vpSize.y - NOTIFY_PADDING_Y - height);
+				return ImVec2(vpSize.x - IMGUI_NOTIFY_PADDING_X, vpSize.y - IMGUI_NOTIFY_PADDING_Y - height);
 			}
 		}
 
-		NOTIFY_INLINE ImVec2 GetWinPivot()
+		IMGUI_NOTIFY_INLINE ImVec2 GetWinPivot()
 		{
 			switch (notificationPosition)
 			{
@@ -303,31 +355,37 @@ namespace ImGui
 		}
 	}
 
-	NOTIFY_INLINE std::vector<ImGuiToast> notifications;
+	IMGUI_NOTIFY_INLINE std::unordered_map<uint64, ImGuiToast> notifications;
+	IMGUI_NOTIFY_INLINE std::vector<uint64> pendingNotificationRemovals;
+	IMGUI_NOTIFY_INLINE std::mutex notificationsMutex;
 
 	/// <summary>
 	/// Insert a new toast in the list
 	/// </summary>
-	NOTIFY_INLINE ImGuiToast& InsertNotification(const ImGuiToast& toast)
+	IMGUI_NOTIFY_INLINE ImGuiToast& InsertNotification(const ImGuiToast& toast)
 	{
-		notifications.push_back(toast);
-		return notifications.back();
+		std::lock_guard<std::mutex> lock(notificationsMutex);
+		notifications.insert(std::pair<uint64, ImGuiToast>(toast.get_id(), toast));
+		return notifications[toast.get_id()];
 	}
 
 	/// <summary>
-	/// Remove a toast from the list by its index
+	/// Remove a toast from the list by its ID
 	/// </summary>
-	/// <param name="index">index of the toast to remove</param>
-	NOTIFY_INLINE VOID RemoveNotification(int index)
+	/// <param name="id">ID of the toast to remove</param>
+	IMGUI_NOTIFY_INLINE VOID RemoveNotification(uint64 id)
 	{
-		notifications.erase(notifications.begin() + index);
+		std::lock_guard<std::mutex> lock(notificationsMutex); // Change to a different mutex for removals?
+		pendingNotificationRemovals.push_back(id);
+		//std::lock_guard<std::mutex> lock(notificationsMutex);
+		//notifications.erase(notifications.begin() + index);
 	}
 
 	/// <summary>
 	/// Set the position of where the notifications appears.
 	/// </summary>
 	/// <param name="pos">position of the notification</param>
-	NOTIFY_INLINE VOID SetNotificationPosition(uint32_t pos)
+	IMGUI_NOTIFY_INLINE VOID SetNotificationPosition(uint32_t pos)
 	{
 		_Internal::notificationPosition = pos;
 	}
@@ -335,21 +393,29 @@ namespace ImGui
 	/// <summary>
 	/// Render toasts, call at the end of your rendering!
 	/// </summary>
-	NOTIFY_INLINE VOID RenderNotifications()
+	IMGUI_NOTIFY_INLINE VOID RenderNotifications()
 	{
 		const auto vp_size = GetMainViewport()->Size;
 
 		float height = 0.f;
 
-		bool removeAllNotifications = false;
-		for (auto i = 0; i < notifications.size(); i++)
+		std::vector<ImGuiToast> notificationsBuffer;
 		{
-			auto* current_toast = &notifications[i];
+			std::lock_guard<std::mutex> lock(notificationsMutex);
+			notificationsBuffer.reserve(notifications.size());
+			for (auto& pair : notifications)
+				notificationsBuffer.push_back(pair.second);
+		}
+
+		bool removeAllNotifications = false;
+		for (auto i = 0; i < notificationsBuffer.size(); i++)
+		{
+			auto* current_toast = &notificationsBuffer[i];
 
 			// Remove toast if expired
 			if (current_toast->get_phase() == ImGuiToastPhase_Expired)
 			{
-				RemoveNotification(i);
+				RemoveNotification(current_toast->get_id());
 				continue;
 			}
 
@@ -375,13 +441,13 @@ namespace ImGui
 			ImVec2 winPivot = _Internal::GetWinPivot();
 			SetNextWindowPos(winPos, ImGuiCond_Always, winPivot);
 
-			Begin(window_name, NULL, NOTIFY_TOAST_FLAGS);
+			Begin(window_name, NULL, IMGUI_NOTIFY_TOAST_FLAGS);
 
 			// Remove when clicked on.
 			bool pendingRemoval = false;
 			if (IsWindowHovered(ImGuiHoveredFlags_None))
 			{
-				if (IsMouseReleased(NOTIFY_REMOVE_BUTTON))
+				if (IsMouseReleased(IMGUI_NOTIFY_REMOVE_BUTTON))
 				{
 					pendingRemoval = true;
 					ImGuiIO& io = ImGui::GetIO();
@@ -389,7 +455,7 @@ namespace ImGui
 						removeAllNotifications = true;
 				}
 
-				if (IsMouseReleased(NOTIFY_SIGNAL_BUTTON))
+				if (IsMouseReleased(IMGUI_NOTIFY_SIGNAL_BUTTON))
 				{
 					current_toast->signal();
 
@@ -405,7 +471,7 @@ namespace ImGui
 				bool was_title_rendered = false;
 
 				// If an icon is set
-				if (!NOTIFY_NULL_OR_EMPTY(icon))
+				if (!IMGUI_NOTIFY_NULL_OR_EMPTY(icon))
 				{
 					//Text(icon); // Render icon text
 					TextColored(text_color, icon);
@@ -413,18 +479,18 @@ namespace ImGui
 				}
 
 				// If a title is set
-				if (!NOTIFY_NULL_OR_EMPTY(title))
+				if (!IMGUI_NOTIFY_NULL_OR_EMPTY(title))
 				{
 					// If a title and an icon is set, we want to render on same line
-					if (!NOTIFY_NULL_OR_EMPTY(icon))
+					if (!IMGUI_NOTIFY_NULL_OR_EMPTY(icon))
 						SameLine();
 
 					Text(title); // Render title text
 					was_title_rendered = true;
 				}
-				else if (!NOTIFY_NULL_OR_EMPTY(default_title))
+				else if (!IMGUI_NOTIFY_NULL_OR_EMPTY(default_title))
 				{
-					if (!NOTIFY_NULL_OR_EMPTY(icon))
+					if (!IMGUI_NOTIFY_NULL_OR_EMPTY(icon))
 						SameLine();
 
 					Text(default_title); // Render default title text (ImGuiToastType_Success -> "Success", etc...)
@@ -432,17 +498,17 @@ namespace ImGui
 				}
 
 				// In case ANYTHING was rendered in the top, we want to add a small padding so the text (or icon) looks centered vertically
-				if (was_title_rendered && !NOTIFY_NULL_OR_EMPTY(content))
+				if (was_title_rendered && !IMGUI_NOTIFY_NULL_OR_EMPTY(content))
 				{
 					SetCursorPosY(GetCursorPosY() + 5.f); // Must be a better way to do this!!!!
 				}
 
 				// If a content is set
-				if (!NOTIFY_NULL_OR_EMPTY(content))
+				if (!IMGUI_NOTIFY_NULL_OR_EMPTY(content))
 				{
 					if (was_title_rendered)
 					{
-#ifdef NOTIFY_USE_SEPARATOR
+#ifdef IMGUI_NOTIFY_USE_SEPARATOR
 						Separator();
 #endif
 					}
@@ -454,20 +520,32 @@ namespace ImGui
 			}
 
 			// Save height for next toasts
-			height += GetWindowHeight() + NOTIFY_PADDING_MESSAGE_Y;
+			height += GetWindowHeight() + IMGUI_NOTIFY_PADDING_MESSAGE_Y;
 
 			// End
 			End();
 
 			if (pendingRemoval)
 			{
-				RemoveNotification(i);
+				RemoveNotification(current_toast->get_id());
 				continue;
 			}
 		}
 
-		if (removeAllNotifications)
-			notifications.clear();
+		{
+			std::lock_guard<std::mutex> lock(notificationsMutex);
+			if (removeAllNotifications)
+			{
+				notifications.clear();
+				pendingNotificationRemovals.clear();
+			}
+			else
+			{
+				for (uint64 id : pendingNotificationRemovals)
+					notifications.erase(id);
+				pendingNotificationRemovals.clear();
+			}
+		}
 	}
 }
 
