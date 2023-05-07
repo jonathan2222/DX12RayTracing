@@ -371,11 +371,11 @@ void RS::DX12::Dx12Core2::Render()
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), u8"\uF059"); // Info
 
             if (ImGui::Button("Warning"))
-                ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! %d", 0x1337 });
+                ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! {}", 0x1337 });
             if (ImGui::Button("Success"))
-                ImGui::InsertNotification({ ImGuiToastType_Success, 3000, "Hello World! This is a success! %s", "We can also format here:)" });
+                ImGui::InsertNotification({ ImGuiToastType_Success, 3000, "Hello World! This is a success! {}", "We can also format here:)" });
             if (ImGui::Button("Error"))
-                ImGui::InsertNotification({ ImGuiToastType_Error, 3000, "Hello World! This is an error! 0x%X", 0xDEADBEEF });
+                ImGui::InsertNotification({ ImGuiToastType_Error, 3000, "Hello World! This is an error! {:#10X}", 0xDEADBEEF });
             if (ImGui::Button("Info"))
                 ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Hello World! This is an info!" });
             if (ImGui::Button("Info Long"))
@@ -385,7 +385,7 @@ void RS::DX12::Dx12Core2::Render()
             {
                 // Now using a custom title...
                 ImGuiToast toast(ImGuiToastType_Success, 3000); // <-- content can also be passed here as above
-                toast.set_title("This is a %s title", "wonderful");
+                toast.set_title("This is a {} title", "wonderful");
                 toast.set_content("Lorem ipsum dolor sit amet");
                 ImGui::InsertNotification(toast);
             }

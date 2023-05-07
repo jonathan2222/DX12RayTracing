@@ -38,7 +38,6 @@
 
 #define NOTIFY_INLINE					inline
 #define NOTIFY_NULL_OR_EMPTY(str)		(!str ||! strlen(str))
-#define NOTIFY_FORMAT(fn, format, ...)	if (format) { va_list args; va_start(args, format); fn(format, args, __VA_ARGS__); va_end(args); }
 
 typedef int ImGuiToastType;
 typedef int ImGuiToastPhase;
@@ -98,18 +97,21 @@ public:
 
 	NOTIFY_INLINE ImGuiToast& dismissOnSignal() { flags |= ImGuiToastFlag_DismissOnSignal; return *this;}
 
-private:
-	// Setters
-
-	NOTIFY_INLINE auto set_title_internal(const char* format, va_list args) { vsnprintf(this->title, sizeof(this->title), format, args); }
-
-	NOTIFY_INLINE auto set_content_internal(const char* format, va_list args) { vsnprintf(this->content, sizeof(this->content), format, args); }
-
 public:
 
-	NOTIFY_INLINE auto set_title(const char* format, ...) -> void { NOTIFY_FORMAT(this->set_title_internal, format); }
+	template<typename... Args>
+	NOTIFY_INLINE auto set_title(const char* format, Args&&...args) -> void
+	{
+		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		strcpy(this->title, str.data());
+	}
 
-	NOTIFY_INLINE auto set_content(const char* format, ...) -> void { NOTIFY_FORMAT(this->set_content_internal, format); }
+	template<typename... Args>
+	NOTIFY_INLINE auto set_content(const char* format, Args&&...args) -> void
+	{
+		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		strcpy(this->content, str.data());
+	}
 
 	NOTIFY_INLINE auto set_type(const ImGuiToastType& type) -> void { IM_ASSERT(type < ImGuiToastType_COUNT); this->type = type; };
 
@@ -240,9 +242,13 @@ public:
 		memset(this->content, 0, sizeof(this->content));
 	}
 
-	ImGuiToast(ImGuiToastType type, const char* format, ...) : ImGuiToast(type) { NOTIFY_FORMAT(this->set_content, format); }
+	//ImGuiToast(ImGuiToastType type, const char* format, ...) : ImGuiToast(type) { NOTIFY_FORMAT(this->set_content, format); }
+	template<typename... Args>
+	ImGuiToast(ImGuiToastType type, const char* format, Args&&...args) : ImGuiToast(type) { this->set_content(format, std::forward<Args>(args)...); }
 
-	ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, ...) : ImGuiToast(type, dismiss_time) { NOTIFY_FORMAT(this->set_content, format); }
+	//ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, ...) : ImGuiToast(type, dismiss_time) { NOTIFY_FORMAT(this->set_content, format); }
+	template<typename... Args>
+	ImGuiToast(ImGuiToastType type, int dismiss_time, const char* format, Args&&...args) : ImGuiToast(type, dismiss_time) { this->set_content(format, std::forward<Args>(args)...); }
 
 };
 
@@ -250,7 +256,7 @@ namespace ImGui
 {
 	namespace _Internal
 	{
-		NOTIFY_INLINE uint32_t position = ImGuiToastPos_BottomRight;
+		NOTIFY_INLINE uint32_t position = ImGuiToastPos_TopRight;
 
 		NOTIFY_INLINE ImVec2 GetWinPos(float height, const ImVec2& vpSize)
 		{

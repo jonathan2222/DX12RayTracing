@@ -59,6 +59,11 @@ namespace RS
 			return str;
 		}
 
+		static std::string Format(const char* msg)
+		{
+			return Format("{}", msg);
+		}
+
 		// Bit manipulations
 
 		template<typename T>
