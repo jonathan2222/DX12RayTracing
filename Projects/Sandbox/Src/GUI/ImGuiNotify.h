@@ -8,8 +8,10 @@
 	* Remove all notifications when shift + right-clicked on any notification.
 	* Can bind a callback and let it be signaled when left-clicked.
 	* Flags, such as DismissOnSignal.
-	* Option to change position of the toasts using ImGuiToastPos_*.
+	* Option to change position of the notifications using ImGuiToastPos_*.
 	* Bring to front (for some reason it was disabled).
+	* Changed formatting to use Utils::Format (using fmt style formatting).
+	* Changed functions to be templated instead of using va_list.
 **/
 
 #ifndef IMGUI_NOTIFY
@@ -254,13 +256,15 @@ public:
 
 namespace ImGui
 {
+	NOTIFY_INLINE uint32_t GetDefaultNotificationPosition() { return ImGuiToastPos_TopRight; }
+
 	namespace _Internal
 	{
-		NOTIFY_INLINE uint32_t position = ImGuiToastPos_TopRight;
+		NOTIFY_INLINE uint32_t notificationPosition = GetDefaultNotificationPosition();
 
 		NOTIFY_INLINE ImVec2 GetWinPos(float height, const ImVec2& vpSize)
 		{
-			switch (position)
+			switch (notificationPosition)
 			{
 			case ImGuiToastPos_TopLeft:
 				return ImVec2(NOTIFY_PADDING_X, NOTIFY_PADDING_Y + height);
@@ -280,7 +284,7 @@ namespace ImGui
 
 		NOTIFY_INLINE ImVec2 GetWinPivot()
 		{
-			switch (position)
+			switch (notificationPosition)
 			{
 			case ImGuiToastPos_TopLeft:
 				return ImVec2(0.0f, 0.0f);
@@ -319,9 +323,13 @@ namespace ImGui
 		notifications.erase(notifications.begin() + index);
 	}
 
-	NOTIFY_INLINE VOID SetToastPosition(uint32_t pos)
+	/// <summary>
+	/// Set the position of where the notifications appears.
+	/// </summary>
+	/// <param name="pos">position of the notification</param>
+	NOTIFY_INLINE VOID SetNotificationPosition(uint32_t pos)
 	{
-		_Internal::position = pos;
+		_Internal::notificationPosition = pos;
 	}
 
 	/// <summary>

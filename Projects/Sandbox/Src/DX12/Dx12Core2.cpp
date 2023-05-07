@@ -355,20 +355,16 @@ void RS::DX12::Dx12Core2::Render()
         pCommandList->DrawInstanced(6, 1, 0, 0);
     }
 
-    static bool show_demo_window = true;
-    static bool show_test = true;
-    static uint32_t position = ImGuiToastPos_BottomRight;
+    static bool show_demo_window = false;
+    static bool show_notification_window = true;
+    static uint32_t position = ImGui::GetDefaultNotificationPosition();
     ImGuiRenderer::Get()->Draw([&]() {
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        if (show_test)
+        if (show_notification_window)
         {
-            ImGui::Begin("Dear ImGui Test", &show_test);
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), u8"\uF06A"); // Warning
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), u8"\uF057"); // Error
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), u8"\uF058"); // Success
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), u8"\uF059"); // Info
+            ImGui::Begin("Notification Test", &show_notification_window);
 
             if (ImGui::Button("Warning"))
                 ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! {}", 0x1337 });
@@ -401,12 +397,12 @@ void RS::DX12::Dx12Core2::Render()
 
             if (ImGui::BeginPopupContextWindow())
             {
-                if (ImGui::MenuItem("Top-left", NULL, position == ImGuiToastPos_TopLeft)) { position = ImGuiToastPos_TopLeft; ImGui::SetToastPosition(position); }
-                if (ImGui::MenuItem("Top-Center", NULL, position == ImGuiToastPos_TopCenter)) { position = ImGuiToastPos_TopCenter; ImGui::SetToastPosition(position); }
-                if (ImGui::MenuItem("Top-right", NULL, position == ImGuiToastPos_TopRight)) { position = ImGuiToastPos_TopRight; ImGui::SetToastPosition(position); }
-                if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetToastPosition(position); }
-                if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetToastPosition(position); }
-                if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetToastPosition(position); }
+                if (ImGui::MenuItem("Top-left", NULL, position == ImGuiToastPos_TopLeft)) { position = ImGuiToastPos_TopLeft; ImGui::SetNotificationPosition(position); }
+                if (ImGui::MenuItem("Top-Center", NULL, position == ImGuiToastPos_TopCenter)) { position = ImGuiToastPos_TopCenter; ImGui::SetNotificationPosition(position); }
+                if (ImGui::MenuItem("Top-right", NULL, position == ImGuiToastPos_TopRight)) { position = ImGuiToastPos_TopRight; ImGui::SetNotificationPosition(position); }
+                if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetNotificationPosition(position); }
+                if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetNotificationPosition(position); }
+                if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetNotificationPosition(position); }
                 ImGui::EndPopup();
             }
 
