@@ -292,13 +292,13 @@ bool RS::DX12::Dx12Core2::WindowSizeChanged(uint32 width, uint32 height, bool is
 
 void RS::DX12::Dx12Core2::Render()
 {
-    int r = rand();
-    if (r % 100 == 0)
-        NOTIFY_DEBUG("Test A");
-    if (r % 500 == 0)
-        NOTIFY_ERROR("Test B. {:#10X}", 0xF8AB29);
-    if (r % 1000 == 0)
-        NOTIFY_CRITICAL("Test C");
+    //int r = rand();
+    //if (r % 100 == 0)
+    //    RS_NOTIFY_DEBUG("Test A");
+    //if (r % 500 == 0)
+    //    RS_NOTIFY_ERROR("Test B. {:#10X}", 0xF8AB29);
+    //if (r % 1000 == 0)
+    //    RS_NOTIFY_CRITICAL("Test C");
 
     // Wait for the current frame's commands to finish, then resets both the command list and the command allocator.
     m_FrameCommandList.BeginFrame(m_Pipeline.GetPipelineState());
@@ -365,7 +365,7 @@ void RS::DX12::Dx12Core2::Render()
         pCommandList->DrawInstanced(6, 1, 0, 0);
     }
 
-    static bool show_demo_window = false;
+    static bool show_demo_window = true;
     static bool show_notification_window = true;
     static uint32_t position = ImGui::GetDefaultNotificationPosition();
     ImGuiRenderer::Get()->Draw([&]() {

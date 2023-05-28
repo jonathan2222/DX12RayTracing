@@ -1,0 +1,22 @@
+{
+  "FileVersion": 2,
+  "Id": "f4c124e3-60a1-a37e-69b9-2e55d5170ae0",
+  "Items": [
+    {
+      "Id": "26b7be36-791d-4f8d-8aca-35d8846831c7",
+      "Command": "-logDXCalls"
+    },
+    {
+      "Id": "76f532e3-4792-4e70-ba33-81b2516471ac",
+      "Command": "-logAllDXCalls"
+    },
+    {
+      "Id": "a78c2573-9832-4ae2-914e-30d1330463c6",
+      "Command": "-logDXNamedObjects"
+    },
+    {
+      "Id": "33022683-cc69-4d05-9ad8-967088214b98",
+      "Command": "-logShaderDebug"
+    }
+  ]
+}

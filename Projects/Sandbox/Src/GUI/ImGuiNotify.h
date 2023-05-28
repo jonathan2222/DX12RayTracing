@@ -14,6 +14,7 @@
 	* Changed functions to be templated instead of using va_list.
 	* Made adding and removing notifications thread safe.
 	* Added IMGUI prefix as to not interfere with other macros.
+	* Added highlight when signaling or removing a notification.
 **/
 
 #ifndef IMGUI_NOTIFY
@@ -31,10 +32,10 @@
 #define IMGUI_NOTIFY_PADDING_X				20.f		// Bottom-left X padding
 #define IMGUI_NOTIFY_PADDING_Y				20.f		// Bottom-left Y padding
 #define IMGUI_NOTIFY_PADDING_MESSAGE_Y		10.f		// Padding Y between each message
-#define IMGUI_NOTIFY_FADE_IN_OUT_TIME			150			// Fade in and out duration
-#define IMGUI_NOTIFY_DEFAULT_DISMISS			3000		// Auto dismiss after X ms (default, applied only of no data provided in constructors)
-#define IMGUI_NOTIFY_OPACITY					1.0f		// 0-1 Toast opacity
-#define IMGUI_NOTIFY_TOAST_FLAGS				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing
+#define IMGUI_NOTIFY_FADE_IN_OUT_TIME		150			// Fade in and out duration
+#define IMGUI_NOTIFY_DEFAULT_DISMISS		3000		// Auto dismiss after X ms (default, applied only of no data provided in constructors)
+#define IMGUI_NOTIFY_OPACITY				1.0f		// 0-1 Toast opacity
+#define IMGUI_NOTIFY_TOAST_FLAGS			ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing
 // Comment out if you don't want any separator between title and content
 //#define IMGUI_NOTIFY_USE_SEPARATOR
 
@@ -89,6 +90,9 @@ enum ImGuiToastFlag_ : uint32_t
 
 class ImGuiToast
 {
+public:
+	using ID = uint64;
+
 private:
 	ImGuiToastType				type = ImGuiToastType_None;
 	char						title[IMGUI_NOTIFY_MAX_MSG_LENGTH];
@@ -97,7 +101,8 @@ private:
 	uint64_t					creation_time = 0;
 	std::function<void(void)>	callback;
 	uint32_t					flags = 0;
-	uint64						id = 0;
+	ID							id = 0;
+	bool						highlighted = false;
 
 	IMGUI_NOTIFY_INLINE static uint64 generator = 0;
 	IMGUI_NOTIFY_INLINE static std::mutex idGeneratorMutex;
@@ -107,6 +112,8 @@ public:
 	IMGUI_NOTIFY_INLINE ImGuiToast& bind(std::function<void(void)> callback) { this->callback = callback; return *this; }
 
 	IMGUI_NOTIFY_INLINE ImGuiToast& dismissOnSignal() { flags |= ImGuiToastFlag_DismissOnSignal; return *this;}
+
+	IMGUI_NOTIFY_INLINE bool is_highlighted() const { return this->highlighted; }
 
 public:
 
@@ -125,6 +132,8 @@ public:
 	}
 
 	IMGUI_NOTIFY_INLINE auto set_type(const ImGuiToastType& type) -> void { IM_ASSERT(type < ImGuiToastType_COUNT); this->type = type; };
+
+	IMGUI_NOTIFY_INLINE void set_highlighted(bool highlighted) { this->highlighted = highlighted; }
 
 public:
 	// Getters
@@ -249,7 +258,7 @@ public:
 	}
 
 	IMGUI_NOTIFY_INLINE auto get_flags() const -> uint32_t { return this->flags; }
-	IMGUI_NOTIFY_INLINE auto get_id() const -> uint64 { return this->id; }
+	IMGUI_NOTIFY_INLINE auto get_id() const -> ID { return this->id; }
 
 public:
 	// Constructors
@@ -262,7 +271,7 @@ public:
 		memset(this->title, 0, sizeof(this->title));
 		memset(this->content, 0, sizeof(this->content));
 
-		uint64 generatedID = 0;
+		ID generatedID = 0;
 		{
 			std::lock_guard<std::mutex> lock(idGeneratorMutex);
 			generatedID = ++this->generator;
@@ -281,7 +290,7 @@ public:
 		memset(this->title, 0, sizeof(this->title));
 		memset(this->content, 0, sizeof(this->content));
 
-		uint64 generatedID = 0;
+		ID generatedID = 0;
 		{
 			std::lock_guard<std::mutex> lock(idGeneratorMutex);
 			generatedID = ++this->generator;
@@ -373,12 +382,10 @@ namespace ImGui
 	/// Remove a toast from the list by its ID
 	/// </summary>
 	/// <param name="id">ID of the toast to remove</param>
-	IMGUI_NOTIFY_INLINE VOID RemoveNotification(uint64 id)
+	IMGUI_NOTIFY_INLINE VOID RemoveNotification(ImGuiToast::ID id)
 	{
 		std::lock_guard<std::mutex> lock(notificationsMutex); // Change to a different mutex for removals?
 		pendingNotificationRemovals.push_back(id);
-		//std::lock_guard<std::mutex> lock(notificationsMutex);
-		//notifications.erase(notifications.begin() + index);
 	}
 
 	/// <summary>
@@ -410,6 +417,7 @@ namespace ImGui
 		bool removeAllNotifications = false;
 		for (auto i = 0; i < notificationsBuffer.size(); i++)
 		{
+			bool is_dirty = false;
 			auto* current_toast = &notificationsBuffer[i];
 
 			// Remove toast if expired
@@ -441,12 +449,21 @@ namespace ImGui
 			ImVec2 winPivot = _Internal::GetWinPivot();
 			SetNextWindowPos(winPos, ImGuiCond_Always, winPivot);
 
+			bool pendingHighlightedStylePop = false;
+			if (current_toast->is_highlighted())
+			{
+				ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(127, 127, 127, 256));
+				pendingHighlightedStylePop = true;
+			}
+
 			Begin(window_name, NULL, IMGUI_NOTIFY_TOAST_FLAGS);
 
 			// Remove when clicked on.
 			bool pendingRemoval = false;
 			if (IsWindowHovered(ImGuiHoveredFlags_None))
 			{
+				// When pressing: highlight the notification in some way. Like change color, size, etc.
+
 				if (IsMouseReleased(IMGUI_NOTIFY_REMOVE_BUTTON))
 				{
 					pendingRemoval = true;
@@ -454,13 +471,28 @@ namespace ImGui
 					if (io.KeyShift)
 						removeAllNotifications = true;
 				}
-
-				if (IsMouseReleased(IMGUI_NOTIFY_SIGNAL_BUTTON))
+				else if (IsMouseDown(IMGUI_NOTIFY_REMOVE_BUTTON))
+				{
+					current_toast->set_highlighted(true);
+					is_dirty = true;
+				}
+				else if (IsMouseReleased(IMGUI_NOTIFY_SIGNAL_BUTTON))
 				{
 					current_toast->signal();
 
 					if (current_toast->get_flags())
 						pendingRemoval = true;
+				}
+				else if (IsMouseDown(IMGUI_NOTIFY_SIGNAL_BUTTON))
+				{
+					current_toast->set_highlighted(true);
+					is_dirty = true;
+				}
+				// User had pressed down but moved outside the window and released, thus the highlight should also be removed.
+				else if (current_toast->is_highlighted())
+				{
+					current_toast->set_highlighted(false);
+					is_dirty = true;
 				}
 			}
 
@@ -525,10 +557,23 @@ namespace ImGui
 			// End
 			End();
 
+			if (pendingHighlightedStylePop)
+			{
+				ImGui::PopStyleColor();
+			}
+
 			if (pendingRemoval)
 			{
 				RemoveNotification(current_toast->get_id());
 				continue;
+			}
+
+			// If data is changed, update its original structs.
+			// TODO: Might want to do this in bulk?
+			if (is_dirty)
+			{
+				std::lock_guard<std::mutex> lock(notificationsMutex);
+				memcpy(&notifications[current_toast->get_id()], current_toast, sizeof(ImGuiToast));
 			}
 		}
 
@@ -541,7 +586,7 @@ namespace ImGui
 			}
 			else
 			{
-				for (uint64 id : pendingNotificationRemovals)
+				for (ImGuiToast::ID id : pendingNotificationRemovals)
 					notifications.erase(id);
 				pendingNotificationRemovals.clear();
 			}
