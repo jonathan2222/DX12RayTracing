@@ -15,11 +15,11 @@ void RS::Console::Init()
 {
 	memset(m_InputBuf, 0, ARRAYSIZE(m_InputBuf));
 
-	AddVar("Console.DisplayHeightRatio", m_DisplayHeightRatio);
-	AddVar("Console.Opacity", m_Opacity);
-	AddVar("Console.SearchPopupMaxDisplayCount", m_SearchPopupMaxDisplayCount);
+	AddVar("Console.DisplayHeightRatio", m_DisplayHeightRatio, Flag::NONE, "Ratio of the console to the height of the window.");
+	AddVar("Console.Opacity", m_Opacity, Flag::NONE, "Opacity of the console.");
+	AddVar("Console.SearchPopupMaxDisplayCount", m_SearchPopupMaxDisplayCount, Flag::NONE, "Maximum number of items that fit into the popup display for search matches.");
 
-	AddVar("Console.Info.CurrentCmdHistoryIndexOffset", m_CurrentCmdHistoryIndexOffset, Flag::ReadOnly);
+	AddVar("Console.Info.CurrentCmdHistoryIndexOffset", m_CurrentCmdHistoryIndexOffset, Flag::ReadOnly, "The index offset in the executed commands history list.");
 
 	AddFunction("Console.ListCommands", [this](FuncArgs args)->void
 		{
@@ -44,7 +44,8 @@ void RS::Console::Init()
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
-		}
+		},
+		Flag::NONE, "List all commands.\nUse '-d' to display the variable type."
 	);
 
 	AddFunction("Console.Clear", [this](FuncArgs args)->void
@@ -53,15 +54,36 @@ void RS::Console::Init()
 				return;
 
 			m_History.clear();
-			if (args.size() > 0)
+			if (args.Get("-c"))
 			{
-				if (args.Get("-c"))
+				m_CommandHistory.clear();
+				m_CurrentCmdHistoryIndexOffset = -1;
+			}
+		},
+		Flag::NONE, "Clear the console.\nUse '-c' to also clear the executed command history."
+	);
+
+	AddFunction("Console.Help", [this](FuncArgs args)->void
+		{
+			if (!ValidateFuncArgs(args, { {FuncArg::TypeFlag::Named} }, ValidateFuncArgsFlag::ArgCountMustMatch | ValidateFuncArgsFlag::TypeMatchOnly))
+				return;
+
+			auto arg = args.Get(0);
+			if (arg)
+			{
+				Variable* pVariable = GetVariable(arg.value().name);
+				if (pVariable)
 				{
-					m_CommandHistory.clear();
-					m_CurrentCmdHistoryIndexOffset = -1;
+					std::vector<std::string> v = Utils::Split(pVariable->documentation, '\n');
+					if (v.empty())
+						Print(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "\tMissing documentation");
+					for (std::string docsLine : v)
+						Print(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "\t{}", docsLine);
 				}
 			}
-		}
+		},
+		{ FuncArg::TypeFlag::Int, FuncArg::TypeFlag::Float, FuncArg::TypeFlag::Function },
+		Flag::NONE, "Get the documentation from the passed command.\nExample:\n\tConsole.Help Console.Clear\n\tGives you the documentation of the Clear command."
 	);
 }
 
@@ -130,7 +152,8 @@ void RS::Console::Render()
 		bool usedHistory = io.KeysDown[ImGuiKey_DownArrow] || io.KeysDown[ImGuiKey_UpArrow];
 		if (!usedHistory)
 		{
-			m_CurrentSearchableItem = m_InputBuf;
+			ComputeCurrentSearchableItem(m_InputBuf);
+
 			m_CurrentMatchedVarIndex = UINT32_MAX;
 			m_CurrentCmdHistoryIndexOffset = -1;
 		}
@@ -150,11 +173,11 @@ void RS::Console::Render()
 			if (m_CurrentMatchedVarIndex < m_MatchedSearchList.size())
 			{
 				MatchedSearchItem& item = m_MatchedSearchList[m_CurrentMatchedVarIndex];
-				memcpy(m_InputBuf, item.fullLine.c_str(), std::min((size_t)ARRAYSIZE(m_InputBuf), item.fullLine.size()));
+				memcpy(m_InputBuf + m_CurrentSearchableItemStartPos, item.fullLine.c_str(), std::min((size_t)ARRAYSIZE(m_InputBuf), item.fullLine.size()));
 				m_MatchedSearchList.clear();
 				m_CurrentMatchedVarIndex = UINT32_MAX;
 
-				m_CurrentSearchableItem = m_InputBuf;
+				ComputeCurrentSearchableItem(m_InputBuf);
 			}
 			m_CurrentCmdHistoryIndexOffset = -1;
 		}
@@ -164,6 +187,7 @@ void RS::Console::Render()
 			if (cmd.empty() == false)
 				ExecuteCommand(cmd);
 			strcpy(m_InputBuf, "");
+			m_CurrentSearchableItemStartPos = 0;
 			m_CurrentSearchableItem.clear();
 			m_CurrentCmdHistoryIndexOffset = -1;
 		}
@@ -182,6 +206,7 @@ void RS::Console::Render()
 	if (m_MatchedSearchList.empty() == false)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0, 0));
 		ImVec2 popupWinPos(0.f, height + ImGui::GetTextLineHeight());
 		ImGui::SetNextWindowPos(popupWinPos, ImGuiCond_Always, winPivot);
 		if (ImGui::Begin("_SearchPopup", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse))
@@ -215,7 +240,7 @@ void RS::Console::Render()
 
 			ImGui::End();
 		}
-		ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
+		ImGui::PopStyleVar(2); // ImGuiStyleVar_WindowPadding, ImGuiStyleVar_WindowMinSize
 	}
 }
 
@@ -241,19 +266,36 @@ void RS::Console::Print(const ImVec4& color, const char* txt)
 	m_History.push_back(line);
 }
 
-bool RS::Console::AddFunction(const std::string& name, std::function<void(FuncArgs)> func)
+bool RS::Console::AddFunction(const std::string& name, std::function<void(FuncArgs)> func, Flags flags, const std::string& docs)
 {
 	Variable var;
 	var.name = name;
 	var.pVar = nullptr;
 	var.type = Type::Function;
 	var.func = func;
-	var.flags = Flag::NONE;
+	var.flags = flags;
+	var.documentation = docs;
 	return AddVarInternal(name, var);
 }
 
-bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool strict)
+bool RS::Console::AddFunction(const std::string& name, Func func, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags, const std::string& docs)
 {
+	Variable var;
+	var.name = name;
+	var.pVar = nullptr;
+	var.type = Type::Function;
+	var.func = func;
+	var.flags = flags;
+	var.searchableTypes = searchableTypes;
+	var.documentation = docs;
+	return AddVarInternal(name, var);
+}
+
+bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags)
+{
+	const bool argCountMustMatch = flags & ValidateFuncArgsFlag::ArgCountMustMatch;
+	const bool typeMatchOnly = flags & ValidateFuncArgsFlag::TypeMatchOnly;
+
 	bool failed = false;
 
 	bool firstPrint = true;
@@ -271,7 +313,7 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool stric
 	for (uint32 i = 0; i < args.size(); ++i)
 	{
 		const FuncArg& arg = args[i];
-		if (arg.name.empty() && arg.type == FuncArg::Type::Unknown)
+		if (arg.name.empty() && arg.type == FuncArg::TypeFlag::NONE)
 		{
 			PrintStart();
 			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tEmpty arguments are not allowed!");
@@ -279,7 +321,11 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool stric
 
 		if (!arg.name.empty())
 		{
-			auto it = std::find_if(validArgs.begin(), validArgs.end(), [arg](const FuncArg& arg2)->bool { return arg.type == arg2.type && arg.name == arg2.name; });
+			auto it = std::find_if(validArgs.begin(), validArgs.end(), [arg, typeMatchOnly](const FuncArg& arg2)->bool
+				{
+					return (arg.type & arg2.type) != 0 && (typeMatchOnly ? true : arg.name == arg2.name);
+				}
+			);
 			if (it == validArgs.end())
 			{
 				PrintStart();
@@ -291,19 +337,24 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool stric
 	}
 
 	uint32 validNonNamedArgCount = 0;
-	std::for_each(validArgs.begin(), validArgs.end(), [&](const FuncArg& arg)->void { if (arg.type != FuncArg::Type::Unknown && arg.name.empty()) validNonNamedArgCount++; });
+	std::for_each(validArgs.begin(), validArgs.end(), [&](const FuncArg& arg)->void
+		{
+			if (arg.type != FuncArg::TypeFlag::NONE && (arg.type & FuncArg::TypeFlag::Named) != 0 && arg.name.empty())
+				validNonNamedArgCount++;
+		}
+	);
 
-	if ((!strict && nonNamedArgCount > validNonNamedArgCount) ||
-		(strict && nonNamedArgCount == validNonNamedArgCount))
+	if ((!argCountMustMatch && nonNamedArgCount > validNonNamedArgCount) ||
+		(argCountMustMatch && nonNamedArgCount == validNonNamedArgCount))
 	{
 		PrintStart();
-		if (strict)
+		if (argCountMustMatch)
 			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tUnsupported number of unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
 		else
 			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
 	}
 
-	if (strict && args.size() != validArgs.size())
+	if (argCountMustMatch && args.size() != validArgs.size())
 	{
 		PrintStart();
 		Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many arguments! Wanted {}, got {}", validArgs.size(), args.size());
@@ -337,6 +388,14 @@ bool RS::Console::AddVarInternal(const std::string& name, const Variable& var)
 	return true;
 }
 
+RS::Console::Variable* RS::Console::GetVariable(const std::string& name)
+{
+	auto it = m_VariablesMap.find(name);
+	if (it != m_VariablesMap.end())
+		return &it->second;
+	return nullptr;
+}
+
 int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 {
 	switch (data->EventFlag)
@@ -349,9 +408,9 @@ int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 			std::string str = PerformSearchCompletion();
 			if (str.empty() == false)
 			{
-				data->DeleteChars(0, data->BufTextLen);
-				data->InsertChars(0, str.c_str());
-				m_CurrentSearchableItem = str;
+				data->DeleteChars(m_CurrentSearchableItemStartPos, data->BufTextLen - m_CurrentSearchableItemStartPos);
+				data->InsertChars(m_CurrentSearchableItemStartPos, str.c_str());
+				ComputeCurrentSearchableItem(data->Buf);
 			}
 			m_CurrentCmdHistoryIndexOffset = -1;
 		}
@@ -369,8 +428,8 @@ int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 				if (m_CurrentCmdHistoryIndexOffset < m_CommandHistory.size())
 				{
 					std::string& cmd = m_CommandHistory[m_CommandHistory.size() - m_CurrentCmdHistoryIndexOffset - 1];
-					data->DeleteChars(0, data->BufTextLen);
-					data->InsertChars(0, cmd.c_str());
+					data->DeleteChars(m_CurrentSearchableItemStartPos, data->BufTextLen - m_CurrentSearchableItemStartPos);
+					data->InsertChars(m_CurrentSearchableItemStartPos, cmd.c_str());
 				}
 			}
 			else
@@ -388,8 +447,8 @@ int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 				// Note: This does not change the searchable item!
 				RS_ASSERT_NO_MSG(m_CurrentMatchedVarIndex < m_MatchedSearchList.size());
 				MatchedSearchItem& item = m_MatchedSearchList[m_CurrentMatchedVarIndex];
-				data->DeleteChars(0, data->BufTextLen);
-				data->InsertChars(0, item.fullLine.c_str());
+				data->DeleteChars(m_CurrentSearchableItemStartPos, data->BufTextLen - m_CurrentSearchableItemStartPos);
+				data->InsertChars(m_CurrentSearchableItemStartPos, item.fullLine.c_str());
 			}
 		}
 		break;
@@ -432,37 +491,54 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 		for (uint32 i = 1; i < tokens.size(); ++i)
 		{
 			FuncArg arg;
-			bool isNamed = tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1]);
+			bool isNamed = (tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1])) ||
+				(tokens[i][0] != '-' && std::isalpha(tokens[i][0]));
 			if (isNamed)
 			{
 				arg.name = tokens[i];
 				i++;
 				if (i >= tokens.size())
 				{
+					arg.type |= FuncArg::TypeFlag::Named;
+					auto it = m_VariablesMap.find(arg.name);
+					if (it != m_VariablesMap.end())
+						arg.type |= TypeToFuncArgType(it->second.type);
 					args.push_back(arg);
 					break;
 				}
 			}
-			isNamed = tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1]);
+			isNamed = (tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1])) ||
+				(tokens[i][0] != '-' && std::isalpha(tokens[i][0]));
 			if (isNamed)
 			{
 				i--;
+				arg.type |= FuncArg::TypeFlag::Named;
+				auto it = m_VariablesMap.find(arg.name);
+				if (it != m_VariablesMap.end())
+					arg.type |= TypeToFuncArgType(it->second.type);
 				args.push_back(arg);
 				continue;
 			}
 
 			std::string value = tokens[i];
 			Type type = StringToVarType(value);
-			arg.type = FuncArg::Type::Unknown;
+			arg.type = FuncArg::TypeFlag::NONE;
 			if (IsTypeInt(type) || IsTypeUInt(type))
 			{
 				type = Type::Int32;
-				arg.type = FuncArg::Type::Int;
+				arg.type = FuncArg::TypeFlag::Int;
 			}
-			if (IsTypeFloat(type))
+			else if (IsTypeFloat(type))
 			{
 				type = Type::Float;
-				arg.type = FuncArg::Type::Float;
+				arg.type = FuncArg::TypeFlag::Float;
+			}
+			if (!arg.name.empty())
+			{
+				arg.type |= FuncArg::TypeFlag::Named;
+				auto it = m_VariablesMap.find(arg.name);
+				if (it != m_VariablesMap.end())
+					arg.type |= TypeToFuncArgType(it->second.type);
 			}
 			StringToVarValue(type, value, (void*)&arg.value);
 			args.push_back(arg);
@@ -567,6 +643,31 @@ void RS::Console::Search(const std::string& searchLine)
 		}
 	);
 
+	// Filter searchable types
+	if (m_ValidSearchableArgTypes.empty() == false)
+	{
+		auto interIt = std::remove_if(intermediateMatchedList.begin(), intermediateMatchedList.end(),
+			[&](const MatchedSearchItem& e)->bool
+			{
+				auto it = m_VariablesMap.find(e.fullLine);
+				if (it != m_VariablesMap.end())
+				{
+					bool valid = false;
+					for (FuncArg::TypeFlags type : m_ValidSearchableArgTypes)
+					{
+						FuncArg::TypeFlags varType = TypeToFuncArgType(it->second.type);
+						if (type & varType)
+							valid = true;
+					}
+					return valid == false;
+				}
+				return false;
+			}
+		);
+		if (interIt != intermediateMatchedList.end())
+			intermediateMatchedList.erase(interIt, intermediateMatchedList.end());
+	}
+
 	// Copy to the matched list.
 	m_MatchedSearchList = intermediateMatchedList;
 }
@@ -605,7 +706,7 @@ std::string RS::Console::PerformSearchCompletion()
 	std::remove_if(validMatches.begin(), validMatches.end(), [maxMatchedCount](const MatchedSearchItem& e)->bool { return e.matchedCount == maxMatchedCount; });
 
 	// Get max match.
-	for (int32 matchedCount = maxMatchedCount; matchedCount < 256; ++matchedCount)
+	for (int32 matchedCount = maxMatchedCount; matchedCount < 512; ++matchedCount)
 	{
 		// Test with one higher.
 		bool foundCompleteTarget = false;
@@ -748,6 +849,37 @@ RS::Console::Type RS::Console::StringToVarType(const std::string& str)
 		initialType = Type::Float;
 	uint64 temp = 0;
 	return StringToVarValue(initialType, str, (void*)&temp);
+}
+
+void RS::Console::ComputeCurrentSearchableItem(const char* searchableLine)
+{
+	std::string buff(searchableLine);
+	m_CurrentSearchableItem = searchableLine;
+	size_t pos = m_CurrentSearchableItem.rfind(' ');
+	if (pos == std::string::npos)
+		m_CurrentSearchableItemStartPos = 0;
+	else
+	{
+		m_CurrentSearchableItemStartPos = pos + 1;
+	}
+
+	m_CurrentSearchableItem = m_CurrentSearchableItem.substr(m_CurrentSearchableItemStartPos, m_CurrentSearchableItem.size() - m_CurrentSearchableItemStartPos);
+
+	if (pos > 1)
+	{
+		size_t pos2 = m_CurrentSearchableItem.rfind(' ', pos == std::string::npos ? pos : pos - 2);
+		if (pos2 == std::string::npos) pos2 = 0;
+		SetValidSearchableArgTypesFromCMD(buff.substr(pos2, pos - pos2));
+	}
+	else
+		m_ValidSearchableArgTypes.clear();
+}
+
+void RS::Console::SetValidSearchableArgTypesFromCMD(const std::string& cmd)
+{
+	auto it = m_VariablesMap.find(cmd);
+	if (it != m_VariablesMap.end())
+		m_ValidSearchableArgTypes = it->second.searchableTypes;
 }
 
 void RS::Console::Search(const std::string& item, const std::vector<std::string>& searchStrings, std::vector<MatchedSearchItem>& refIntermediateMatchedList)

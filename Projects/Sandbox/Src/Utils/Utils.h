@@ -196,5 +196,11 @@ namespace RS
 			}
 			return pos;
 		}
+
+		template<typename T>
+		static bool IsBitSet(T v, T bit)
+		{
+			return v & (1 << bit);
+		}
 	};
 }

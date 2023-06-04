@@ -10,19 +10,19 @@ namespace RS
 	{
 	public:
 		RS_BEGIN_FLAGS_U32(Flag)
-			RS_FLAG(ReadOnly)
+			RS_FLAG(ReadOnly) // Does not work on Functions
 		RS_END_FLAGS();
 
 		struct FuncArg
 		{
-			enum class Type : uint32
-			{
-				Unknown,
-				Int,
-				Float
-			};
+			RS_BEGIN_BITFLAGS_U32(TypeFlag)
+				RS_BITFLAG(Int)
+				RS_BITFLAG(Float)
+				RS_BITFLAG(Named)
+				RS_BITFLAG(Function)
+			RS_END_BITFLAGS();
 
-			Type type = Type::Unknown;
+			TypeFlags type = TypeFlag::NONE;
 			std::string name = "";
 			union
 			{
@@ -38,10 +38,10 @@ namespace RS
 				uint64 value = 0;
 			};
 			FuncArg() = default;
-			FuncArg(Type type) : type(type), name(""), value(0) {}
-			FuncArg(const std::string& name) : type(Type::Unknown), name(name), value(0) {}
-			FuncArg(Type type, const std::string& name) : type(type), name(name), value(0) {}
-			FuncArg(Type type, const std::string& name, uint64 value) : type(type), name(name), value(value) {}
+			FuncArg(TypeFlags type) : type(type), name(""), value(0) {}
+			FuncArg(const std::string& name) : type(TypeFlag::Named), name(name), value(0) {}
+			FuncArg(TypeFlags type, const std::string& name) : type(type), name(name), value(0) {}
+			FuncArg(TypeFlags type, const std::string& name, uint64 value) : type(type), name(name), value(value) {}
 		};
 
 		struct FuncArgsInternal : public std::vector<FuncArg>
@@ -49,8 +49,17 @@ namespace RS
 			FuncArgsInternal() : vector() {};
 			FuncArgsInternal(std::initializer_list<FuncArg> _Ilist) : vector(_Ilist) {}
 
+			std::optional<FuncArg> Get(uint32 index) const
+			{
+				if (index >= size())
+					return {};
+				return at(index);
+			}
+
 			std::optional<FuncArg> Get(const std::string& name) const
 			{
+				if (empty())
+					return {};
 				auto it = std::find_if(begin(), end(), [name](const FuncArg& arg)->bool { return arg.name == name; });
 				if (it == end())
 					return {};
@@ -59,10 +68,12 @@ namespace RS
 
 			std::optional<FuncArg> GetUnnamed(uint32 index) const
 			{
+				if (empty())
+					return {};
 				uint32 currentIndex = 0;
 				auto it = std::find_if(begin(), end(), [&](const FuncArg& arg)->bool
 					{
-						if (arg.name.empty() && arg.type != FuncArg::Type::Unknown)
+						if (arg.name.empty() && (arg.type != FuncArg::TypeFlag::NONE && (arg.type & FuncArg::TypeFlag::Named) != 0))
 						{
 							currentIndex++;
 							if (currentIndex == index)
@@ -90,13 +101,23 @@ namespace RS
 		void Release();
 
 		template<typename T>
-		bool AddVar(const std::string& name, T& var, Flags flags = Flag::NONE);
+		bool AddVar(const std::string& name, T& var, Flags flags = Flag::NONE, const std::string& docs = "");
+		
+		template<typename T>
+		bool AddVar(const std::string& name, T& var, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags = Flag::NONE, const std::string& docs = "");
+
+		RS_BEGIN_BITFLAGS_U32(ValidateFuncArgsFlag)
+			RS_BITFLAG(ArgCountMustMatch)
+			RS_BITFLAG(TypeMatchOnly)
+			RS_BITFLAG_COMBO(Strict, ArgCountMustMatch)
+		RS_END_BITFLAGS();
 
 		/*
 		* A function can only hold arguments of type unknown, int32, and float.
 		*/
-		bool AddFunction(const std::string& name, Func func);
-		bool ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool strict = false);
+		bool AddFunction(const std::string& name, Func func, Flags flags = Flag::NONE, const std::string& docs = "");
+		bool AddFunction(const std::string& name, Func func, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags = Flag::NONE, const std::string& docs = "");
+		bool ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags = ValidateFuncArgsFlag::NONE);
 
 		bool RemoveVar(const std::string& name);
 
@@ -154,6 +175,14 @@ namespace RS
 		}
 		inline static bool IsTypeVariable(Type type) { return IsTypeInt(type) || IsTypeUInt(type) || IsTypeFloat(type); }
 		static int GetByteCountFromType(Type type);
+		static FuncArg::TypeFlags TypeToFuncArgType(Type type)
+		{
+			FuncArg::TypeFlags types = FuncArg::TypeFlag::NONE;
+			if (IsTypeInt(type) || IsTypeUInt(type)) types |= FuncArg::TypeFlag::Int;
+			if (IsTypeFloat(type)) types |= FuncArg::TypeFlag::Float;
+			if (type == Type::Function) types |= FuncArg::TypeFlag::Function;
+			return types;
+		}
 
 		struct Variable
 		{
@@ -163,11 +192,15 @@ namespace RS
 			void*		pVar = nullptr;
 			Func		func;
 			Variable() = default;
-			Variable(const std::string& name, Type type, Flags flags, void* pVar, Func func)
-				: name(name), type(type), flags(flags), pVar(pVar), func(func)
+			Variable(const std::string& name, Type type, Flags flags, void* pVar, Func func, const std::string& docs)
+				: name(name), type(type), flags(flags), pVar(pVar), func(func), documentation(docs)
 			{}
+
+			std::vector<FuncArg::TypeFlags> searchableTypes;
+			std::string documentation;
 		};
 		bool AddVarInternal(const std::string& name, const Variable& var);
+		Variable* GetVariable(const std::string& name);
 
 		inline static int InputTextCallback(ImGuiInputTextCallbackData* data)
 		{
@@ -190,6 +223,8 @@ namespace RS
 		bool SearchSinglePart(const std::string& searchWord, const std::string& searchableLine, int& outMatchedCount, int& outStartIndex);
 
 		std::string PerformSearchCompletion();
+		void ComputeCurrentSearchableItem(const char* searchableLine);
+		void SetValidSearchableArgTypesFromCMD(const std::string& cmd);
 
 		static std::string VarTypeToString(Type type);
 		static std::string VarValueToString(Type type, void* value);
@@ -199,14 +234,18 @@ namespace RS
 	private:
 		std::mutex m_VariablesMutex;
 		std::unordered_map<std::string, Variable> m_VariablesMap;
+
 		std::vector<Line> m_History; // All history of prints to the console.
 		std::vector<std::string> m_CommandHistory; // All history of command executions to the console.
+
+		uint32		m_CurrentSearchableItemStartPos = 0;
 		std::string m_CurrentSearchableItem;
 		std::vector<std::string> m_SearchableItems; // All searchable commands are here.
 		std::vector<MatchedSearchItem> m_MatchedSearchList; // Items that were matched with when searched.
+		std::vector<FuncArg::TypeFlags> m_ValidSearchableArgTypes;
 
 		bool	m_Enabled = false;
-		char	m_InputBuf[256];
+		char	m_InputBuf[512];
 
 		int32	m_CurrentCmdHistoryIndexOffset = -1;
 		float	m_DisplayHeightRatio = 0.25f;
@@ -216,9 +255,17 @@ namespace RS
 	};
 
 	template<typename T>
-	inline bool Console::AddVar(const std::string& name, T& var, Console::Flags flags)
+	inline bool Console::AddVar(const std::string& name, T& var, Console::Flags flags, const std::string& docs)
 	{
-		return AddVarInternal(name, Variable(name, Type::Unknown, flags, &var, nullptr));
+		return AddVarInternal(name, Variable(name, Type::Unknown, flags, &var, nullptr, docs));
+	}
+
+	template<typename T>
+	inline bool Console::AddVar(const std::string& name, T& var, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags, const std::string& docs)
+	{
+		Variable varObj(name, Type::Unknown, flags, &var, nullptr, docs);
+		varObj.searchableTypes = searchableTypes;
+		return AddVarInternal(name, varObj);
 	}
 
 	template<typename... Args>
@@ -237,9 +284,16 @@ namespace RS
 
 #define RS_ADD_VAR(type, enumType) \
 	template<>	\
-	inline bool Console::AddVar(const std::string& name, type& var, Console::Flags flags) \
+	inline bool Console::AddVar(const std::string& name, type& var, Console::Flags flags, const std::string& docs) \
 	{ \
-		return AddVarInternal(name, Variable( name, enumType, flags, &var, nullptr )); \
+		return AddVarInternal(name, Variable( name, enumType, flags, &var, nullptr, docs)); \
+	}; \
+	template<>	\
+	inline bool Console::AddVar(const std::string& name, type& var, const std::vector<FuncArg::TypeFlags>& searchableTypes, Console::Flags flags, const std::string& docs) \
+	{ \
+		Variable varObj(name, enumType, flags, &var, nullptr, docs); \
+		varObj.searchableTypes = searchableTypes; \
+		return AddVarInternal(name, varObj); \
 	};
 
 	RS_ADD_VAR(int8, Console::Type::Int8);
