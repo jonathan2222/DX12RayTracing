@@ -12,6 +12,7 @@
 #include "Render/ImGuiRenderer.h"
 
 #include "GUI/LogNotifier.h"
+#include "Core/Console.h"
 
 RS::DX12::Dx12Core2* RS::DX12::Dx12Core2::Get()
 {
@@ -431,6 +432,8 @@ void RS::DX12::Dx12Core2::Render()
         ImGui::RenderNotifications(); // <-- Here we render all notifications
         ImGui::PopStyleVar(1); // Don't forget to Pop()
         ImGui::PopStyleColor(1);
+
+        Console::Get()->Render();
     });
 
     // ImGui

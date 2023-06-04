@@ -10,15 +10,15 @@ namespace RS::DX12
 	class Shader
 	{
 	public:
-		BEGIN_BITFLAGS_U32(TypeFlag)
-			BITFLAG(Vertex)		// Vertex shader
-			BITFLAG(Pixel)		// Pixel shader
-			BITFLAG(Compute)	// Compute shader
-			BITFLAG(Geometry)	// Geometry shader
-			BITFLAG(Domain)		// Domain shader
-			BITFLAG(Hull)		// Hull shader
-			BITFLAG(Auto)		// Let the shader find all the shader types.
-		END_BITFLAGS();
+		RS_BEGIN_BITFLAGS_U32(TypeFlag)
+			RS_BITFLAG(Vertex)		// Vertex shader
+			RS_BITFLAG(Pixel)		// Pixel shader
+			RS_BITFLAG(Compute)	// Compute shader
+			RS_BITFLAG(Geometry)	// Geometry shader
+			RS_BITFLAG(Domain)		// Domain shader
+			RS_BITFLAG(Hull)		// Hull shader
+			RS_BITFLAG(Auto)		// Let the shader find all the shader types.
+		RS_END_BITFLAGS();
 
 		struct Description
 		{

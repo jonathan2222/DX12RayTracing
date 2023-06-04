@@ -7,6 +7,87 @@ namespace RS
 	public:
 		RS_STATIC_CLASS(Utils);
 
+		static std::vector<std::string> Split(const std::string& str, char c)
+		{
+			std::vector<std::string> v;
+			if (str.empty())
+				return v;
+
+			size_t prePos = 0;
+			size_t pos = str.find(c);
+			while (pos != std::string::npos)
+			{
+				size_t count = pos - prePos;
+				if (count != 0)
+					v.push_back(str.substr(prePos, count));
+				prePos = pos + 1;
+				pos = str.find(c, prePos);
+			}
+
+			if (prePos < str.length())
+				v.push_back(str.substr(prePos));
+			
+			return v;
+		}
+
+		/*
+			s: Test
+			c: '-'
+			count: 6
+			Res: --Test
+		*/
+		static std::string FillLeft(const std::string& s, char c, uint32 count)
+		{
+			if (s.size() >= count)
+				return s;
+			return PaddLeft(s, c, count - s.size());
+		}
+
+		static std::string FillRight(const std::string& s, char c, uint32 count)
+		{
+			if (s.size() >= count)
+				return s;
+			return PaddRight(s, c, count - s.size());
+		}
+
+		static std::string PaddLeft(const std::string& s, char c, uint32 count)
+		{
+			std::string padding;
+			padding.resize(count);
+			std::fill(padding.begin(), padding.end(), c);
+			return padding + s;
+		}
+
+		/*
+			s: Test
+			c: '-'
+			count: 6
+			Res: ------Test
+		*/
+		static std::string PaddRight(const std::string& s, char c, uint32 count)
+		{
+			std::string padding;
+			padding.resize(count);
+			std::fill(padding.begin(), padding.end(), c);
+			return s + padding;
+		}
+
+		static std::string ReplaceAll(const std::string& s, const std::string& from, const std::string& to)
+		{
+			std::string newString = s;
+			if (s.empty() || (from.empty() && to.empty()))
+				return newString;
+
+			size_t pos = newString.find(from);
+			while (pos != std::string::npos)
+			{
+				newString.replace(pos, from.size(), to);
+				pos = newString.find(from, pos);
+			}
+
+			return newString;
+		}
+
 		static std::string ToLower(const std::string& s)
 		{
 			std::string res = s;

@@ -126,6 +126,17 @@ Input::ModFlags Input::GetMBMods(const MB& button) const
     return keyInfo.Mods;
 }
 
+void RS::Input::AlwaysListenToKey(const Key& key)
+{
+    s_AllwaysListenedKeys.push_back(key);
+}
+
+bool RS::Input::ShouldAlwaysListenToKey(const Key& key)
+{
+    auto it = std::find(s_AllwaysListenedKeys.begin(), s_AllwaysListenedKeys.end(), key);
+    return it != s_AllwaysListenedKeys.end();
+}
+
 void Input::CenterMouse() const
 {
     GLFWwindow* wnd = static_cast<GLFWwindow*>(Display::Get()->GetGLFWWindow());
@@ -238,17 +249,18 @@ void Input::UpdateKeyInfo(KeyInfo& keyInfo, float dt)
 
 void Input::KeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int mods)
 {
+    Key rsKey = (Key)key;
     RS_UNREFERENCED_VARIABLE(wnd);
     RS_UNREFERENCED_VARIABLE(scancode);
     RS_UNREFERENCED_VARIABLE(mods);
-    if (!ImGuiRenderer::Get()->WantKeyInput())
+    if (Input::Get()->ShouldAlwaysListenToKey(rsKey)
+        || !ImGuiRenderer::Get()->WantKeyInput())
     {
-        Key ymKey = (Key)key;
         if (action == GLFW_PRESS)
-            s_KeyMap[ymKey].State = KeyState::FIRST_PRESSED;
+            s_KeyMap[rsKey].State = KeyState::FIRST_PRESSED;
         if (action == GLFW_RELEASE)
-            s_KeyMap[ymKey].State = KeyState::FIRST_RELEASED;
-        s_KeyMap[ymKey].Mods = mods;
+            s_KeyMap[rsKey].State = KeyState::FIRST_RELEASED;
+        s_KeyMap[rsKey].Mods = mods;
     }
 }
 

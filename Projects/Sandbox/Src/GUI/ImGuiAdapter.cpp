@@ -10,6 +10,8 @@
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window
 #endif
 
+#include "Core/Input.h"
+
 using namespace RS;
 
 #define GLFW_HAS_WINDOW_TOPMOST       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
@@ -299,7 +301,7 @@ void RS::ImGuiAdapter::KeyCallback(GLFWwindow* window, int key, int scancode, in
     if (s_PrevUserCallbackKey != NULL)
         s_PrevUserCallbackKey(window, key, scancode, action, mods);
 
-    if (s_IsInputActive)
+    if (s_IsInputActive && !Input::Get()->ShouldAlwaysListenToKey((RS::Key)key))
     {
         ImGuiIO& io = ImGui::GetIO();
         if (action == GLFW_PRESS)
@@ -324,7 +326,8 @@ void RS::ImGuiAdapter::CharCallback(GLFWwindow* window, unsigned int c)
     if (s_PrevUserCallbackChar != NULL)
         s_PrevUserCallbackChar(window, c);
 
-    if (s_IsInputActive)
+    // TODO: Figure out a better way of ignoring §-presses
+    if (s_IsInputActive && c != 167)
     {
         ImGuiIO& io = ImGui::GetIO();
         io.AddInputCharacter(c);

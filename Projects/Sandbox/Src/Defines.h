@@ -73,7 +73,7 @@ typedef uint64_t	uint64;
 *	
 *	All functions which makes it work are hidden inside the nested _Internal struct.
 * */
-#define BEGIN_BITFLAGS(type, field)																						\
+#define RS_BEGIN_BITFLAGS(type, field)																						\
     typedef type field##s;																								\
 	struct field {																										\
 		struct _Internal {																								\
@@ -92,11 +92,32 @@ typedef uint64_t	uint64;
 			};																											\
 			inline static constexpr BitFieldType startLine = __LINE__ + 1; }; /* startLine should be the line right before the first call to BITFLAG, because we want a line diff of 1 for each consecutive FLAG.*/ \
 		inline static constexpr _Internal::BitFieldType NONE = 0; // Add a flag for zero, it is always named NONE
-#define BEGIN_BITFLAGS_U32(field) BEGIN_BITFLAGS(uint32, field)
-#define BEGIN_BITFLAGS_U64(field) BEGIN_BITFLAGS(uint64, field)
-#define BITFLAG(flag) inline static constexpr _Internal::BitFieldType flag = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
-#define END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; \
+#define RS_BEGIN_BITFLAGS_U32(field) RS_BEGIN_BITFLAGS(uint32, field)
+#define RS_BEGIN_BITFLAGS_U64(field) RS_BEGIN_BITFLAGS(uint64, field)
+#define RS_BITFLAG(name) inline static constexpr _Internal::BitFieldType name = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
+#define RS_BITFLAG_COMBO(name, flag) inline static constexpr _Internal::BitFieldType name = flag; // Use this after all calls to BITFLAG!!
+#define RS_END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; \
 	inline static constexpr _Internal::BitFieldType MASK = (1 << COUNT) - 1; };
+
+/*
+* Same interface as bitflags but does not restrict to a power of 2.
+*/
+#define RS_BEGIN_FLAGS(type, field)	\
+    typedef type field##s;			\
+	struct field {					\
+		struct _Internal {			\
+			inline static constexpr char* fieldName = #field;															\
+			inline static constexpr bool containsFlag = RS::Utils::ContainsLastStr(fieldName, "Flag");					\
+			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
+			typedef type FlagType;																					\
+			inline static constexpr FlagType startLine = __LINE__ + 1; }; /* startLine should be the line right before the first call to FLAGS, because we want a line diff of 1 for each consecutive FLAG.*/ \
+		inline static constexpr _Internal::FlagType NONE = 0; // Add a flag for zero, it is always named NONE
+#define RS_BEGIN_FLAGS_U32(field) RS_BEGIN_FLAGS(uint32, field)
+#define RS_BEGIN_FLAGS_U64(field) RS_BEGIN_FLAGS(uint64, field)
+#define RS_FLAG(name) inline static constexpr _Internal::FlagType name = __LINE__ - _Internal::startLine;
+#define RS_FLAG_V(name, value) inline static constexpr _Internal::FlagType name = value;
+#define RS_END_FLAGS() inline static constexpr _Internal::FlagType COUNT = __LINE__ - _Internal::startLine; \
+	inline static constexpr _Internal::FlagType MASK = (1 << COUNT) - 1; };
 
 // Check if power of 2 and treat 0 as false.
 #define IS_POWER_OF_2(x) (x && !(x & (x - 1)))

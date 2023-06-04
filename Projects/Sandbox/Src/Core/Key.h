@@ -63,6 +63,8 @@ namespace RS
 		Y = 89,
 		Z = 90,
 
+		MICRO = 96, // §
+
 		/* Function keys */
 		ESCAPE = 256,
 		ENTER = 257,

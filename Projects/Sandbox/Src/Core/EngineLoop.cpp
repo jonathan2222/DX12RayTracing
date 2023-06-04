@@ -9,6 +9,8 @@
 
 #include "DX12/Dx12Core2.h"
 
+#include "Core/Console.h"
+
 using namespace RS;
 
 const wchar_t* EngineLoop::c_hitGroupName = L"MyHitGroup";
@@ -24,6 +26,24 @@ std::shared_ptr<EngineLoop> EngineLoop::Get()
 
 void EngineLoop::Init()
 {
+    Console::Get()->Init();
+    RS::Input::Get()->AlwaysListenToKey(RS::Key::MICRO); // For console.
+
+    /* ------ Test for Utils::Split ------
+    std::vector<std::string> v1 = Utils::Split("Test.Hej.alla", '.');
+    std::vector<std::string> v2 = Utils::Split("Test.Hej.alla.", '.');
+    std::vector<std::string> v3 = Utils::Split("TestHejalla", '.');
+    std::vector<std::string> v4 = Utils::Split("..", '.');
+    std::vector<std::string> v5 = Utils::Split("hej..", '.');
+    std::vector<std::string> v6 = Utils::Split("..San", '.');
+    std::vector<std::string> v7 = Utils::Split("hej..San", '.');
+    std::vector<std::string> v8 = Utils::Split("", '.');
+    std::vector<std::string> v9 = Utils::Split("c", '.');
+    std::vector<std::string> v10 = Utils::Split("ac", '.');
+    std::vector<std::string> v11 = Utils::Split(".a", '.');
+    std::vector<std::string> v12 = Utils::Split("b.", '.');
+    */
+
     //m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
     //UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
     //
@@ -53,6 +73,8 @@ void EngineLoop::Release()
     //DX12::Dx12Core::Get()->~Dx12Core();
 
     DX12::Dx12Core2::Get()->Release();
+
+    Console::Get()->Release();
 }
 
 void EngineLoop::Run()
@@ -77,6 +99,18 @@ void EngineLoop::Run()
         {
             if (RS::Input::Get()->IsKeyClicked(RS::Key::F11))
                 pDisplay->ToggleFullscreen();
+        }
+
+        // Toggle console by pressing §
+        {
+            if (RS::Input::Get()->IsKeyClicked(RS::Key::MICRO))
+            {
+                RS:Console* pConsole = RS::Console::Get();
+                if (pConsole->IsEnabled())
+                    pConsole->Disable();
+                else
+                    pConsole->Enable();
+            }
         }
 
         m_FrameTimer.FixedTick([&]() { FixedTick(); });

@@ -134,6 +134,9 @@ namespace RS
 		*/
 		ModFlags GetMBMods(const MB& button) const;
 
+		void AlwaysListenToKey(const Key& key);
+		bool ShouldAlwaysListenToKey(const Key& key);
+
 		void CenterMouse() const;
 		void LockMouse() const;
 		void UnlockMouse() const;
@@ -169,5 +172,9 @@ namespace RS
 		inline static glm::vec2 s_MousePosPre = glm::vec2(0.f);
 		inline static glm::vec2 s_MouseDelta = glm::vec2(0.f);
 		inline static glm::vec2 s_ScrollDelta = glm::vec2(0.f);
+
+		// Keys which will bypass the UI system.
+		// TODO: Change this to a unordered set? Or at least something that uses a hash.
+		inline static std::vector<Key> s_AllwaysListenedKeys = std::vector<Key>();
 	};
 }
