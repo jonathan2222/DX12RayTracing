@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <imgui.h>
+#include <optional>
 
 namespace RS
 {
@@ -12,6 +13,72 @@ namespace RS
 			RS_FLAG(ReadOnly)
 		RS_END_FLAGS();
 
+		struct FuncArg
+		{
+			enum class Type : uint32
+			{
+				Unknown,
+				Int,
+				Float
+			};
+
+			Type type = Type::Unknown;
+			std::string name = "";
+			union
+			{
+				union
+				{
+					int32 i32;
+					uint32 ui32;
+					int64 i64;
+					uint64 ui64;
+					float f;
+					double d;
+				} types;
+				uint64 value = 0;
+			};
+			FuncArg() = default;
+			FuncArg(Type type) : type(type), name(""), value(0) {}
+			FuncArg(const std::string& name) : type(Type::Unknown), name(name), value(0) {}
+			FuncArg(Type type, const std::string& name) : type(type), name(name), value(0) {}
+			FuncArg(Type type, const std::string& name, uint64 value) : type(type), name(name), value(value) {}
+		};
+
+		struct FuncArgsInternal : public std::vector<FuncArg>
+		{
+			FuncArgsInternal() : vector() {};
+			FuncArgsInternal(std::initializer_list<FuncArg> _Ilist) : vector(_Ilist) {}
+
+			std::optional<FuncArg> Get(const std::string& name) const
+			{
+				auto it = std::find_if(begin(), end(), [name](const FuncArg& arg)->bool { return arg.name == name; });
+				if (it == end())
+					return {};
+				return *it;
+			}
+
+			std::optional<FuncArg> GetUnnamed(uint32 index) const
+			{
+				uint32 currentIndex = 0;
+				auto it = std::find_if(begin(), end(), [&](const FuncArg& arg)->bool
+					{
+						if (arg.name.empty() && arg.type != FuncArg::Type::Unknown)
+						{
+							currentIndex++;
+							if (currentIndex == index)
+								return true;
+						}
+						return false;
+					}
+				);
+				if (it == end())
+					return {};
+				return *it;
+			}
+		};
+
+		using FuncArgs = const FuncArgsInternal&;
+		using Func = std::function<void(FuncArgs)>;
 	public:
 		RS_NO_COPY_AND_MOVE(Console);
 		Console() = default;
@@ -25,7 +92,11 @@ namespace RS
 		template<typename T>
 		bool AddVar(const std::string& name, T& var, Flags flags = Flag::NONE);
 
-		bool AddFunction(const std::string& name, std::function<void(void)> func);
+		/*
+		* A function can only hold arguments of type unknown, int32, and float.
+		*/
+		bool AddFunction(const std::string& name, Func func);
+		bool ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool strict = false);
 
 		bool RemoveVar(const std::string& name);
 
@@ -81,17 +152,18 @@ namespace RS
 		{
 			return a == b || (IsTypeInt(a) && IsTypeInt(b)) || (IsTypeUInt(a) && IsTypeUInt(b)) || (IsTypeFloat(a) && IsTypeFloat(b));
 		}
+		inline static bool IsTypeVariable(Type type) { return IsTypeInt(type) || IsTypeUInt(type) || IsTypeFloat(type); }
 		static int GetByteCountFromType(Type type);
 
 		struct Variable
 		{
-			std::string					name;
-			Type						type = Type::Unknown;
-			Flags						flags = Flag::NONE;
-			void*						pVar = nullptr;
-			std::function<void(void)>	func;
+			std::string	name;
+			Type		type = Type::Unknown;
+			Flags		flags = Flag::NONE;
+			void*		pVar = nullptr;
+			Func		func;
 			Variable() = default;
-			Variable(const std::string& name, Type type, Flags flags, void* pVar, std::function<void(void)> func)
+			Variable(const std::string& name, Type type, Flags flags, void* pVar, Func func)
 				: name(name), type(type), flags(flags), pVar(pVar), func(func)
 			{}
 		};

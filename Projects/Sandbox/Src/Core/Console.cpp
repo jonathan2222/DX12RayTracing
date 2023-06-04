@@ -3,7 +3,7 @@
 
 #include "GUI/LogNotifier.h"
 
-#include <optional>
+#include <ctype.h>
 
 RS::Console* RS::Console::Get()
 {
@@ -21,8 +21,11 @@ void RS::Console::Init()
 
 	AddVar("Console.Info.CurrentCmdHistoryIndexOffset", m_CurrentCmdHistoryIndexOffset, Flag::ReadOnly);
 
-	AddFunction("Console.ListCommands", [this](void)->void
+	AddFunction("Console.ListCommands", [this](FuncArgs args)->void
 		{
+			if (!ValidateFuncArgs(args, { {"-d"} }, false))
+				return;
+
 			{
 				Line line;
 				line.str = Utils::Format("Commands:");
@@ -31,18 +34,33 @@ void RS::Console::Init()
 			}
 			for (auto& e : m_VariablesMap)
 			{
+				bool hasDetail = args.Get("-d").has_value();
+				char t = IsTypeVariable(e.second.type) ? 'V' : 'F';
+				std::string commandType = Utils::Format("[{}]", t);
+				std::string detail = hasDetail ? " " + VarTypeToString(e.second.type) : "";
+
 				Line line;
-				line.str = "  " + Utils::FillRight(VarTypeToString(e.second.type), ' ', 14) + e.first;
+				line.str = "  " + Utils::FillRight(commandType + detail, ' ', hasDetail ? 14 : 4) + e.first;
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
 		}
 	);
 
-	AddFunction("Console.Clear", [this](void)->void
+	AddFunction("Console.Clear", [this](FuncArgs args)->void
 		{
+			if (!ValidateFuncArgs(args, { {"-c"} }, false))
+				return;
+
 			m_History.clear();
-			// Note: Thise does not clear the command history.
+			if (args.size() > 0)
+			{
+				if (args.Get("-c"))
+				{
+					m_CommandHistory.clear();
+					m_CurrentCmdHistoryIndexOffset = -1;
+				}
+			}
 		}
 	);
 }
@@ -100,11 +118,11 @@ void RS::Console::Render()
 		}
 	}
 
-	ImGui::PopStyleVar();
+	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
-	// Command-line
+	// Command-line input
 	bool reclaim_focus = true; // Always focus.
-	ImGuiInputTextFlags input_text_flags = /*ImGuiInputTextFlags_AutoSelectAll | */ ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit;
+	ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit;
 	ImGui::PushItemWidth(vp_size.x);
 	if (ImGui::InputText("Input", m_InputBuf, IM_ARRAYSIZE(m_InputBuf), input_text_flags, Console::InputTextCallback, (void*)this))
 	{
@@ -121,6 +139,7 @@ void RS::Console::Render()
 	}
 	ImGui::PopItemWidth();
 
+	// Enter pressed on CMD.
 	bool isEnterPressed = ImGui::IsKeyPressed(ImGuiKey_Enter, true) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, true);
 	if (ImGui::IsItemFocused() && isEnterPressed)
 	{
@@ -142,7 +161,6 @@ void RS::Console::Render()
 		else
 		{
 			std::string cmd = m_InputBuf;
-			// TODO: Trim string
 			if (cmd.empty() == false)
 				ExecuteCommand(cmd);
 			strcpy(m_InputBuf, "");
@@ -158,9 +176,12 @@ void RS::Console::Render()
 		ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
 
 	ImGui::End();
+	ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
 
+	// Pupop search matches window.
 	if (m_MatchedSearchList.empty() == false)
 	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImVec2 popupWinPos(0.f, height + ImGui::GetTextLineHeight());
 		ImGui::SetNextWindowPos(popupWinPos, ImGuiCond_Always, winPivot);
 		if (ImGui::Begin("_SearchPopup", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse))
@@ -168,9 +189,15 @@ void RS::Console::Render()
 			// Seems to not do what I want. This will resize it depending on the contents of the window.
 			ImGui::SetWindowSize(ImVec2(vp_size.x, 0.0f), ImGuiCond_Always);
 
+			uint32 frameOffset = 0;
+			if (m_CurrentMatchedVarIndex != UINT32_MAX)
+			{
+				if (m_CurrentMatchedVarIndex >= m_SearchPopupMaxDisplayCount)
+					frameOffset = m_CurrentMatchedVarIndex - m_SearchPopupMaxDisplayCount + 1;
+			}
 			for (int32 i = 0; i < m_SearchPopupMaxDisplayCount; ++i)
 			{
-				uint32 index = (uint32)(i + (m_CurrentMatchedVarIndex == UINT32_MAX ? 0 : m_CurrentMatchedVarIndex));
+				uint32 index = (uint32)(i + frameOffset);
 				if (index < m_MatchedSearchList.size())
 				{
 					MatchedSearchItem& item = m_MatchedSearchList[index];
@@ -188,9 +215,8 @@ void RS::Console::Render()
 
 			ImGui::End();
 		}
+		ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
 	}
-
-	ImGui::PopStyleVar(); // ImGuiStyleVar_WindowPadding
 }
 
 void RS::Console::RenderStats()
@@ -215,7 +241,7 @@ void RS::Console::Print(const ImVec4& color, const char* txt)
 	m_History.push_back(line);
 }
 
-bool RS::Console::AddFunction(const std::string& name, std::function<void(void)> func)
+bool RS::Console::AddFunction(const std::string& name, std::function<void(FuncArgs)> func)
 {
 	Variable var;
 	var.name = name;
@@ -224,6 +250,66 @@ bool RS::Console::AddFunction(const std::string& name, std::function<void(void)>
 	var.func = func;
 	var.flags = Flag::NONE;
 	return AddVarInternal(name, var);
+}
+
+bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, bool strict)
+{
+	bool failed = false;
+
+	bool firstPrint = true;
+	auto PrintStart = [&]()
+	{
+		if (firstPrint)
+		{
+			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid arguments:");
+			firstPrint = false;
+			failed = true;
+		}
+	};
+
+	uint32 nonNamedArgCount = 0;
+	for (uint32 i = 0; i < args.size(); ++i)
+	{
+		const FuncArg& arg = args[i];
+		if (arg.name.empty() && arg.type == FuncArg::Type::Unknown)
+		{
+			PrintStart();
+			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tEmpty arguments are not allowed!");
+		}
+
+		if (!arg.name.empty())
+		{
+			auto it = std::find_if(validArgs.begin(), validArgs.end(), [arg](const FuncArg& arg2)->bool { return arg.type == arg2.type && arg.name == arg2.name; });
+			if (it == validArgs.end())
+			{
+				PrintStart();
+				Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\t{} is not a valid named argument!", arg.name);
+			}
+		}
+		else
+			nonNamedArgCount++;
+	}
+
+	uint32 validNonNamedArgCount = 0;
+	std::for_each(validArgs.begin(), validArgs.end(), [&](const FuncArg& arg)->void { if (arg.type != FuncArg::Type::Unknown && arg.name.empty()) validNonNamedArgCount++; });
+
+	if ((!strict && nonNamedArgCount > validNonNamedArgCount) ||
+		(strict && nonNamedArgCount == validNonNamedArgCount))
+	{
+		PrintStart();
+		if (strict)
+			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tUnsupported number of unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
+		else
+			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
+	}
+
+	if (strict && args.size() != validArgs.size())
+	{
+		PrintStart();
+		Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many arguments! Wanted {}, got {}", validArgs.size(), args.size());
+	}
+
+	return !failed;
 }
 
 bool RS::Console::AddVarInternal(const std::string& name, const Variable& var)
@@ -340,16 +426,48 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 	Variable& var = it->second;
 	if (var.type == Type::Function)
 	{
-		if (numArguments != 0)
-		{
-			RS_NOTIFY_ERROR("Executing a function with arguments is not supported!");
-			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Executing a function with arguments is not supported!");
-			m_CommandHistory.push_back(cmdLine);
-			return;
-		}
-
 		Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmd.c_str());
-		var.func();
+
+		FuncArgsInternal args;
+		for (uint32 i = 1; i < tokens.size(); ++i)
+		{
+			FuncArg arg;
+			bool isNamed = tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1]);
+			if (isNamed)
+			{
+				arg.name = tokens[i];
+				i++;
+				if (i >= tokens.size())
+				{
+					args.push_back(arg);
+					break;
+				}
+			}
+			isNamed = tokens[i][0] == '-' && tokens[i].size() > 1 && std::isalpha(tokens[i][1]);
+			if (isNamed)
+			{
+				i--;
+				args.push_back(arg);
+				continue;
+			}
+
+			std::string value = tokens[i];
+			Type type = StringToVarType(value);
+			arg.type = FuncArg::Type::Unknown;
+			if (IsTypeInt(type) || IsTypeUInt(type))
+			{
+				type = Type::Int32;
+				arg.type = FuncArg::Type::Int;
+			}
+			if (IsTypeFloat(type))
+			{
+				type = Type::Float;
+				arg.type = FuncArg::Type::Float;
+			}
+			StringToVarValue(type, value, (void*)&arg.value);
+			args.push_back(arg);
+		}
+		var.func(args);
 		m_CommandHistory.push_back(cmdLine);
 		return;
 	}
