@@ -32,15 +32,26 @@ void RS::Console::Init()
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
+
+			std::vector<Variable> vars;
 			for (auto& e : m_VariablesMap)
+				vars.push_back(e.second);
+			std::sort(vars.begin(), vars.end(),
+				[](const Variable& a, const Variable& b)->bool
+				{
+					return a.name < b.name;
+				}
+			);
+
+			bool hasDetail = args.Get("-d").has_value();
+			for (Variable& v : vars)
 			{
-				bool hasDetail = args.Get("-d").has_value();
-				char t = IsTypeVariable(e.second.type) ? 'V' : 'F';
+				std::string t = IsTypeVariable(v.type) ? "V" : "F";
+				if (hasDetail) t = VarTypeToString(v.type);
 				std::string commandType = Utils::Format("[{}]", t);
-				std::string detail = hasDetail ? " " + VarTypeToString(e.second.type) : "";
 
 				Line line;
-				line.str = "  " + Utils::FillRight(commandType + detail, ' ', hasDetail ? 14 : 4) + e.first;
+				line.str = "  " + Utils::FillRight(commandType, ' ', hasDetail ? 14 : 4) + v.name;
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
