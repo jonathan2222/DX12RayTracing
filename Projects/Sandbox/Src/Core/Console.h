@@ -252,6 +252,8 @@ namespace RS
 		float	m_Opacity = 0.75f;
 		uint32	m_SearchPopupMaxDisplayCount = 5;
 		uint32	m_CurrentMatchedVarIndex = UINT32_MAX;
+
+		bool	m_DisplaySearchResultsForEmptySearchWord = false;
 	};
 
 	template<typename T>

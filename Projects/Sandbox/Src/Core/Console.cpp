@@ -188,6 +188,7 @@ void RS::Console::Render()
 				ExecuteCommand(cmd);
 			strcpy(m_InputBuf, "");
 			m_CurrentSearchableItemStartPos = 0;
+			m_DisplaySearchResultsForEmptySearchWord = false;
 			m_CurrentSearchableItem.clear();
 			m_CurrentCmdHistoryIndexOffset = -1;
 		}
@@ -485,7 +486,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 	Variable& var = it->second;
 	if (var.type == Type::Function)
 	{
-		Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmd.c_str());
+		Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
 
 		FuncArgsInternal args;
 		for (uint32 i = 1; i < tokens.size(); ++i)
@@ -571,6 +572,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 					type = var.type; // Change signed/unsigned.
 				else
 				{
+					Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
 					std::string wantType = VarTypeToString(var.type);
 					std::string gotType = VarTypeToString(type);
 					RS_NOTIFY_ERROR("The given type is too large for the stored type. Wants {} but got {}", wantType, gotType);
@@ -590,6 +592,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 			}
 			else
 			{
+				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
 				std::string wantType = VarTypeToString(var.type);
 				std::string gotType = VarTypeToString(type);
 				RS_NOTIFY_ERROR("Type does not match! Variable wants {} but got {}", wantType, gotType);
@@ -600,6 +603,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 		}
 		else
 		{
+			Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
 			RS_NOTIFY_ERROR("Writing {} arguments to a variable is not supported!", numArguments);
 			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Writing {} arguments to a variable is not supported!", numArguments);
 			m_CommandHistory.push_back(cmdLine);
@@ -611,12 +615,12 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 void RS::Console::Search(const std::string& searchLine)
 {
 	m_MatchedSearchList.clear();
-	if (searchLine.empty()) return;
+	if (searchLine.empty() && !m_DisplaySearchResultsForEmptySearchWord) return;
 
 	// Each part is searched by matching sequential chars and then combined.
 	std::vector<std::string> searchStrings = Utils::Split(searchLine, '.');
-	if (searchStrings.empty()) return;
-	if (searchLine.back() == '.') searchStrings.push_back("");
+	if (searchStrings.empty() && !m_DisplaySearchResultsForEmptySearchWord) return;
+	if (!searchLine.empty() && searchLine.back() == '.') searchStrings.push_back("");
 
 	std::vector<MatchedSearchItem> intermediateMatchedList;
 
@@ -857,7 +861,10 @@ void RS::Console::ComputeCurrentSearchableItem(const char* searchableLine)
 	m_CurrentSearchableItem = searchableLine;
 	size_t pos = m_CurrentSearchableItem.rfind(' ');
 	if (pos == std::string::npos)
+	{
 		m_CurrentSearchableItemStartPos = 0;
+		m_DisplaySearchResultsForEmptySearchWord = false;
+	}
 	else
 	{
 		m_CurrentSearchableItemStartPos = pos + 1;
@@ -879,7 +886,10 @@ void RS::Console::SetValidSearchableArgTypesFromCMD(const std::string& cmd)
 {
 	auto it = m_VariablesMap.find(cmd);
 	if (it != m_VariablesMap.end())
+	{
 		m_ValidSearchableArgTypes = it->second.searchableTypes;
+		m_DisplaySearchResultsForEmptySearchWord = m_ValidSearchableArgTypes.empty() == false;
+	}
 }
 
 void RS::Console::Search(const std::string& item, const std::vector<std::string>& searchStrings, std::vector<MatchedSearchItem>& refIntermediateMatchedList)
@@ -1051,7 +1061,18 @@ void RS::Console::Search(const std::string& item, const std::vector<std::string>
 		}
 	}
 
-	if (combinedMatchedCount.has_value() && combinedMatchedCount.value() > 0)
+	// Add all items when no search string is present.
+	if (searchStrings.empty() && m_DisplaySearchResultsForEmptySearchWord)
+	{
+		Line line;
+		line.str = item;
+		line.color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+		matchedLine.parts.push_back(line);
+		combinedMatchedCount = 0;
+		combinedStartIndex = 0;
+	}
+
+	if (combinedMatchedCount.has_value() && (combinedMatchedCount.value() > 0 || m_DisplaySearchResultsForEmptySearchWord))
 	{
 		matchedLine.fullLine = item;
 		matchedLine.matchedCount = combinedMatchedCount.value();
