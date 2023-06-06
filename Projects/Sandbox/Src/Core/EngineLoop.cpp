@@ -10,6 +10,7 @@
 #include "DX12/Dx12Core2.h"
 
 #include "Core/Console.h"
+#include "Editor/Editor.h"
 
 using namespace RS;
 
@@ -63,6 +64,8 @@ void EngineLoop::Init()
     //CreateWindowSizeDependentResources();
 
     DX12::Dx12Core2::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+
+    RSE::Editor::Get()->Init();
 }
 
 void EngineLoop::Release()
@@ -71,6 +74,8 @@ void EngineLoop::Release()
     //OnDeviceLost();
     //DX12::Dx12Core::Get()->Release();
     //DX12::Dx12Core::Get()->~Dx12Core();
+
+    RSE::Editor::Get()->Release();
 
     DX12::Dx12Core2::Get()->Release();
 
@@ -124,11 +129,13 @@ void EngineLoop::Run()
 
 void EngineLoop::FixedTick()
 {
-
+    RSE::Editor::Get()->FixedUpdate();
 }
 
 void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
+    RSE::Editor::Get()->Update();
+
     //Dx12Core::Get()->Render();
 
     //if (!DX12::Dx12Core::Get()->IsWindowVisible())
@@ -141,6 +148,12 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
     //CopyRaytracingOutputToBackbuffer();
     //
     //DX12::Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    ImGuiRenderer::Get()->Draw([&]()
+        {
+            RSE::Editor::Get()->Render();
+        }
+    );
     DX12::Dx12Core2::Get()->Render();
 }
 
@@ -224,9 +237,7 @@ void EngineLoop::OnDeviceRestored()
 void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
 {
     if (!DX12::Dx12Core2::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
-    {
         return;
-    }
 
     //if (!DX12::Dx12Core::Get()->WindowSizeChanged(width, height, false))
     //{

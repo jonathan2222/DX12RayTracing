@@ -47,5 +47,7 @@ namespace RS
 		DX12::Dx12DescriptorHandle				m_ImGuiFontDescriptorHandle;
 		uint32									m_OldWidth;
 		uint32									m_OldHeight;
+
+		ImGuiConfigFlags						m_ImGuiConfigFlags = 0;
 	};
 }

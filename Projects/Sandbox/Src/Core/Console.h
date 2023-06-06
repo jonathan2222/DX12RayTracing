@@ -90,9 +90,41 @@ namespace RS
 
 		using FuncArgs = const FuncArgsInternal&;
 		using Func = std::function<void(FuncArgs)>;
+
+		enum class Type : uint32
+		{
+			Unknown = 0,
+			Int8,
+			Int16,
+			Int32,
+			Int64,
+			UInt8,
+			UInt16,
+			UInt32,
+			UInt64,
+			Float,
+			Double,
+			Function
+		};
+		inline static std::vector<Type> s_VariableTypes = { Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::UInt8, Type::UInt16, Type::UInt32, Type::UInt64, Type::Float, Type::Double };
+
+		struct Variable
+		{
+			std::string	name	= "";
+			Type		type	= Type::Unknown;
+			Flags		flags	= Flag::NONE;
+			void*		pVar	= nullptr;
+			Func		func	= nullptr;
+			Variable() = default;
+			Variable(const std::string& name, Type type, Flags flags, void* pVar, Func func, const std::string& docs)
+				: name(name), type(type), flags(flags), pVar(pVar), func(func), documentation(docs)
+			{}
+
+			std::vector<FuncArg::TypeFlags> searchableTypes;
+			std::string documentation;
+		};
 	public:
 		RS_NO_COPY_AND_MOVE(Console);
-		Console() = default;
 		~Console() = default;
 
 		static Console* Get();
@@ -121,8 +153,13 @@ namespace RS
 
 		bool RemoveVar(const std::string& name);
 
+		Variable* GetVariable(const std::string& name);
+		std::vector<Variable> GetVariables() const;
+		std::vector<Variable> GetVariables(const std::vector<Type>& includeList) const;
+
+		void ExecuteCommand(const std::string& cmd);
+
 		void Render();
-		void RenderStats();
 
 		template<typename... Args>
 		void Print(const char* format, Args&&...args);
@@ -137,28 +174,10 @@ namespace RS
 		void Disable() { m_Enabled = false; }
 		[[nodiscard]] bool IsEnabled() const { return m_Enabled; }
 
-	private:
-		struct Line
-		{
-			std::string str;
-			ImVec4		color = { 1.0f, 1.0f, 1.0f, 1.0f };
-		};
-
-		enum class Type : uint32
-		{
-			Unknown = 0,
-			Int8,
-			Int16,
-			Int32,
-			Int64,
-			UInt8,
-			UInt16,
-			UInt32,
-			UInt64,
-			Float,
-			Double,
-			Function
-		};
+		static std::string VarTypeToString(Type type);
+		static std::string VarValueToString(Type type, void* value);
+		static Type StringToVarValue(Type type, const std::string& str, void* refValue, int _internal = 0);
+		static Type StringToVarType(const std::string& str);
 
 		enum class TypeInfo : uint32
 		{
@@ -169,6 +188,7 @@ namespace RS
 		inline static bool IsTypeInt(Type type) { return type >= Type::Int8 && type <= Type::Int64; }
 		inline static bool IsTypeUInt(Type type) { return type >= Type::UInt8 && type <= Type::UInt64; }
 		inline static bool IsTypeFloat(Type type) { return type >= Type::Float && type <= Type::Double; }
+		inline static bool IsTypeFunction(Type type) { return type == Type::Function; }
 		inline static bool IsOfSameType(Type a, Type b)
 		{
 			return a == b || (IsTypeInt(a) && IsTypeInt(b)) || (IsTypeUInt(a) && IsTypeUInt(b)) || (IsTypeFloat(a) && IsTypeFloat(b));
@@ -183,24 +203,16 @@ namespace RS
 			if (type == Type::Function) types |= FuncArg::TypeFlag::Function;
 			return types;
 		}
+	private:
+		Console() = default;
 
-		struct Variable
+		struct Line
 		{
-			std::string	name;
-			Type		type = Type::Unknown;
-			Flags		flags = Flag::NONE;
-			void*		pVar = nullptr;
-			Func		func;
-			Variable() = default;
-			Variable(const std::string& name, Type type, Flags flags, void* pVar, Func func, const std::string& docs)
-				: name(name), type(type), flags(flags), pVar(pVar), func(func), documentation(docs)
-			{}
-
-			std::vector<FuncArg::TypeFlags> searchableTypes;
-			std::string documentation;
+			std::string str;
+			ImVec4		color = { 1.0f, 1.0f, 1.0f, 1.0f };
 		};
+
 		bool AddVarInternal(const std::string& name, const Variable& var);
-		Variable* GetVariable(const std::string& name);
 
 		inline static int InputTextCallback(ImGuiInputTextCallbackData* data)
 		{
@@ -209,7 +221,6 @@ namespace RS
 		}
 
 		int HandleInputText(ImGuiInputTextCallbackData* data);
-		void ExecuteCommand(const std::string& cmd);
 
 		void Search(const std::string& searchable);
 		struct MatchedSearchItem
@@ -225,11 +236,6 @@ namespace RS
 		std::string PerformSearchCompletion();
 		void ComputeCurrentSearchableItem(const char* searchableLine);
 		void SetValidSearchableArgTypesFromCMD(const std::string& cmd);
-
-		static std::string VarTypeToString(Type type);
-		static std::string VarValueToString(Type type, void* value);
-		static Type StringToVarValue(Type type, const std::string& str, void* refValue, int _internal = 0);
-		static Type StringToVarType(const std::string& str);
 
 	private:
 		std::mutex m_VariablesMutex;

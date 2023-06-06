@@ -145,6 +145,30 @@ namespace RS
 			return Format("{}", msg);
 		}
 
+		// Numbers
+		template<typename FType, typename IType>
+		static uint32 GetNumDecimals(FType v)
+		{
+			uint32 count = 0;
+			FType num = std::abs(v);
+			num = num - IType(num);
+			while (num != 0)
+			{
+				num = num * 10;
+				num = num - IType(num);
+				count++;
+			}
+			return count;
+		}
+		static uint32 GetNumDecimals(float v)
+		{
+			return GetNumDecimals<float, int32>(v);
+		}
+		static uint32 GetNumDecimals(double v)
+		{
+			return GetNumDecimals<double, int64>(v);
+		}
+
 		// Bit manipulations
 
 		template<typename T>

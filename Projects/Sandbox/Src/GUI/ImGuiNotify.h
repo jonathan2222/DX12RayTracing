@@ -93,6 +93,22 @@ class ImGuiToast
 public:
 	using ID = uint64;
 
+	ImGuiToast(const ImGuiToast& other)
+		: type(other.type)
+		, dismiss_time(other.dismiss_time)
+		, creation_time(other.creation_time)
+		, flags(other.flags)
+		, id(other.id)
+		, highlighted(other.highlighted)
+	{
+		assert(sizeof(this->title) == sizeof(other.title));
+		assert(sizeof(this->content) == sizeof(other.content));
+		memcpy(this->title, other.title, sizeof(this->title));
+		memcpy(this->content, other.content, sizeof(this->content));
+
+		this->callback = other.callback; // Lambda got corrupted. Is it because we are in another thread?
+	}
+
 private:
 	ImGuiToastType				type = ImGuiToastType_None;
 	char						title[IMGUI_NOTIFY_MAX_MSG_LENGTH];
@@ -107,11 +123,23 @@ private:
 	IMGUI_NOTIFY_INLINE static uint64 generator = 0;
 	IMGUI_NOTIFY_INLINE static std::mutex idGeneratorMutex;
 public:
-	IMGUI_NOTIFY_INLINE auto signal() -> void { if (callback) callback(); }
+	IMGUI_NOTIFY_INLINE auto signal() -> void
+	{
+		if (callback)
+			callback();
+	}
 
-	IMGUI_NOTIFY_INLINE ImGuiToast& bind(std::function<void(void)> callback) { this->callback = callback; return *this; }
+	IMGUI_NOTIFY_INLINE ImGuiToast& bind(std::function<void(void)> callback)
+	{
+		this->callback = callback;
+		return *this;
+	}
 
-	IMGUI_NOTIFY_INLINE ImGuiToast& dismissOnSignal() { flags |= ImGuiToastFlag_DismissOnSignal; return *this;}
+	IMGUI_NOTIFY_INLINE ImGuiToast& dismissOnSignal()
+	{
+		flags |= ImGuiToastFlag_DismissOnSignal;
+		return *this;
+	}
 
 	IMGUI_NOTIFY_INLINE bool is_highlighted() const { return this->highlighted; }
 
@@ -262,7 +290,7 @@ public:
 
 public:
 	// Constructors
-	ImGuiToast() // Added to make vector.reserve happpy
+	ImGuiToast() // Added to make vector.reserve happy
 	{
 		this->type = ImGuiToastType_None;
 		this->dismiss_time = IMGUI_NOTIFY_DEFAULT_DISMISS;
@@ -317,6 +345,18 @@ public:
 
 namespace ImGui
 {
+	IMGUI_NOTIFY_INLINE VOID HelpMarker(const char* desc)
+	{
+		ImGui::TextDisabled("(%s)", u8"\u003F");
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip())
+		{
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+			ImGui::TextUnformatted(desc);
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+	}
+
 	IMGUI_NOTIFY_INLINE uint32_t GetDefaultNotificationPosition() { return ImGuiToastPos_TopRight; }
 
 	namespace _Internal

@@ -7,7 +7,7 @@
 
 RS::Console* RS::Console::Get()
 {
-	static std::unique_ptr<RS::Console> pConsole{ std::make_unique<RS::Console>() };
+	static std::unique_ptr<RS::Console> pConsole(new Console());
 	return pConsole.get();
 }
 
@@ -156,7 +156,8 @@ void RS::Console::Render()
 	// Command-line input
 	bool reclaim_focus = true; // Always focus.
 	ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit;
-	ImGui::PushItemWidth(vp_size.x);
+	//ImGui::PushItemWidth(vp_size.x);
+	ImGui::PushItemWidth(-1); // Span full width.
 	if (ImGui::InputText("Input", m_InputBuf, IM_ARRAYSIZE(m_InputBuf), input_text_flags, Console::InputTextCallback, (void*)this))
 	{
 		ImGuiIO& io = ImGui::GetIO();
@@ -254,14 +255,6 @@ void RS::Console::Render()
 		}
 		ImGui::PopStyleVar(2); // ImGuiStyleVar_WindowPadding, ImGuiStyleVar_WindowMinSize
 	}
-}
-
-void RS::Console::RenderStats()
-{
-	const ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-	ImGui::Begin("_RS_ConsoleStats", NULL, flags);
-
-	ImGui::End();
 }
 
 void RS::Console::Print(const char* txt)
@@ -408,6 +401,31 @@ RS::Console::Variable* RS::Console::GetVariable(const std::string& name)
 	return nullptr;
 }
 
+std::vector<RS::Console::Variable> RS::Console::GetVariables() const
+{
+	std::vector<Variable> variables;
+	variables.reserve(m_VariablesMap.size());
+	for (auto e : m_VariablesMap)
+		variables.push_back(e.second);
+	return variables;
+}
+
+std::vector<RS::Console::Variable> RS::Console::GetVariables(const std::vector<Type>& includeList) const
+{
+	std::vector<Variable> variables;
+	variables.reserve(m_VariablesMap.size());
+	for (auto e : m_VariablesMap)
+	{
+		auto it = std::find(includeList.begin(), includeList.end(), e.second.type);
+		if (it != includeList.end())
+		{
+			variables.push_back(e.second);
+			continue;
+		}
+	}
+	return variables;
+}
+
 int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 {
 	switch (data->EventFlag)
@@ -492,11 +510,10 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 		return;
 	}
 
-	RS_NOTIFY_SUCCESS("Executing: {}", cmd);
-
 	Variable& var = it->second;
 	if (var.type == Type::Function)
 	{
+		RS_NOTIFY_SUCCESS("Executing: {}", cmd);
 		Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
 
 		FuncArgsInternal args;
@@ -563,7 +580,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 	{
 		if (numArguments == 0)
 		{ // Reading
-
+			RS_NOTIFY_SUCCESS("Executing: {}", cmd);
 			std::string line = Utils::Format("{} == {}", cmd, VarValueToString(var.type, var.pVar));
 			Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());
 			m_CommandHistory.push_back(cmdLine);
@@ -571,6 +588,15 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 		}
 		else if (numArguments == 1 || (numArguments == 2 && tokens[1] == "="))
 		{ // Writing
+			if (var.flags & Flag::ReadOnly)
+			{
+				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), cmdLine.c_str());
+				RS_NOTIFY_ERROR("Trying to write to a variable that is read only!");
+				Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Trying to write to a variable that is read only!");
+				m_CommandHistory.push_back(cmdLine);
+				return;
+			}
+
 			std::string value = tokens[numArguments];
 
 			Type type = StringToVarType(value);
@@ -595,6 +621,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 
 			if (IsOfSameType(type, var.type))
 			{
+				RS_NOTIFY_SUCCESS("Executing: {}", cmd);
 				StringToVarValue(var.type, value, var.pVar);
 				std::string line = Utils::Format("{} = {}", cmd, value);
 				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());

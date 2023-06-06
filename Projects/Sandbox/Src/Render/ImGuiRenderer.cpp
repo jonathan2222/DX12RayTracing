@@ -6,6 +6,9 @@
 
 #include "DX12/Dx12Core2.h"
 #include "Core/Display.h"
+#include "Core/Console.h"
+
+#include "Editor/Editor.h"
 
 RS::ImGuiRenderer* RS::ImGuiRenderer::Get()
 {
@@ -15,6 +18,8 @@ RS::ImGuiRenderer* RS::ImGuiRenderer::Get()
 
 void RS::ImGuiRenderer::Init()
 {
+	Console::Get()->AddVar("ImGui.ConfigFlags", m_ImGuiConfigFlags, Console::Flag::ReadOnly, "ConfigFlags");
+
 	InternalResize();
 }
 
@@ -55,6 +60,7 @@ void RS::ImGuiRenderer::Render()
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.FontGlobalScale = m_Scale;
+	m_ImGuiConfigFlags = io.ConfigFlags;
 
 	{
 		std::lock_guard<std::mutex> lock(m_Mutex);
@@ -123,6 +129,7 @@ void RS::ImGuiRenderer::InternalInit()
 	ImGuiAdapter::Init(Display::Get()->GetGLFWWindow(), true, ImGuiAdapter::ClientAPI::DX12);
 	ImGui_ImplDX12_Init(DX12::Dx12Core2::Get()->GetD3D12Device(), FRAME_BUFFER_COUNT, format, srvHeap->GetHeap(), m_ImGuiFontDescriptorHandle.m_Cpu, m_ImGuiFontDescriptorHandle.m_Gpu);
 
+	// Add icon font:
 	float pixelSize = 13.f;// *GetGuiScale();
 	ImFont* pFont = io.Fonts->AddFontDefault();
 	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 }; // Will not be copied by AddFont* so keep in scope.
@@ -150,6 +157,8 @@ void RS::ImGuiRenderer::InternalResize()
 			Release();
 		}
 		InternalInit();
+
+		RSE::Editor::Get()->Resize(width, height);
 
 		m_OldWidth = width;
 		m_OldHeight = height;

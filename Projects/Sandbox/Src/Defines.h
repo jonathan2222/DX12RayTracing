@@ -110,7 +110,7 @@ typedef uint64_t	uint64;
 			inline static constexpr bool containsFlag = RS::Utils::ContainsLastStr(fieldName, "Flag");					\
 			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
 			typedef type FlagType;																					\
-			inline static constexpr FlagType startLine = __LINE__ + 1; }; /* startLine should be the line right before the first call to FLAGS, because we want a line diff of 1 for each consecutive FLAG.*/ \
+			inline static constexpr FlagType startLine = __LINE__; }; /* startLine should be the line right before the first call to FLAGS, because we want a line diff of 1 for each consecutive FLAG.*/ \
 		inline static constexpr _Internal::FlagType NONE = 0; // Add a flag for zero, it is always named NONE
 #define RS_BEGIN_FLAGS_U32(field) RS_BEGIN_FLAGS(uint32, field)
 #define RS_BEGIN_FLAGS_U64(field) RS_BEGIN_FLAGS(uint64, field)

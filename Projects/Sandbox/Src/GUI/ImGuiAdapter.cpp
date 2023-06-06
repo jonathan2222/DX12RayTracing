@@ -64,6 +64,8 @@ bool RS::ImGuiAdapter::Init(GLFWwindow* window, bool install_callbacks, ClientAP
     io.GetClipboardTextFn = ImGuiAdapter::GetClipboardText;
     io.ClipboardUserData = s_Window;
 
+    //io.doc
+
     /*   ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
     #if defined(_WIN32)
         io.ImeWindowHandle = (void*)glfwGetWin32Window(s_Window);
