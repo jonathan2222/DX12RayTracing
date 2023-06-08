@@ -17,5 +17,13 @@ namespace RSE
 		void RenderFloatVariable(RS::Console::Variable& var);
 		void RenderIntVariable(RS::Console::Variable& var);
 
+		void SortTable(std::vector<RS::Console::Variable>& refVariables);
+
+	private:
+		std::vector<RS::Console::Variable> m_Variables;
+		std::vector<RS::Console::Variable> m_Functions;
+		std::vector<RS::Console::Variable> m_Unknowns;
+
+		uint64 m_StoredConsoleStateHash = 0;
 	};
 }

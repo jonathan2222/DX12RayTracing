@@ -144,6 +144,8 @@ namespace RS
 			RS_BITFLAG_COMBO(Strict, ArgCountMustMatch)
 		RS_END_BITFLAGS();
 
+		uint64 GetStateHash() const;
+
 		/*
 		* A function can only hold arguments of type unknown, int32, and float.
 		*/
@@ -237,6 +239,8 @@ namespace RS
 		void ComputeCurrentSearchableItem(const char* searchableLine);
 		void SetValidSearchableArgTypesFromCMD(const std::string& cmd);
 
+		void UpdateStateHash(const Variable& var);
+
 	private:
 		std::mutex m_VariablesMutex;
 		std::unordered_map<std::string, Variable> m_VariablesMap;
@@ -260,6 +264,8 @@ namespace RS
 		uint32	m_CurrentMatchedVarIndex = UINT32_MAX;
 
 		bool	m_DisplaySearchResultsForEmptySearchWord = false;
+
+		uint64	m_StateHash = 0xdeadbeef;
 	};
 
 	template<typename T>

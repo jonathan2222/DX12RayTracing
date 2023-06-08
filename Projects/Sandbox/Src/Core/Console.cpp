@@ -105,6 +105,7 @@ void RS::Console::Release()
 bool RS::Console::RemoveVar(const std::string& name)
 {
 	std::lock_guard<std::mutex> lock(m_VariablesMutex);
+	UpdateStateHash(m_VariablesMap[name]);
 	m_VariablesMap.erase(name);
 	return false;
 }
@@ -156,7 +157,6 @@ void RS::Console::Render()
 	// Command-line input
 	bool reclaim_focus = true; // Always focus.
 	ImGuiInputTextFlags input_text_flags = ImGuiInputTextFlags_EscapeClearsAll | ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCharFilter | ImGuiInputTextFlags_CallbackEdit;
-	//ImGui::PushItemWidth(vp_size.x);
 	ImGui::PushItemWidth(-1); // Span full width.
 	if (ImGui::InputText("Input", m_InputBuf, IM_ARRAYSIZE(m_InputBuf), input_text_flags, Console::InputTextCallback, (void*)this))
 	{
@@ -283,6 +283,11 @@ bool RS::Console::AddFunction(const std::string& name, std::function<void(FuncAr
 	return AddVarInternal(name, var);
 }
 
+uint64 RS::Console::GetStateHash() const
+{
+	return m_StateHash;
+}
+
 bool RS::Console::AddFunction(const std::string& name, Func func, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags, const std::string& docs)
 {
 	Variable var;
@@ -389,6 +394,8 @@ bool RS::Console::AddVarInternal(const std::string& name, const Variable& var)
 	m_SearchableItems.push_back(name);
 
 	std::sort(m_SearchableItems.begin(), m_SearchableItems.end());
+
+	UpdateStateHash(var);
 
 	return true;
 }
@@ -928,6 +935,17 @@ void RS::Console::SetValidSearchableArgTypesFromCMD(const std::string& cmd)
 		m_ValidSearchableArgTypes = it->second.searchableTypes;
 		m_DisplaySearchResultsForEmptySearchWord = m_ValidSearchableArgTypes.empty() == false;
 	}
+}
+
+void RS::Console::UpdateStateHash(const Variable& var)
+{
+	m_StateHash = Utils::Hash(m_StateHash, m_VariablesMap.size());
+	m_StateHash = Utils::Hash(m_StateHash, var.name);
+	m_StateHash = Utils::Hash(m_StateHash, var.flags);
+	m_StateHash = Utils::Hash(m_StateHash, var.type);
+	m_StateHash = Utils::Hash(m_StateHash, (uint64*)var.pVar);
+
+	m_StateHash = Utils::Hash(m_StateHash);
 }
 
 void RS::Console::Search(const std::string& item, const std::vector<std::string>& searchStrings, std::vector<MatchedSearchItem>& refIntermediateMatchedList)
