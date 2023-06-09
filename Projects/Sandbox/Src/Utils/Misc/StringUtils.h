@@ -2,27 +2,57 @@
 
 namespace RS::Utils
 {
-	inline std::vector<std::string> Split(const std::string& str, char c)
+	/*
+	* Functions in this file:
+	*	Split			- Slipts the string with a given delimiter into a list of strings.
+	*	PaddLeft		- Adds padding to the left of the string.
+	*	PaddRight		- Adds padding to the right of the string.
+	*	FillLeft		- Fills the left of the string such that the total length of the string is the specified value.
+	*	FillRight		- Fills the right of the string such that the total length of the string is the specified value.
+	*	ReplaceAll		- Replaces all occurrences of one substring to another.
+	*	ToLower			- Converts the string into lowercase.
+	*	ToUpper			- Converts the string into uppercase.
+	*	ToWString		- Converts the string into a wide string.
+	*	ToString		- Converts a wide string into a normal string.
+	*	EndsWith		- Checks if the string ends with a certain substring.
+	*	StartsWith		- Checks if the string starts with a certain substring.
+	*	Format			- Formats the string using fmt syntax.
+	*/
+
+	/*
+	* Split the string with a specified delimiter.
+	* Tip: Use a std::string_view will avoid any copy of the original string.
+	*/
+	template<typename T>
+	inline void Split(std::vector<T>& vector, const T& str, char delimiter)
 	{
-		std::vector<std::string> v;
+		RS_ASSERT_NO_MSG(vector.empty());
 		if (str.empty())
-			return v;
+			return;
 
 		size_t prePos = 0;
-		size_t pos = str.find(c);
+		size_t pos = str.find(delimiter);
 		while (pos != std::string::npos)
 		{
 			size_t count = pos - prePos;
 			if (count != 0)
-				v.push_back(str.substr(prePos, count));
+				vector.push_back(str.substr(prePos, count));
 			prePos = pos + 1;
-			pos = str.find(c, prePos);
+			pos = str.find(delimiter, prePos);
 		}
 
 		if (prePos < str.length())
-			v.push_back(str.substr(prePos));
+			vector.push_back(str.substr(prePos));
+	}
 
-		return v;
+	/*
+	* Split the string with a specified delimiter.
+	*/
+	inline std::vector<std::string> Split(const std::string& str, char delimiter)
+	{
+		std::vector<std::string> vector;
+		Split<std::string>(vector, str, delimiter);
+		return vector;
 	}
 
 	inline std::string PaddLeft(const std::string& s, char c, uint32 count)
@@ -116,19 +146,51 @@ namespace RS::Utils
 		return r;
 	}
 
-	// Compile time function to check if a string has a certain ending.
-	inline constexpr bool ContainsLastStr(std::string_view view, std::string_view ending)
+	/*
+	* Check if a string ends with a certain string.
+	* PS: Can be used at compile time too!
+	*/
+	inline constexpr bool EndsWith(std::string_view string, std::string_view ending)
 	{
-		if (view.length() >= ending.length()) {
-			return (0 == view.compare(view.length() - ending.length(), ending.length(), ending));
-		}
-		else {
-			return false;
-		}
+		const size_t stringLength = string.size();
+		const size_t endingLength = ending.size();
+
+		RS_ASSERT_NO_MSG(endingLength > 0);
+		RS_ASSERT_NO_MSG(stringLength > 0);
+		if (endingLength > stringLength) return false;
+		if (endingLength == stringLength) return string == ending;
+
+		// Using string view to skip allocating memory.
+		const std::string_view stringView = string;
+		const std::string_view stringEnding = stringView.substr(stringLength - endingLength, endingLength);
+		
+		return stringEnding == ending;
 	}
 
+	/*
+	* Check if a string starts with a certain string.
+	* PS: Can be used at compile time too!
+	*/
+	inline constexpr bool StartsWith(std::string_view string, std::string_view starting)
+	{
+		const size_t stringLength = string.size();
+		const size_t startingLength = starting.size();
+
+		RS_ASSERT_NO_MSG(startingLength > 0);
+		RS_ASSERT_NO_MSG(stringLength > 0);
+		if (startingLength > stringLength) return false;
+		if (startingLength == stringLength) return string == starting;
+
+		// Using string view to skip allocating memory.
+		const std::string_view stringView = string;
+		const std::string_view stringStarting = stringView.substr(0, startingLength);
+
+		return stringStarting == starting;
+	}
+
+	// Format strings
 	template<typename... Args>
-	static std::string Format(fmt::format_string<Args...> fmt, Args &&...args)
+	inline std::string Format(fmt::format_string<Args...> fmt, Args &&...args)
 	{
 		std::string str;
 		fmt::format_to(std::back_inserter(str), fmt, std::forward<Args>(args)...);

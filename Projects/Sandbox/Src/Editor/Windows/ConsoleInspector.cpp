@@ -175,7 +175,7 @@ void RSE::ConsoleInspector::SortTable(std::vector<RS::Console::Variable>& refVar
 				switch (sort_spec->ColumnIndex)
 				{
 				case 0: delta = strcmp(a.name.c_str(), b.name.c_str()); break;
-				case 1: delta = 0; break;
+				case 1: delta = 0; break; // TODO: Add sort for type value!
 				case 2: delta = (a.flags & Console::Flag::ReadOnly) - (b.flags & Console::Flag::ReadOnly); break;
 				default:
 					RS_ASSERT_NO_MSG(false);
@@ -186,6 +186,7 @@ void RSE::ConsoleInspector::SortTable(std::vector<RS::Console::Variable>& refVar
 				if (delta < 0)
 					return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? true : false;
 			}
+			// Fallback sort
 			return a.name < b.name;
 		}
 	);

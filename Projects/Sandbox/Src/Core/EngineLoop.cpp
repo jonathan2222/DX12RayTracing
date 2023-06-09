@@ -45,6 +45,14 @@ void EngineLoop::Init()
     std::vector<std::string> v12 = Utils::Split("b.", '.');
     */
 
+    //bool res0 = Utils::EndsWith("", ""); // This should throw an assert.
+    //bool resA = Utils::EndsWith("", "san"); // This should throw an assert.
+    //bool resB = Utils::EndsWith("Hejsan", ""); // This should throw an assert.
+    bool resC = Utils::EndsWith("Hejsan", "santamaria");
+    bool resD = Utils::EndsWith("./test/this/thing.png", ".png");
+    bool resE = Utils::EndsWith("./test/this/thing.png", "thing.png");
+    bool resF = Utils::EndsWith("./test/this/thing.png", "thing");
+
     //m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
     //UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
     //
