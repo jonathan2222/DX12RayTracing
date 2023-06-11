@@ -24,10 +24,10 @@ RS::CommandQueue::~CommandQueue()
     Flush();
 }
 
-Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> RS::CommandQueue::GetCommandList()
+std::shared_ptr<RS::CommandList> RS::CommandQueue::GetCommandList()
 {
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
-    Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> commandList;
+    std::shared_ptr<CommandList> commandList;
 
     // A command allocator cannot be used until the command has been fully executed on the GPU.
     if (!m_CommandAllocatorQueue.empty() && IsFenceComplete(m_CommandAllocatorQueue.front().fenceValue))
@@ -46,7 +46,7 @@ Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> RS::CommandQueue::GetCommandList(
     {
         commandList = m_CommandListQueue.front();
         m_CommandListQueue.pop();
-        DXCall(commandList->Reset(commandAllocator.Get(), nullptr));
+        commandList->Reset();
     }
     else
     {
@@ -54,12 +54,12 @@ Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> RS::CommandQueue::GetCommandList(
     }
 
     // Associate the command allocator with the command list so that it can be retrieved when the command list is executed.
-    DXCall(commandList->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.Get()));
+    DXCall(commandList->GetGraphicsCommandList()->SetPrivateDataInterface(__uuidof(ID3D12CommandAllocator), commandAllocator.Get()));
 
     return commandList;
 }
 
-uint64 RS::CommandQueue::ExecuteCommandList(Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> commandList)
+uint64 RS::CommandQueue::ExecuteCommandList(std::shared_ptr<RS::CommandList> commandList)
 {
     // Close the command list such that it can be executed.
     commandList->Close();
@@ -67,9 +67,9 @@ uint64 RS::CommandQueue::ExecuteCommandList(Microsoft::WRL::ComPtr<DX12_COMMAND_
     ID3D12CommandAllocator* commandAllocator = nullptr;
 
     UINT dataSize = sizeof(commandAllocator);
-    DXCall(commandList->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, commandAllocator));
+    DXCall(commandList->GetGraphicsCommandList()->GetPrivateData(__uuidof(ID3D12CommandAllocator), &dataSize, commandAllocator));
 
-    ID3D12CommandList* const ppComandLists[] = { commandList.Get() };
+    ID3D12CommandList* const ppComandLists[] = { commandList->GetGraphicsCommandList().Get() };
     m_d3d12CommandQueue->ExecuteCommandLists(1, ppComandLists);
 
     uint64 fenceValue = Signal();
@@ -124,9 +124,7 @@ Microsoft::WRL::ComPtr<ID3D12CommandAllocator> RS::CommandQueue::CreateCommandAl
     return commandAllocator;
 }
 
-Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> RS::CommandQueue::CreateCommandList(Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator)
+std::shared_ptr<RS::CommandList> RS::CommandQueue::CreateCommandList(Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator)
 {
-    Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> commandList;
-    DXCallVerbose(m_d3d12Device->CreateCommandList(0, m_CommandListType, allocator.Get(), nullptr, IID_PPV_ARGS(&commandList)), "Failed to create the command list!");
-    return commandList;
+    return std::make_unique<CommandList>(m_CommandListType, allocator);
 }

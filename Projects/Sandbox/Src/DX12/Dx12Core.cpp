@@ -3,6 +3,7 @@
 
 #include "DX12/Factory.h"
 #include "Utils/Utils.h"
+#include "DX12Core.h"
 
 using namespace RS::DX12;
 
