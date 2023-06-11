@@ -120,8 +120,10 @@ namespace RS::_Internal
         x = nullptr;            \
     }
 
-#define DX12_DEVICE_PTR ID3D12Device8*
-#define DX12_FACTORY_PTR IDXGIFactory4*
+#define DX12_DEVICE_TYPE ID3D12Device8
+#define DX12_FACTORY_TYPE IDXGIFactory4
+#define DX12_DEVICE_PTR DX12_DEVICE_TYPE*
+#define DX12_FACTORY_PTR DX12_FACTORY_TYPE*
 
 namespace RS::DX12
 {
