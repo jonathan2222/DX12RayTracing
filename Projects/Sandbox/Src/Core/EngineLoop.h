@@ -39,6 +39,8 @@ namespace RS
 
 		void Tick(const RS::FrameStats& frameStats);
 
+        static uint64 GetCurrentFrameNumber();
+
 	private:
 		void CreateDeviceDependentResources();
 		void CreateWindowSizeDependentResources();
@@ -69,6 +71,8 @@ namespace RS
 	private:
 		FrameStats m_FrameStats = {};
 		FrameTimer m_FrameTimer;
+
+        inline static uint64 m_CurrentFrameNumber = 0;
 
 		// ---------------- Raytracing variables ----------------
 		static const UINT                   FrameCount = 3;

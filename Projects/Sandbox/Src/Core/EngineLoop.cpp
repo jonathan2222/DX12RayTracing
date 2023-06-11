@@ -142,6 +142,8 @@ void EngineLoop::FixedTick()
 
 void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
+    m_CurrentFrameNumber++;
+
     RSE::Editor::Get()->Update();
 
     //Dx12Core::Get()->Render();
@@ -163,6 +165,11 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
         }
     );
     DX12::Dx12Core2::Get()->Render();
+}
+
+uint64 RS::EngineLoop::GetCurrentFrameNumber()
+{
+    return m_CurrentFrameNumber;
 }
 
 void EngineLoop::CreateDeviceDependentResources()
