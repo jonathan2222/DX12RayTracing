@@ -3,6 +3,8 @@
 
 #include "DX12/NewCore/DX12Core3.h"
 
+#include "Utils/Misc/ThreadUtils.h"
+
 RS::CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE type)
     : m_CommandListType(type)
     , m_FenceValue(0)
@@ -18,34 +20,45 @@ RS::CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE type)
     DXCall(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)), "Failed to create the command queue!");
     DXCall(pDevice->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)));
 
+    // Set the thread name for easy debugging.
+    char threadName[256];
+    sprintf_s(threadName, "ProcessInFlightCommandLists ");
     switch (type)
     {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Direct Command Queue");
+        strcat_s(threadName, "(Direct)");
         break;
     case D3D12_COMMAND_LIST_TYPE_BUNDLE:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Bundle Command Queue");
+        strcat_s(threadName, "(Bundle)");
         break;
     case D3D12_COMMAND_LIST_TYPE_COMPUTE:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Compute Command Queue");
+        strcat_s(threadName, "(Compute)");
         break;
     case D3D12_COMMAND_LIST_TYPE_COPY:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Copy Command Queue");
+        strcat_s(threadName, "(Copy)");
         break;
     case D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Video Decode Command Queue");
+        strcat_s(threadName, "(Video Decode)");
         break;
     case D3D12_COMMAND_LIST_TYPE_VIDEO_PROCESS:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Video Process Command Queue");
+        strcat_s(threadName, "(Video Process)");
         break;
     case D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE:
         DX12_SET_DEBUG_NAME(m_d3d12CommandQueue, "Video Encode Command Queue");
+        strcat_s(threadName, "(Video Encode)");
         break;
     default:
         break;
     }
 
     m_ProcessInFlightCommandListsThread = std::thread(&CommandQueue::ProcessInFlightCommandLists, this);
+    Utils::SetThreadName(m_ProcessInFlightCommandListsThread, threadName);
 }
 
 RS::CommandQueue::~CommandQueue()

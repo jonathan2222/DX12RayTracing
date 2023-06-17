@@ -118,7 +118,7 @@ namespace RS
 			{
 				if (subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
 				{
-					state = state;
+					this->state = state;
 					subresourceState.clear();
 				}
 				else

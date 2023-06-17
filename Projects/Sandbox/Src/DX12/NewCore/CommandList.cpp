@@ -321,7 +321,7 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
     ComPtr<ID3D12Resource> pResource;
     DXCall(pDevice->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
-        &textureDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        &textureDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
         IID_PPV_ARGS(&pResource)));
 
     std::shared_ptr<Texture> pTexture = std::make_shared<Texture>(pResource, name);

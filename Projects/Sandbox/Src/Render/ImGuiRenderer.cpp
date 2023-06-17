@@ -25,6 +25,12 @@ void RS::ImGuiRenderer::Init()
 
 void RS::ImGuiRenderer::FreeDescriptor()
 {
+	if (!m_IsInitialized)
+	{
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+		return;
+	}
+
 	DX12::Dx12DescriptorHeap* srvHeap = DX12::Dx12Core2::Get()->GetDescriptorHeapGPUResources();
 	srvHeap->Free(m_ImGuiFontDescriptorHandle);
 	m_ImGuiFontDescriptorHandle = {};
@@ -37,16 +43,29 @@ void RS::ImGuiRenderer::Release()
 	ImGui::DestroyContext();
 
 	m_IsReleased = true;
+	m_IsInitialized = false;
 }
 
 void RS::ImGuiRenderer::Draw(std::function<void(void)> callback)
 {
+	if (!m_IsInitialized)
+	{
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(m_Mutex);
 	m_DrawCalls.emplace_back(callback);
 }
 
 void RS::ImGuiRenderer::Render()
 {
+	if (!m_IsInitialized)
+	{
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+		return;
+	}
+
 	if (m_ShouldRescale)
 	{
 		// Resize only, after BeginFrame set s_ShouldRescale to false.
@@ -86,22 +105,35 @@ void RS::ImGuiRenderer::Render()
 
 bool RS::ImGuiRenderer::WantKeyInput()
 {
+	if (!m_IsInitialized)
+	{
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+		return false;
+	}
+
 	ImGuiIO& io = ImGui::GetIO();
 	return io.WantCaptureKeyboard || io.WantCaptureMouse;
 }
 
 void RS::ImGuiRenderer::Resize()
 {
+	if (!m_IsInitialized)
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+
 	m_ShouldRescale = true;
 }
 
 float RS::ImGuiRenderer::GetGuiScale()
 {
+	if (!m_IsInitialized)
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+
 	return m_Scale;
 }
 
 void RS::ImGuiRenderer::InternalInit()
 {
+	m_IsInitialized = true;
 	m_IsReleased = false;
 
 	DXGI_FORMAT format = DX12::Dx12Core2::Get()->GetMainSurface()->GetFormat();
@@ -167,6 +199,12 @@ void RS::ImGuiRenderer::InternalResize()
 
 void RS::ImGuiRenderer::ReScale(uint32 width, uint32 height)
 {
+	if (!m_IsInitialized)
+	{
+		LOG_WARNING("ImGuiRenderer is not initialized!");
+		return;
+	}
+
 	ImGuiStyle& style = ImGui::GetStyle();
 	float widthScale = width / 1920.f;
 	float heightScale = height / 1080.f;

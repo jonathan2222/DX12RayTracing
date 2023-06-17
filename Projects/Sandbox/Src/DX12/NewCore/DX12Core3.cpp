@@ -131,14 +131,15 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
             data = nullptr;
         }
 
+        uint64 fenceValue = m_pDirectCommandQueue->ExecuteCommandList(pCommandList);
+
         // Wait for load to finish.
-        DX12Core3::Get()->Flush();
+        m_pDirectCommandQueue->WaitForFenceValue(fenceValue);
     }
 }
 
 void RS::DX12Core3::Release()
 {
-    //m_Surface.Release();
     m_Device.Release();
 }
 
@@ -214,10 +215,10 @@ void RS::DX12Core3::Render()
 
     pCommandList->DrawInstanced(6, 1, 0, 0);
 
+    m_pDirectCommandQueue->ExecuteCommandList(pCommandList);
+
     // Frame index is the same as the back buffer index.
     m_CurrentFrameIndex = m_pSwapChain->Present(nullptr);
-
-    //m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % FRAME_BUFFER_COUNT;
 }
 
 void RS::DX12Core3::ReleaseStaleDescriptors()

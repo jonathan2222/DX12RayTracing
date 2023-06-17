@@ -39,6 +39,7 @@ namespace RS
 		void ReScale(uint32 width, uint32 height);
 
 	private:
+		bool									m_IsInitialized = false;
 		bool									m_IsReleased = true;
 		std::vector<std::function<void(void)>>	m_DrawCalls;
 		std::mutex								m_Mutex;
