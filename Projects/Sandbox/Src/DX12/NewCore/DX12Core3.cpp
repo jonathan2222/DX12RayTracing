@@ -8,6 +8,9 @@
 //#define STB_IMAGE_IMPLEMENTATION
 #define STBI_FAILURE_USERMSG
 #include <stb_image.h>
+#include "Render/ImGuiRenderer.h"
+#include "GUI/LogNotifier.h"
+#include "Core/Console.h"
 
 RS::DX12Core3::~DX12Core3()
 {
@@ -55,6 +58,9 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
 
     // TODO: Remove/Move these!
     {
+        // ImGui
+        ImGuiRenderer::Get()->Init();
+
         CreatePipelineState();
 
         struct Vertex
@@ -140,6 +146,8 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
 
 void RS::DX12Core3::Release()
 {
+    //ImGuiRenderer::Get()->FreeDescriptor();
+    ImGuiRenderer::Get()->Release();
     m_Device.Release();
 }
 
@@ -159,7 +167,7 @@ bool RS::DX12Core3::WindowSizeChanged(uint32 width, uint32 height, bool isFullsc
     LOG_WARNING("Resize to: ({}, {}) isFullscreen: {}, windowed: {}", width, height, isFullscreen, windowed);
 
     m_pSwapChain->Resize(width, height, isFullscreen);
-    //ImGuiRenderer::Get()->Resize();
+    ImGuiRenderer::Get()->Resize();
     return true;
 }
 
@@ -168,54 +176,131 @@ void RS::DX12Core3::Render()
     const uint32 frameIndex = GetCurrentFrameIndex();
     ReleasePendingResourceRemovals(frameIndex);
 
-    auto pCommandList = m_pDirectCommandQueue->GetCommandList();
-
-    pCommandList->SetRootSignature(m_pRootSignature);
-    pCommandList->SetPipelineState(m_pPipelineState);
-
-    D3D12_VIEWPORT viewport{};
-    viewport.MaxDepth = 0;
-    viewport.MinDepth = 1;
-    viewport.TopLeftX = viewport.TopLeftY = 0;
-    viewport.Width = Display::Get()->GetWidth();
-    viewport.Height = Display::Get()->GetHeight();
-    pCommandList->SetViewport(viewport);
-
-    D3D12_RECT scissorRect{};
-    scissorRect.left = scissorRect.top = 0;
-    scissorRect.right = viewport.Width;
-    scissorRect.bottom = viewport.Height;
-    pCommandList->SetScissorRect(scissorRect);
-
-    auto pRenderTarget = m_pSwapChain->GetCurrentRenderTarget();
-    pCommandList->SetRenderTarget(pRenderTarget);
-    const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
-    pCommandList->ClearTexture(pRenderTarget->GetAttachment(AttachmentPoint::Color0), clearColor);
-
-    pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
-
-    struct RootConstData
     {
-        const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
-        uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
-    } rootConstData;
-    rootConstData.texIndex[0] = 0;
-    rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
-    pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
+        auto pCommandList = m_pDirectCommandQueue->GetCommandList();
 
-    struct ConstantBufferData
+        pCommandList->SetRootSignature(m_pRootSignature);
+        pCommandList->SetPipelineState(m_pPipelineState);
+
+        D3D12_VIEWPORT viewport{};
+        viewport.MaxDepth = 0;
+        viewport.MinDepth = 1;
+        viewport.TopLeftX = viewport.TopLeftY = 0;
+        viewport.Width = Display::Get()->GetWidth();
+        viewport.Height = Display::Get()->GetHeight();
+        pCommandList->SetViewport(viewport);
+
+        D3D12_RECT scissorRect{};
+        scissorRect.left = scissorRect.top = 0;
+        scissorRect.right = viewport.Width;
+        scissorRect.bottom = viewport.Height;
+        pCommandList->SetScissorRect(scissorRect);
+
+        auto pRenderTarget = m_pSwapChain->GetCurrentRenderTarget();
+        pCommandList->SetRenderTarget(pRenderTarget);
+        const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
+        pCommandList->ClearTexture(pRenderTarget->GetAttachment(AttachmentPoint::Color0), clearColor);
+
+        pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
+
+        struct RootConstData
+        {
+            const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
+            uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
+        } rootConstData;
+        rootConstData.texIndex[0] = 0;
+        rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
+        pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
+
+        struct ConstantBufferData
+        {
+            float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
+        } textIndex;
+        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
+
+        pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
+        pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
+
+        pCommandList->DrawInstanced(6, 1, 0, 0);
+
+        m_pDirectCommandQueue->ExecuteCommandList(pCommandList);
+    }
+
     {
-        float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
-    } textIndex;
-    pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
+        static bool show_demo_window = true;
+        static bool show_notification_window = true;
+        static uint32_t position = ImGui::GetDefaultNotificationPosition();
+        ImGuiRenderer::Get()->Draw([&]() {
+            if (show_demo_window)
+                ImGui::ShowDemoWindow(&show_demo_window);
 
-    pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
-    pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
+            if (show_notification_window)
+            {
+                ImGui::Begin("Notification Test", &show_notification_window);
 
-    pCommandList->DrawInstanced(6, 1, 0, 0);
+                if (ImGui::Button("Warning"))
+                    ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! {}", 0x1337 });
+                if (ImGui::Button("Success"))
+                    ImGui::InsertNotification({ ImGuiToastType_Success, 3000, "Hello World! This is a success! {}", "We can also format here:)" });
+                if (ImGui::Button("Error"))
+                    ImGui::InsertNotification({ ImGuiToastType_Error, 3000, "Hello World! This is an error! {:#10X}", 0xDEADBEEF });
+                if (ImGui::Button("Info"))
+                    ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Hello World! This is an info!" });
+                if (ImGui::Button("Info Long"))
+                    ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation" });
 
-    m_pDirectCommandQueue->ExecuteCommandList(pCommandList);
+                if (ImGui::Button("Critical"))
+                    ImGui::InsertNotification({ ImGuiToastType_Critical, "Hello World! This is an info!" });
+                if (ImGui::Button("Debug"))
+                    ImGui::InsertNotification({ ImGuiToastType_Debug, "Hello World! This is an info!" });
+
+                if (ImGui::Button("Custom title"))
+                {
+                    // Now using a custom title...
+                    ImGuiToast toast(ImGuiToastType_Success, 3000); // <-- content can also be passed here as above
+                    toast.set_title("This is a {} title", "wonderful");
+                    toast.set_content("Lorem ipsum dolor sit amet");
+                    ImGui::InsertNotification(toast);
+                }
+
+                if (ImGui::Button("No dismiss"))
+                {
+                    ImGui::InsertNotification({ ImGuiToastType_Error, IMGUI_NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
+                        {
+                            ImGui::InsertNotification({ ImGuiToastType_Info, "Signaled" });
+                        }
+                    ).dismissOnSignal();
+                }
+
+                if (ImGui::BeginPopupContextWindow())
+                {
+                    if (ImGui::MenuItem("Top-left", NULL, position == ImGuiToastPos_TopLeft)) { position = ImGuiToastPos_TopLeft; ImGui::SetNotificationPosition(position); }
+                    if (ImGui::MenuItem("Top-Center", NULL, position == ImGuiToastPos_TopCenter)) { position = ImGuiToastPos_TopCenter; ImGui::SetNotificationPosition(position); }
+                    if (ImGui::MenuItem("Top-right", NULL, position == ImGuiToastPos_TopRight)) { position = ImGuiToastPos_TopRight; ImGui::SetNotificationPosition(position); }
+                    if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetNotificationPosition(position); }
+                    if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetNotificationPosition(position); }
+                    if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetNotificationPosition(position); }
+                    ImGui::EndPopup();
+                }
+
+                ImGui::End();
+            }
+
+            // Render toasts on top of everything, at the end of your code!
+            // You should push style vars here
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
+            ImGui::RenderNotifications(); // <-- Here we render all notifications
+            ImGui::PopStyleVar(1); // Don't forget to Pop()
+            ImGui::PopStyleColor(1);
+
+            Console::Get()->Render();
+            });
+
+        // ImGui
+        ImGuiRenderer::Get()->Render();
+    }
 
     // Frame index is the same as the back buffer index.
     m_CurrentFrameIndex = m_pSwapChain->Present(nullptr);

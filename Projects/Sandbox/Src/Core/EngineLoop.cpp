@@ -55,17 +55,15 @@ void EngineLoop::Init()
     bool resF = Utils::EndsWith("./test/this/thing.png", "thing");
 
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
-    //DX12::Dx12Core2::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
-    //RSE::Editor::Get()->Init();
+    RSE::Editor::Get()->Init();
 }
 
 void EngineLoop::Release()
 {
-    //RSE::Editor::Get()->Release();
+    RSE::Editor::Get()->Release();
 
-    //DX12::Dx12Core2::Get()->Release();
     DX12Core3::Get()->Release();
 
     Console::Get()->Release();
@@ -118,21 +116,20 @@ void EngineLoop::Run()
 
 void EngineLoop::FixedTick()
 {
-    //RSE::Editor::Get()->FixedUpdate();
+    RSE::Editor::Get()->FixedUpdate();
 }
 
 void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
     m_CurrentFrameNumber++;
 
-    //RSE::Editor::Get()->Update();
+    RSE::Editor::Get()->Update();
 
-    //ImGuiRenderer::Get()->Draw([&]()
-    //    {
-    //        RSE::Editor::Get()->Render();
-    //    }
-    //);
-    //DX12::Dx12Core2::Get()->Render();
+    ImGuiRenderer::Get()->Draw([&]()
+        {
+            RSE::Editor::Get()->Render();
+        }
+    );
     DX12Core3::Get()->Render();
 }
 
@@ -220,20 +217,8 @@ void EngineLoop::OnDeviceRestored()
 
 void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
 {
-    //if (!DX12::Dx12Core2::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
-    //    return;
     if (!DX12Core3::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
         return;
-
-    //if (!DX12::Dx12Core::Get()->WindowSizeChanged(width, height, false))
-    //{
-    //    return;
-    //}
-    //
-    //UpdateForSizeChange(width, height);
-    //
-    //ReleaseWindowSizeDependentResources();
-    //CreateWindowSizeDependentResources();
 }
 
 void RS::EngineLoop::RecreateD3D()

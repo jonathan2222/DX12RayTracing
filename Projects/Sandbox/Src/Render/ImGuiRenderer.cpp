@@ -4,7 +4,7 @@
 #include "GUI/ImGuiAdapter.h"
 #include <backends/imgui_impl_dx12.h>
 
-#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 #include "Core/Display.h"
 #include "Core/Console.h"
 
@@ -31,9 +31,9 @@ void RS::ImGuiRenderer::FreeDescriptor()
 		return;
 	}
 
-	DX12::Dx12DescriptorHeap* srvHeap = DX12::Dx12Core2::Get()->GetDescriptorHeapGPUResources();
-	srvHeap->Free(m_ImGuiFontDescriptorHandle);
-	m_ImGuiFontDescriptorHandle = {};
+	//DX12::Dx12DescriptorHeap* srvHeap = DX12Core2::Get()->GetDescriptorHeapGPUResources();
+	//srvHeap->Free(m_ImGuiFontDescriptorHandle);
+	//m_ImGuiFontDescriptorHandle = {};
 }
 
 void RS::ImGuiRenderer::Release()
@@ -41,6 +41,11 @@ void RS::ImGuiRenderer::Release()
 	ImGui_ImplDX12_Shutdown();
 	ImGuiAdapter::Release();
 	ImGui::DestroyContext();
+	if (m_SRVHeap)
+	{
+		m_SRVHeap->Release();
+		m_SRVHeap = nullptr;
+	}
 
 	m_IsReleased = true;
 	m_IsInitialized = false;
@@ -87,17 +92,23 @@ void RS::ImGuiRenderer::Render()
 			drawCall();
 	}
 
-	DX12::Dx12DescriptorHeap* srvHeap = DX12::Dx12Core2::Get()->GetDescriptorHeapGPUResources();
-	ID3D12GraphicsCommandList* pCommandList = DX12::Dx12Core2::Get()->GetFrameCommandList()->GetCommandList();
+	//DX12::Dx12DescriptorHeap* srvHeap = DX12::Dx12Core2::Get()->GetDescriptorHeapGPUResources();
+	auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
+	auto pCommandList = pCommandQueue->GetCommandList();
+	auto pD3D12CommandList = pCommandList->GetGraphicsCommandList().Get();
 
 	// Rendering
 	ImGui::Render();
 
 	// This is necessary if it has already been set.
-	ID3D12DescriptorHeap* pHeaps[1] = { srvHeap->GetHeap() };
-	pCommandList->SetDescriptorHeaps(1, pHeaps);
+	pD3D12CommandList->SetDescriptorHeaps(1, &m_SRVHeap);
 
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pCommandList);
+	auto pRenderTarget = DX12Core3::Get()->GetSwapChain()->GetCurrentRenderTarget();
+	pCommandList->SetRenderTarget(pRenderTarget);
+
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pD3D12CommandList);
+
+	pCommandQueue->ExecuteCommandList(pCommandList);
 
 	// Clear the call stack
 	m_DrawCalls.clear();
@@ -136,13 +147,23 @@ void RS::ImGuiRenderer::InternalInit()
 	m_IsInitialized = true;
 	m_IsReleased = false;
 
-	DXGI_FORMAT format = DX12::Dx12Core2::Get()->GetMainSurface()->GetFormat();
-	DX12::Dx12DescriptorHeap* srvHeap = DX12::Dx12Core2::Get()->GetDescriptorHeapGPUResources();
+	DescriptorAllocation alloc = DX12Core3::Get()->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	m_ImGuiFontDescriptorHandle = srvHeap->Allocate();
-#ifdef RS_CONFIG_DEBUG
-	m_ImGuiFontDescriptorHandle.SetDebugName("ImGui Font descriptor");
-#endif
+	auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
+	auto pCommandList = pCommandQueue->GetCommandList();
+	//pCommandList->
+
+	DXGI_FORMAT format = DX12Core3::Get()->GetSwapChain()->GetFormat();
+
+	{
+		auto pDevice = DX12Core3::Get()->GetD3D12Device();
+		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		desc.NumDescriptors = 1;
+		desc.NodeMask = 0;
+		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		DXCall(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_SRVHeap)));
+	}
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -159,7 +180,7 @@ void RS::ImGuiRenderer::InternalInit()
 	ReScale(pDisplay->GetWidth(), pDisplay->GetHeight());
 
 	ImGuiAdapter::Init(Display::Get()->GetGLFWWindow(), true, ImGuiAdapter::ClientAPI::DX12);
-	ImGui_ImplDX12_Init(DX12::Dx12Core2::Get()->GetD3D12Device(), FRAME_BUFFER_COUNT, format, srvHeap->GetHeap(), m_ImGuiFontDescriptorHandle.m_Cpu, m_ImGuiFontDescriptorHandle.m_Gpu);
+	ImGui_ImplDX12_Init(DX12Core3::Get()->GetD3D12Device(), FRAME_BUFFER_COUNT, format, m_SRVHeap, m_SRVHeap->GetCPUDescriptorHandleForHeapStart(), m_SRVHeap->GetGPUDescriptorHandleForHeapStart());
 
 	// Add icon font:
 	float pixelSize = 13.f;// *GetGuiScale();
@@ -184,7 +205,7 @@ void RS::ImGuiRenderer::InternalResize()
 	{
 		if (!m_IsReleased)
 		{
-			DX12::Dx12Core2::Get()->GetFrameCommandList()->WaitForGPUQueue();
+			DX12Core3::Get()->Flush();
 			FreeDescriptor();
 			Release();
 		}

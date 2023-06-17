@@ -40,6 +40,8 @@ namespace RS
 		DX12_DEVICE_PTR GetD3D12Device() const { return m_Device.GetD3D12Device(); }
 		DX12_FACTORY_PTR GetDXGIFactory() const { return m_Device.GetDXGIFactory(); }
 
+		SwapChain* GetSwapChain() const { return m_pSwapChain.get(); }
+
 		CommandQueue* GetDirectCommandQueue() const { return m_pDirectCommandQueue.get(); }
 
 		void Flush();

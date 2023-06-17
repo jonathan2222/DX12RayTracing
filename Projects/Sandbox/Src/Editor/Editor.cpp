@@ -15,6 +15,7 @@ void RSE::Editor::Init()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Think this is for Multiple windows.
 }
 
 void RSE::Editor::Release()

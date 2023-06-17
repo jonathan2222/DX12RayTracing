@@ -45,10 +45,11 @@ namespace RS
 		std::mutex								m_Mutex;
 		bool									m_ShouldRescale = false;
 		float									m_Scale = 1.f;
-		DX12::Dx12DescriptorHandle				m_ImGuiFontDescriptorHandle;
 		uint32									m_OldWidth;
 		uint32									m_OldHeight;
 
 		ImGuiConfigFlags						m_ImGuiConfigFlags = 0;
+
+		ID3D12DescriptorHeap*					m_SRVHeap = nullptr;
 	};
 }
