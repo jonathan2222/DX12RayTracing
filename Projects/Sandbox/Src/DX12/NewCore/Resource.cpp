@@ -38,25 +38,30 @@ RS::Resource::Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D
     CheckFeatureSupport();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RS::Resource::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
-{
-    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
-    auto pDevice = DX12Core3::Get()->GetD3D12Device();
-    pDevice->CreateShaderResourceView(m_pD3D12Resource.Get(), srvDesc, handle);
-    return handle;
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE RS::Resource::GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
-{
-    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
-    auto pDevice = DX12Core3::Get()->GetD3D12Device();
-    pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, uavDesc, handle);
-    return handle;
-}
+//D3D12_CPU_DESCRIPTOR_HANDLE RS::Resource::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
+//{
+//    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
+//    auto pDevice = DX12Core3::Get()->GetD3D12Device();
+//    pDevice->CreateShaderResourceView(m_pD3D12Resource.Get(), srvDesc, handle);
+//    return handle;
+//}
+//
+//D3D12_CPU_DESCRIPTOR_HANDLE RS::Resource::GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
+//{
+//    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
+//    auto pDevice = DX12Core3::Get()->GetD3D12Device();
+//    pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, uavDesc, handle);
+//    return handle;
+//}
 
 void RS::Resource::Free() const
 {
-    RS_ASSERT(m_WasFreed, "Trying to free a resource multiple times!");
+    if (m_WasFreed)
+    {
+        LOG_WARNING("Trying to free a resource multiple times!");
+        return;
+    }
+
     DX12Core3::Get()->FreeResource(m_pD3D12Resource);
     m_WasFreed = true;
 }
@@ -70,11 +75,6 @@ void RS::Resource::SetName(const std::string& name)
 std::string RS::Resource::GetName() const
 {
     return m_Name;
-}
-
-void RS::Resource::SetDescriptor(DescriptorAllocation&& descriptorAllocation)
-{
-    m_DescriptorAllocation = std::move(descriptorAllocation);
 }
 
 D3D12_RESOURCE_DESC RS::Resource::GetD3D12ResourceDesc() const
@@ -110,4 +110,26 @@ D3D12_RESOURCE_DESC RS::Resource::CheckFeatureSupport()
     DXCallVerbose(pDevice->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &m_FormatSupport, sizeof(D3D12_FEATURE_DATA_FORMAT_SUPPORT)));
     
     return desc;
+}
+
+RS::DescriptorAllocation RS::Resource::CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
+{
+    auto pCore = DX12Core3::Get();
+    auto pDevice = pCore->GetD3D12Device();
+    auto srv = pCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    pDevice->CreateShaderResourceView(m_pD3D12Resource.Get(), srvDesc, srv.GetDescriptorHandle());
+
+    return srv;
+}
+
+RS::DescriptorAllocation RS::Resource::CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
+{
+    auto pCore = DX12Core3::Get();
+    auto pDevice = pCore->GetD3D12Device();
+    auto uav = pCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+    pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
+
+    return uav;
 }

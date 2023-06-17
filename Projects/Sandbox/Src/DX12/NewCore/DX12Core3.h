@@ -29,6 +29,8 @@ namespace RS
 
 		void FreeResource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource);
 
+		bool WindowSizeChanged(uint32 width, uint32 height, bool isFullscreen, bool windowed, bool minimized);
+
 		// TODO: This function should be moved to a main renderer or the EngineLoop.
 		void Render();
 
@@ -63,8 +65,8 @@ namespace RS
 		// TODO: Remake these.
 		DX12::Dx12Device				m_Device;
 		// Would like to have multiple of these such that we can have more windows open.
-		DX12::Dx12Surface				m_Surface; // TODO: This should not be called surface. Maybe canvas or swap chain?
-		std::unique_ptr<SwapChain>		m_SwapChain;
+		//DX12::Dx12Surface				m_Surface; // TODO: This should not be called surface. Maybe canvas or swap chain?
+		std::unique_ptr<SwapChain>		m_pSwapChain;
 		std::unique_ptr<CommandQueue>	m_pDirectCommandQueue;
 
 		std::unique_ptr<DescriptorAllocator> m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
@@ -76,5 +78,18 @@ namespace RS
 		ID3D12PipelineState* m_pPipelineState = nullptr;
 		std::shared_ptr<VertexBuffer> m_pVertexBufferResource;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
+		std::shared_ptr<Texture> m_NullTexture;
+		std::shared_ptr<Texture> m_NormalTexture;
+
+		struct RootParameter
+		{
+			static const uint32 PixelData = 0;
+			static const uint32 PixelData2 = 1;
+
+			// TODO: Same Table
+			static const uint32 Textures = 2;
+			static const uint32 ConstantBufferViews = 3;
+			static const uint32 UnordedAccessViews = 4;
+		};
 	};
 }

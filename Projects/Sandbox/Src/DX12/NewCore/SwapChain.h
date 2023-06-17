@@ -19,9 +19,11 @@ namespace RS
 
 		void Resize(uint32 width, uint32 height, bool isFullscreen);
 
-		std::shared_ptr<Texture> GetBackBuffer(uint32 index) { return m_BackBufferTextures[index]; }
-		std::shared_ptr<Texture> GetCurrentBackBuffer() { return m_BackBufferTextures[m_BackBufferIndex]; }
+		std::shared_ptr<Texture> GetBackBuffer(uint32 index) const { return m_BackBufferTextures[index]; }
+		std::shared_ptr<Texture> GetCurrentBackBuffer() const { return m_BackBufferTextures[m_BackBufferIndex]; }
 		uint32 GetCurrentBackBufferIndex() const { return m_BackBufferIndex; }
+
+		std::shared_ptr<RenderTarget> GetCurrentRenderTarget() const;
 
 		uint32 GetWidth() const { return m_Width; }
 		uint32 GetHeight() const { return m_Height; }
@@ -29,10 +31,10 @@ namespace RS
 
 	private:
 		void CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DX12::DXGIFlags flags);
-		void CreateResources(DXGI_FORMAT format);
+		void CreateResources();
 
 	private:
-		Microsoft::WRL::ComPtr<IDXGISwapChain3>	m_SwapChain;
+		Microsoft::WRL::ComPtr<IDXGISwapChain3>	m_pSwapChain;
 		std::shared_ptr<Texture>				m_BackBufferTextures[BackBufferCount]{ nullptr };
 
 		bool				m_UseVSync			= false;
@@ -44,5 +46,7 @@ namespace RS
 		DXGI_FORMAT			m_Format			= DXGI_FORMAT_R8G8B8A8_UNORM;
 
 		uint64				m_FenceValues[BackBufferCount];
+
+		std::shared_ptr<RenderTarget>	m_pRenderTareget;
 	};
 }

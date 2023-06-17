@@ -7,7 +7,8 @@
 #include "DX12/DirecXRaytracingHelper.h"
 #include "Raytracing.hlsl.h"
 
-#include "DX12/Dx12Core2.h"
+//#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 
 #include "Core/Console.h"
 #include "Editor/Editor.h"
@@ -53,39 +54,19 @@ void EngineLoop::Init()
     bool resE = Utils::EndsWith("./test/this/thing.png", "thing.png");
     bool resF = Utils::EndsWith("./test/this/thing.png", "thing");
 
-    //m_rayGenCB.viewport = { -1.0f, -1.0f, 1.0f, 1.0f };
-    //UpdateForSizeChange(Display::Get()->GetWidth(), Display::Get()->GetHeight());
-    //
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
-    //DX12::Dx12Core::Get()->Init(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, 3, D3D_FEATURE_LEVEL_11_0, DX12::Dx12Core::c_RequireTearingSupport);
-    //
-    //DX12::Dx12Core::Get()->RegisterDeviceNotify(this);
-    //DX12::Dx12Core::Get()->SetWindow(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
-    //DX12::Dx12Core::Get()->InitializeDXGIAdapter();
-    //
-    //DX12::ThrowIfFalse(DX12::Dx12Core::IsDirectXRaytracingSupported(DX12::Dx12Core::Get()->GetAdapter()), "DirectX Raytracing is not supported by your OS, GPU and/or driver.");
-    //
-    //DX12::Dx12Core::Get()->CreateDeviceResources();
-    //DX12::Dx12Core::Get()->CreateWindowSizeDependentResources();
-    //
-    //CreateDeviceDependentResources();
-    //CreateWindowSizeDependentResources();
+    //DX12::Dx12Core2::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+    DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
-    DX12::Dx12Core2::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
-
-    RSE::Editor::Get()->Init();
+    //RSE::Editor::Get()->Init();
 }
 
 void EngineLoop::Release()
 {
-    //DX12::Dx12Core::Get()->WaitForGpu();
-    //OnDeviceLost();
-    //DX12::Dx12Core::Get()->Release();
-    //DX12::Dx12Core::Get()->~Dx12Core();
+    //RSE::Editor::Get()->Release();
 
-    RSE::Editor::Get()->Release();
-
-    DX12::Dx12Core2::Get()->Release();
+    //DX12::Dx12Core2::Get()->Release();
+    DX12Core3::Get()->Release();
 
     Console::Get()->Release();
 }
@@ -137,34 +118,22 @@ void EngineLoop::Run()
 
 void EngineLoop::FixedTick()
 {
-    RSE::Editor::Get()->FixedUpdate();
+    //RSE::Editor::Get()->FixedUpdate();
 }
 
 void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
     m_CurrentFrameNumber++;
 
-    RSE::Editor::Get()->Update();
+    //RSE::Editor::Get()->Update();
 
-    //Dx12Core::Get()->Render();
-
-    //if (!DX12::Dx12Core::Get()->IsWindowVisible())
-    //{
-    //    return;
-    //}
-    //
-    //DX12::Dx12Core::Get()->Prepare();
-    //DoRaytracing();
-    //CopyRaytracingOutputToBackbuffer();
-    //
-    //DX12::Dx12Core::Get()->Present(D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-    ImGuiRenderer::Get()->Draw([&]()
-        {
-            RSE::Editor::Get()->Render();
-        }
-    );
-    DX12::Dx12Core2::Get()->Render();
+    //ImGuiRenderer::Get()->Draw([&]()
+    //    {
+    //        RSE::Editor::Get()->Render();
+    //    }
+    //);
+    //DX12::Dx12Core2::Get()->Render();
+    DX12Core3::Get()->Render();
 }
 
 uint64 RS::EngineLoop::GetCurrentFrameNumber()
@@ -251,7 +220,9 @@ void EngineLoop::OnDeviceRestored()
 
 void RS::EngineLoop::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
 {
-    if (!DX12::Dx12Core2::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
+    //if (!DX12::Dx12Core2::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
+    //    return;
+    if (!DX12Core3::Get()->WindowSizeChanged(width, height, isFullscreen, windowed, false))
         return;
 
     //if (!DX12::Dx12Core::Get()->WindowSizeChanged(width, height, false))

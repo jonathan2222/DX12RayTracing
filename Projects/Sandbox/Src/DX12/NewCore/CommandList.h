@@ -18,23 +18,30 @@ namespace RS
 	class CommandList
 	{
 	public:
-		explicit CommandList(D3D12_COMMAND_LIST_TYPE type, Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator);
+		explicit CommandList(D3D12_COMMAND_LIST_TYPE type);
 		virtual ~CommandList();
 
 		void Reset();
 
+		bool Close(CommandList& pendingCommandList);
+		// Just close the command list. This is usefull for pending command lists.
 		void Close();
 
 		void SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY primitiveTopology);
 
 		void ClearTexture(const std::shared_ptr<Texture>& pTexture, const float clearColor[4]);
+		void ClearTextures(const std::vector<std::shared_ptr<Texture>>& textures, const float clearColor[4]);
 		void ClearDSV(const std::shared_ptr<Texture>& pTexture, D3D12_CLEAR_FLAGS clearFlags, float depth, uint8 stencil);
 
 		std::shared_ptr<Buffer> CreateBufferResource(uint64 size, const std::string& name);
 		std::shared_ptr<Buffer> CreateBufferResource(uint64 size, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name);
 		std::shared_ptr<VertexBuffer> CreateVertexBufferResource(uint64 size, uint32 stride, const std::string& name);
 		Microsoft::WRL::ComPtr<ID3D12Resource> CreateBuffer(size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags);
+
+		std::shared_ptr<Texture> CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name);
+
 		void UploadToBuffer(std::shared_ptr<Buffer> pBuffer, size_t bufferSize, const void* bufferData);
+		void UploadTextureSubresourceData(const std::shared_ptr<Texture>& pTexture, uint32 firstSubresource, uint32 numSubresources, D3D12_SUBRESOURCE_DATA* pSubresourceData);
 
 		void TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
 		void TransitionBarrier(const std::shared_ptr<Resource>& pResource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
@@ -53,7 +60,7 @@ namespace RS
 
 		void SetViewport(const D3D12_VIEWPORT& viewport);
 		void SetViewports(const std::vector<D3D12_VIEWPORT>& viewports);
-		void SetScissorRects(const D3D12_RECT scissorRect);
+		void SetScissorRect(const D3D12_RECT scissorRect);
 		void SetScissorRects(const std::vector<D3D12_RECT>& scissorRects);
 
 		void SetPipelineState(ID3D12PipelineState* pPipelineState);
@@ -76,7 +83,7 @@ namespace RS
 		* @param numSubresources The number of subresources to transition.
 		* @param srv The SRV description to use for the resource in the shader.
 		*/
-		void SetShaderResourceView(
+		void BindShaderResourceView(
 			uint32 rootParameterIndex,
 			uint32 descriptorOffset,
 			const std::shared_ptr<Resource>& pResource,
@@ -94,7 +101,7 @@ namespace RS
 		* @param numSubresources The number of subresources to transition.
 		* @param uav The UAV description to use for the resource in the shader.
 		*/
-		void SetUnorderedAccessView(
+		void BindUnorderedAccessView(
 			uint32 rootParameterIndex,
 			uint32 descriptorOffset,
 			const std::shared_ptr<Resource>& pResource,
@@ -103,13 +110,20 @@ namespace RS
 			UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 			const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav = nullptr);
 
-		void SetRenderTarget(const RenderTarget& renderTarget);
+		void BindBuffer(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Buffer>& pTexture,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		void BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget);
 
 		void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
 
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> GetGraphicsCommandList() const { return m_d3d12CommandList; }
 
 	private:
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> m_d3d12CommandList;
 		D3D12_COMMAND_LIST_TYPE m_CommandListType;
 
@@ -120,8 +134,9 @@ namespace RS
 		std::unique_ptr<DynamicDescriptorHeap> m_pDynamicDescriptorHeap[2]; // CBV_SRV_UAV and SAMPER
 		ID3D12DescriptorHeap* m_pDescriptorHeaps[2];
 
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
 		ID3D12RootSignature* m_pRootSignature;
 		ID3D12PipelineState* m_pPipelineState;
+
+		uint64 m_ID;
 	};
 }

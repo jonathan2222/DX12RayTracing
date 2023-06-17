@@ -13,8 +13,10 @@ RS::SwapChain::SwapChain(HWND window, uint32 width, uint32 height, DX12::DXGIFla
     , m_UseVSync(false)
     , m_FenceValues{ 0 }
 {
+    m_pRenderTareget = std::make_shared<RenderTarget>();
+
     CreateSwapChain(window, width, height, m_Format, flags);
-    CreateResources(m_Format);
+    CreateResources();
 }
 
 RS::SwapChain::~SwapChain()
@@ -49,14 +51,14 @@ uint32 RS::SwapChain::Present(const std::shared_ptr<Texture>& pTexture)
     {
         // Recommended to always use tearing if supported when using a sync interval of 0.
         // Note this will fail if in true 'fullscreen' mode.
-        hr = m_SwapChain->Present(m_UseVSync ? 1 : 0, m_IsFullscreen ? 0 : DXGI_PRESENT_ALLOW_TEARING);
+        hr = m_pSwapChain->Present(m_UseVSync ? 1 : 0, m_IsFullscreen ? 0 : DXGI_PRESENT_ALLOW_TEARING);
     }
     else
     {
         // The first argument instructs DXGI to block until VSync, putting the application
         // to sleep until the next VSync. This ensures we don't waste any cycles rendering
         // frames that will never be displayed to the screen.
-        hr = m_SwapChain->Present(m_UseVSync ? 1 : 0, 0);
+        hr = m_pSwapChain->Present(m_UseVSync ? 1 : 0, 0);
     }
 
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
@@ -74,7 +76,7 @@ uint32 RS::SwapChain::Present(const std::shared_ptr<Texture>& pTexture)
 
     m_FenceValues[m_BackBufferIndex] = pCommandQueue->Signal();
 
-    m_BackBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+    m_BackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
 
     uint64 fenceValue = m_FenceValues[m_BackBufferIndex];
     pCommandQueue->WaitForFenceValue(fenceValue);
@@ -86,6 +88,35 @@ uint32 RS::SwapChain::Present(const std::shared_ptr<Texture>& pTexture)
 
 void RS::SwapChain::Resize(uint32 width, uint32 height, bool isFullscreen)
 {
+    if (m_Width != width || m_Height != height)
+    {
+        m_Width = std::max(1u, width);
+        m_Height = std::max(1u, height);
+
+        // Wait on GPU work.
+        DX12Core3::Get()->Flush();
+
+        // Remove the previous resources.
+        m_pRenderTareget->Reset();
+        for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
+            m_BackBufferTextures[i].reset();
+
+        // Resize dxgi swap chain back buffers.
+        DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+        DXCall(m_pSwapChain->GetDesc(&swapChainDesc));
+        DXCall(m_pSwapChain->ResizeBuffers(FRAME_BUFFER_COUNT, m_Width, m_Height, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+        m_BackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+        
+        // Create new frame buffer resources.
+        CreateResources();
+    }
+}
+
+std::shared_ptr<RS::RenderTarget> RS::SwapChain::GetCurrentRenderTarget() const
+{
+    m_pRenderTareget->SetAttachment(AttachmentPoint::Color0, GetCurrentBackBuffer());
+    return m_pRenderTareget;
 }
 
 void RS::SwapChain::CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DX12::DXGIFlags flags)
@@ -114,35 +145,26 @@ void RS::SwapChain::CreateSwapChain(HWND window, uint32 width, uint32 height, DX
 
     ComPtr<IDXGISwapChain1> swapChain;
     DXCall(pFactory->CreateSwapChainForHwnd(pCommandQueue->GetD3D12CommandQueue().Get(), window, &swapChainDesc, &fullscreenSwapChainDesc, nullptr, &swapChain));
-    DXCallVerbose(swapChain->QueryInterface(IID_PPV_ARGS(&m_SwapChain)));
+    DXCallVerbose(swapChain->QueryInterface(IID_PPV_ARGS(&m_pSwapChain)));
 
     DXCallVerbose(pFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+
+    m_BackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
 }
 
-void RS::SwapChain::CreateResources(DXGI_FORMAT format)
+void RS::SwapChain::CreateResources()
 {
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
     RS_ASSERT_NO_MSG(pDevice);
 
     for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
     {
-        auto pTexture = m_BackBufferTextures[i];
+        Microsoft::WRL::ComPtr<ID3D12Resource> pBackBufferResource;
+        m_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBufferResource));
 
-        auto descAllocator = DX12Core3::Get()->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        pTexture->SetDescriptor(descAllocator->Allocate(1));
+        ResourceStateTracker::AddGlobalResourceState(pBackBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
-        // Fill the texture with data.
-        auto pResource = pTexture->GetD3D12Resource().Get();
-        m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&pResource));
-        pTexture->SetName(Utils::Format("Swap Chain RTV[{}]", i));
-
-        ResourceStateTracker::AddGlobalResourceState(pResource, D3D12_RESOURCE_STATE_COMMON);
-
-        D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-        rtvDesc.Format = format;
-        rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-        // Use the allocated memory that the handle points to and set the data for a RTV at that position.
-        pDevice->CreateRenderTargetView(pResource, &rtvDesc, pTexture->GetCPUDescriptorHandle());
+        std::string name = Utils::Format("Swap Chain RTV[{}]", i);
+        m_BackBufferTextures[i] = std::make_shared<Texture>(pBackBufferResource, name);
     }
 }

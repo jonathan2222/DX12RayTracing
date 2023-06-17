@@ -1,7 +1,7 @@
 #include "PreCompiled.h"
 #include "RootSignature.h"
 
-#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 
 RS::RootSignature::RootSignature(D3D12_ROOT_SIGNATURE_FLAGS flags, D3D_ROOT_SIGNATURE_VERSION requestedVersion)
 	: m_Dirty(true)
@@ -9,7 +9,7 @@ RS::RootSignature::RootSignature(D3D12_ROOT_SIGNATURE_FLAGS flags, D3D_ROOT_SIGN
 	, m_Version(requestedVersion) // TODO: Check if it supports this version!
 	, m_RootSignature(nullptr)
 {
-	memset(m_DescriptorTableBitMasks, 0, sizeof(uint32) * D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
+	memset(m_DescriptorTableBitMasks, 0, sizeof(uint32) * 2);
 }
 
 void RS::RootSignature::SRV(uint32 shaderRegister, uint32 registerSpace, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility)
@@ -155,7 +155,7 @@ void RS::RootSignature::CreateRootSignature()
 		DXCall(hr);
 	}
 
-	auto pDevice = DX12::Dx12Core2::Get()->GetD3D12Device();
+	auto pDevice = DX12Core3::Get()->GetD3D12Device();
 
 	DXCall(pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 }
@@ -241,7 +241,7 @@ void RS::RootSignature::Entry::UAV(uint32 shaderRegister, uint32 registerSpace, 
 
 void RS::RootSignature::Entry::Constants(uint32 num32BitValues, uint32 shaderRegister, uint32 registerSpace, D3D12_SHADER_VISIBILITY visibility)
 {
-	m_RootParameter.InitAsConstants(shaderRegister, registerSpace, visibility);
+	m_RootParameter.InitAsConstants(num32BitValues, shaderRegister, registerSpace, visibility);
 	m_IsNull = false;
 	m_Visibility = visibility;
 }
@@ -261,7 +261,7 @@ bool RS::RootSignature::Entry::Validate() const
 	if (IsTable())
 	{
 		const bool isSampler = m_Ranges.front().RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		for (auto range : m_Ranges)
+		for (auto& range : m_Ranges)
 		{
 			// Cannot have samplers together with the other types.
 			if (isSampler != (range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER))

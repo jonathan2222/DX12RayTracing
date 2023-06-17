@@ -13,7 +13,17 @@ namespace RS
 		Buffer(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name);
 		virtual ~Buffer();
 
+		virtual void CreateViews();
+
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const override;
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
+
 	private:
+		mutable std::unordered_map<size_t, DescriptorAllocation> m_ShaderResourceViews;
+		mutable std::unordered_map<size_t, DescriptorAllocation> m_UnorderedAccessViews;
+
+		mutable std::mutex m_ShaderResourceViewsMutex;
+		mutable std::mutex m_UnorderedAccessViewsMutex;
 	};
 
 	class VertexBuffer : public Buffer
@@ -25,6 +35,16 @@ namespace RS
 
 		D3D12_VERTEX_BUFFER_VIEW CreateView() const;
 
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const override
+		{
+			RS_ASSERT(false, "Vertex buffer does not support SRVs!");
+			return D3D12_CPU_DESCRIPTOR_HANDLE{};
+		}
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override
+		{
+			RS_ASSERT(false, "Vertex buffer does not support UAVs!");
+			return D3D12_CPU_DESCRIPTOR_HANDLE{};
+		}
 	private:
 		uint32 m_SizeInBytes;
 		uint32 m_StrideInBytes;
@@ -46,16 +66,13 @@ namespace RS
 
 		/**
 		* Get the SRV for a resource.
-		*
-		* @param dxgiFormat The required format of the resource. When accessing a
-		* depth-stencil buffer as a shader resource view, the format will be different.
 		*/
-		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const;
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const override;
 
 		/**
 		* Get the UAV for a (sub)resource.
 		*/
-		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const;
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
 
 		/**
 		 * Get the RTV for the texture.
@@ -95,9 +112,6 @@ namespace RS
 		static DXGI_FORMAT GetTypelessFormat(DXGI_FORMAT format);
 
 	private:
-		DescriptorAllocation CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const;
-		DescriptorAllocation CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const;
-
 		mutable std::unordered_map<size_t, DescriptorAllocation> m_ShaderResourceViews;
 		mutable std::unordered_map<size_t, DescriptorAllocation> m_UnorderedAccessViews;
 

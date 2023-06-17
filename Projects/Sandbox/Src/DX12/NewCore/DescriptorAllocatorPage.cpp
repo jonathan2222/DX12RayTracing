@@ -1,13 +1,13 @@
 #include "PreCompiled.h"
 #include "DescriptorAllocatorPage.h"
 
-#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 
 RS::DescriptorAllocatorPage::DescriptorAllocatorPage(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptors)
     : m_HeapType(type)
     , m_NumDescriptorsInHeap(numDescriptors)
 {
-    auto device = DX12::Dx12Core2::Get()->GetD3D12Device();
+    auto device = DX12Core3::Get()->GetD3D12Device();
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.Type = m_HeapType;

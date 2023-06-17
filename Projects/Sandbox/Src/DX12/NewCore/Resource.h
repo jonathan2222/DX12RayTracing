@@ -11,18 +11,17 @@ namespace RS
 	public:
 		Microsoft::WRL::ComPtr<ID3D12Resource> GetD3D12Resource() const { return m_pD3D12Resource; }
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const;
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const = 0;
+		virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const = 0;
 
 		void Free() const;
 
 		void SetName(const std::string& name);
 		std::string GetName() const;
 
-		void SetDescriptor(DescriptorAllocation&& descriptorAllocation);
+		//void SetDescriptor(DescriptorAllocation&& descriptorAllocation);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() const { return m_DescriptorAllocation.GetDescriptorHandle(); }
+		//D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() const { return m_DescriptorAllocation.GetDescriptorHandle(); }
 
 		D3D12_RESOURCE_DESC GetD3D12ResourceDesc() const;
 
@@ -38,13 +37,16 @@ namespace RS
 
 		D3D12_RESOURCE_DESC CheckFeatureSupport();
 
+		// Used for the inherited resource to implement the Get functions.
+		DescriptorAllocation CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const;
+		DescriptorAllocation CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const;
+
+	protected:
 		friend class CommandList;
 
 		std::unique_ptr<D3D12_CLEAR_VALUE> m_pD3D12ClearValue;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_pD3D12Resource;
 		mutable bool m_WasFreed;
-
-		DescriptorAllocation m_DescriptorAllocation; // Releases the descriptor back to the pool when the destructor is called.
 
 		std::string m_Name;
 

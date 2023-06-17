@@ -1,7 +1,7 @@
 #include "PreCompiled.h"
 #include "UploadBuffer.h"
 
-#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 #include <new> // std::bad_alloc
 
 RS::UploadBuffer::UploadBuffer(size_t pageSize)
@@ -59,7 +59,7 @@ RS::UploadBuffer::Page::Page(size_t sizeInBytes)
     , m_CPUPtr(nullptr)
     , m_GPUPtr(D3D12_GPU_VIRTUAL_ADDRESS(0))
 {
-    auto device = DX12::Dx12Core2::Get()->GetD3D12Device();
+    auto device = DX12Core3::Get()->GetD3D12Device();
     DXCall(device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
         D3D12_HEAP_FLAG_NONE,

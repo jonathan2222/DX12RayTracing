@@ -22,7 +22,7 @@ namespace RS
 		struct Entry;
 		struct TableRange : public CD3DX12_DESCRIPTOR_RANGE1
 		{
-			static const uint32 BINDLESS_RESOURCE_MAX_SIZE = UINT32_MAX;
+			static const uint32 BINDLESS_RESOURCE_MAX_SIZE = 1024;
 
 			TableRange() { NumDescriptors = 0u; }
 			void SRV(uint32 numDescriptors, uint32 baseShaderRegister, uint32 registerSpace = 0, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE, uint32 offsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
@@ -36,7 +36,7 @@ namespace RS
 		private:
 			friend struct Entry;
 
-			bool IsNull() const { return NumDescriptors > 0; }
+			bool IsNull() const { return NumDescriptors == 0; }
 		};
 
 		struct Entry

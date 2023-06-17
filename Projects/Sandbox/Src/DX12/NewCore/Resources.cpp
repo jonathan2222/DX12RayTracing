@@ -61,16 +61,68 @@ RS::Buffer::Buffer(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VA
 	: Resource(resourceDesc, pClearValue)
 {
 	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    CreateViews();
 }
 
 RS::Buffer::Buffer(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name)
 	: Resource(pResource)
 {
 	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    CreateViews();
 }
 
 RS::Buffer::~Buffer()
 {
+}
+
+void RS::Buffer::CreateViews()
+{
+    std::lock_guard<std::mutex> lock(m_ShaderResourceViewsMutex);
+    std::lock_guard<std::mutex> guard(m_UnorderedAccessViewsMutex);
+
+    // SRVs and UAVs will be created as needed.
+    m_ShaderResourceViews.clear();
+    m_UnorderedAccessViews.clear();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE RS::Buffer::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
+{
+    std::size_t hash = 0;
+    if (srvDesc)
+    {
+        hash = std::hash<D3D12_SHADER_RESOURCE_VIEW_DESC>{}(*srvDesc);
+    }
+
+    std::lock_guard<std::mutex> lock(m_ShaderResourceViewsMutex);
+
+    auto iter = m_ShaderResourceViews.find(hash);
+    if (iter == m_ShaderResourceViews.end())
+    {
+        auto srv = CreateShaderResourceView(srvDesc);
+        iter = m_ShaderResourceViews.insert({ hash, std::move(srv) }).first;
+    }
+
+    return iter->second.GetDescriptorHandle();
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE RS::Buffer::GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
+{
+    std::size_t hash = 0;
+    if (uavDesc)
+    {
+        hash = std::hash<D3D12_UNORDERED_ACCESS_VIEW_DESC>{}(*uavDesc);
+    }
+
+    std::lock_guard<std::mutex> guard(m_UnorderedAccessViewsMutex);
+
+    auto iter = m_UnorderedAccessViews.find(hash);
+    if (iter == m_UnorderedAccessViews.end())
+    {
+        auto uav = CreateUnorderedAccessView(uavDesc);
+        iter = m_UnorderedAccessViews.insert({ hash, std::move(uav) }).first;
+    }
+
+    return iter->second.GetDescriptorHandle();
 }
 
 RS::VertexBuffer::VertexBuffer(uint32 stride, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name)
@@ -105,12 +157,14 @@ RS::Texture::Texture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_
 	: Resource(resourceDesc, pClearValue)
 {
 	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    CreateViews();
 }
 
 RS::Texture::Texture(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name)
 	: Resource(pResource)
 {
 	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    CreateViews();
 }
 
 void RS::Texture::Resize(uint32 width, uint32 height, uint32 depthOrArraySize)
@@ -407,26 +461,4 @@ DXGI_FORMAT RS::Texture::GetTypelessFormat(DXGI_FORMAT format)
     }
 
     return typelessFormat;
-}
-
-RS::DescriptorAllocation RS::Texture::CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
-{
-    auto pCore = DX12Core3::Get();
-    auto pDevice = pCore->GetD3D12Device();
-    auto srv = pCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-    pDevice->CreateShaderResourceView(m_pD3D12Resource.Get(), srvDesc, srv.GetDescriptorHandle());
-
-    return srv;
-}
-
-RS::DescriptorAllocation RS::Texture::CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
-{
-    auto pCore = DX12Core3::Get();
-    auto pDevice = pCore->GetD3D12Device();
-    auto uav = pCore->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-    pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
-
-    return uav;
 }

@@ -5,6 +5,9 @@
 
 // TODO: Remove/Move these!
 #include "DX12/Shader.h"
+//#define STB_IMAGE_IMPLEMENTATION
+#define STBI_FAILURE_USERMSG
+#include <stb_image.h>
 
 RS::DX12Core3::~DX12Core3()
 {
@@ -29,6 +32,9 @@ RS::DX12Core3::DX12Core3()
     : m_CurrentFrameIndex(0)
     , m_FenceValues{ 0 }
 {
+    const D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+    const DX12::DXGIFlags dxgiFlags = DX12::DXGIFlag::REQUIRE_TEARING_SUPPORT;
+    m_Device.Init(d3dMinFeatureLevel, dxgiFlags);
 }
 
 RS::DX12Core3* RS::DX12Core3::Get()
@@ -39,18 +45,13 @@ RS::DX12Core3* RS::DX12Core3::Get()
 
 void RS::DX12Core3::Init(HWND window, int width, int height)
 {
-    const D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-    const DX12::DXGIFlags dxgiFlags = DX12::DXGIFlag::REQUIRE_TEARING_SUPPORT;
-    m_Device.Init(d3dMinFeatureLevel, dxgiFlags);
-    m_Surface.Init(window, width, height, dxgiFlags);
-
-    m_pDirectCommandQueue = std::make_unique<CommandQueue>(m_Device.GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+    m_pDirectCommandQueue = std::make_unique<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     for (uint32 i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
         m_pDescriptorHeaps[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i), 256);
 
     // TODO: This should be able to be outside this calss. Think what happens when we have multiple swap chains.
-    m_SwapChain = std::make_unique<SwapChain>(window, width, height, dxgiFlags);
+    m_pSwapChain = std::make_unique<SwapChain>(window, width, height, m_Device.GetDXGIFlags());
 
     // TODO: Remove/Move these!
     {
@@ -87,12 +88,57 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
         m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(Vertex), "Vertex Buffer");
         pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&triangleVertices[0]);
         //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
+
+        // Texture
+        {
+            std::string texturePath = RS_TEXTURE_PATH + std::string("flyToYourDream.jpg");
+            int w, h, n;
+            const int requestedChannelCount = 4;
+            uint8* data = stbi_load(texturePath.c_str(), &w, &h, &n, requestedChannelCount);
+            RS_ASSERT(data, "Could not load texture! Reason: {}", stbi_failure_reason());
+            { // Flip image in y
+                std::vector<uint8> buffer(w * requestedChannelCount);
+                for (int y = 0; y < h / 2; y++)
+                {
+                    int top = y * w * requestedChannelCount;
+                    int bot = (h - y - 1) * w * requestedChannelCount;
+                    std::swap_ranges(data + top, data + top + buffer.size(), data + bot);
+                }
+            }
+            m_NormalTexture = pCommandList->CreateTexture((uint32)w, (uint32)h, data, DX12::GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, DX12::FormatType::UNORM), "FlyToYTourDeam Texture Resource");
+            stbi_image_free(data);
+            data = nullptr;
+        }
+
+        // Null Texture
+        {
+            std::string texturePath = RS_TEXTURE_PATH + std::string("NullTexture.png");
+            int w, h, n;
+            const int requestedChannelCount = 4;
+            uint8* data = stbi_load(texturePath.c_str(), &w, &h, &n, requestedChannelCount);
+            RS_ASSERT(data, "Could not load texture! Reason: {}", stbi_failure_reason());
+            { // Flip image in y
+                std::vector<uint8> buffer(w * requestedChannelCount);
+                for (int y = 0; y < h / 2; y++)
+                {
+                    int top = y * w * requestedChannelCount;
+                    int bot = (h - y - 1) * w * requestedChannelCount;
+                    std::swap_ranges(data + top, data + top + buffer.size(), data + bot);
+                }
+            }
+            m_NullTexture = pCommandList->CreateTexture((uint32)w, (uint32)h, data, DX12::GetDXGIFormat(requestedChannelCount ? requestedChannelCount : n, 8, DX12::FormatType::UNORM), "Null Texture Resource");
+            stbi_image_free(data);
+            data = nullptr;
+        }
+
+        // Wait for load to finish.
+        DX12Core3::Get()->Flush();
     }
 }
 
 void RS::DX12Core3::Release()
 {
-    m_Surface.Release();
+    //m_Surface.Release();
     m_Device.Release();
 }
 
@@ -103,15 +149,29 @@ void RS::DX12Core3::FreeResource(Microsoft::WRL::ComPtr<ID3D12Resource> pResourc
     m_PendingResourceRemovals[frameIndex].push_back(pResource);
 }
 
+bool RS::DX12Core3::WindowSizeChanged(uint32 width, uint32 height, bool isFullscreen, bool windowed, bool minimized)
+{
+    bool isWindowVisible = width != 0 && height != 0 && !minimized;
+    if (!isWindowVisible)
+        return false;
+
+    LOG_WARNING("Resize to: ({}, {}) isFullscreen: {}, windowed: {}", width, height, isFullscreen, windowed);
+
+    m_pSwapChain->Resize(width, height, isFullscreen);
+    //ImGuiRenderer::Get()->Resize();
+    return true;
+}
+
 void RS::DX12Core3::Render()
 {
     const uint32 frameIndex = GetCurrentFrameIndex();
     ReleasePendingResourceRemovals(frameIndex);
 
     auto pCommandList = m_pDirectCommandQueue->GetCommandList();
-    // ....
+
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_pPipelineState);
+
     D3D12_VIEWPORT viewport{};
     viewport.MaxDepth = 0;
     viewport.MinDepth = 1;
@@ -119,18 +179,17 @@ void RS::DX12Core3::Render()
     viewport.Width = Display::Get()->GetWidth();
     viewport.Height = Display::Get()->GetHeight();
     pCommandList->SetViewport(viewport);
+
     D3D12_RECT scissorRect{};
     scissorRect.left = scissorRect.top = 0;
     scissorRect.right = viewport.Width;
     scissorRect.bottom = viewport.Height;
-    pCommandList->SetScissorRects(scissorRect);
+    pCommandList->SetScissorRect(scissorRect);
 
-    // TODO: Set rtv
-    // TODO: Clear rtv (texture)
-    //pCommandList->ClearTexture()
-
-    auto pBackBuffer = m_SwapChain->GetCurrentBackBuffer();
-    //pCommandList->SetRenderTarget();
+    auto pRenderTarget = m_pSwapChain->GetCurrentRenderTarget();
+    pCommandList->SetRenderTarget(pRenderTarget);
+    const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
+    pCommandList->ClearTexture(pRenderTarget->GetAttachment(AttachmentPoint::Color0), clearColor);
 
     pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
@@ -140,21 +199,23 @@ void RS::DX12Core3::Render()
         const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
         uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
     } rootConstData;
-    //rootConstData.texIndex[0] = m_Texture.GetDescriptorIndex();
-    //rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = m_NullTexture.GetDescriptorIndex();
-    pCommandList->SetGraphicsRoot32BitConstants(0, 4 * 2, &rootConstData);
-
-    // TODO: Bind textures. The DynamicDescriptorHeap does not support bindless I think...
+    rootConstData.texIndex[0] = 0;
+    rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
+    pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
 
     struct ConstantBufferData
     {
         float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
     } textIndex;
-    pCommandList->SetGraphicsDynamicConstantBuffer(1, sizeof(textIndex), (void*)&textIndex);
+    pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
+
+    pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
+    pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
 
     pCommandList->DrawInstanced(6, 1, 0, 0);
 
-    m_CurrentFrameIndex = m_SwapChain->Present(nullptr);
+    // Frame index is the same as the back buffer index.
+    m_CurrentFrameIndex = m_pSwapChain->Present(nullptr);
 
     //m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % FRAME_BUFFER_COUNT;
 }
@@ -304,13 +365,14 @@ void RS::DX12Core3::CreateRootSignature()
     const uint32 uavRegSpace = 3;
 
     auto& rootSignature = *m_pRootSignature.get();
-    rootSignature[0].Constants(4 * 2, currentShaderRegisterCBV++, registerSpace);
-    rootSignature[1].CBV(currentShaderRegisterCBV++, registerSpace);
+    rootSignature[RootParameter::PixelData].Constants(4 * 2, currentShaderRegisterCBV++, registerSpace);
+    rootSignature[RootParameter::PixelData2].CBV(currentShaderRegisterCBV++, registerSpace);
 
     // All bindless buffers, textures overlap using different spaces.
-    rootSignature[2][0].CBVBindless(0, cbvRegSpace, 0);
-    rootSignature[2][1].SRVBindless(0, srvRegSpace, 0);
-    rootSignature[2][2].UAVBindless(0, uavRegSpace, 0);
+    // TODO: DynamicDescriptorHeap does not like when we have empty descriptors (not set) and not bindless too.
+    rootSignature[RootParameter::Textures][0].SRV(2, 0, srvRegSpace);
+    //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
+    //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
 
     {
         CD3DX12_STATIC_SAMPLER_DESC samplerDesc{};
