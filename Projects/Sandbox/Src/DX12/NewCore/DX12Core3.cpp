@@ -15,6 +15,16 @@ void RS::DX12Core3::Flush()
     m_pDirectCommandQueue->Flush();
 }
 
+RS::DescriptorAllocator* RS::DX12Core3::GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE type) const
+{
+    return m_pDescriptorHeaps[type].get();
+}
+
+RS::DescriptorAllocation RS::DX12Core3::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type)
+{
+    return GetDescriptorAllocator(type)->Allocate(1);
+}
+
 RS::DX12Core3::DX12Core3()
     : m_CurrentFrameIndex(0)
     , m_FenceValues{ 0 }
@@ -36,10 +46,8 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
 
     m_pDirectCommandQueue = std::make_unique<CommandQueue>(m_Device.GetD3D12Device(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-    m_pShaderResourceDescriptorHeap = std::make_unique<DescriptorAllocator>(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 256);
-    m_pSamplerDescriptorHeap = std::make_unique<DescriptorAllocator>(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256);
-    m_pRTVDescriptorHeap = std::make_unique<DescriptorAllocator>(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
-    m_pDSVDescriptorHeap = std::make_unique<DescriptorAllocator>(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
+    for (uint32 i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+        m_pDescriptorHeaps[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i), 256);
 
     // TODO: This should be able to be outside this calss. Think what happens when we have multiple swap chains.
     m_SwapChain = std::make_unique<SwapChain>(window, width, height, dxgiFlags);
@@ -69,16 +77,16 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
         };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
-        //m_VertexBuffer.Create((uint8*)&triangleVertices[0], sizeof(Vertex), vertexBufferSize);
 
-        const uint32 size = Display::Get()->GetWidth() * Display::Get()->GetHeight() * 4;
-        struct ConstantBufferData
-        {
-            float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
-        } textIndex;
+        //struct ConstantBufferData
+        //{
+        //    float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
+        //} textIndex;
 
-        //m_ConstantBuffer.Create((uint8*)&textIndex, sizeof(textIndex));
-        //m_ConstantBuffer.CreateView();
+        auto pCommandList = m_pDirectCommandQueue->GetCommandList();
+        m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(Vertex), "Vertex Buffer");
+        pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&triangleVertices[0]);
+        //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
     }
 }
 
@@ -100,7 +108,51 @@ void RS::DX12Core3::Render()
     const uint32 frameIndex = GetCurrentFrameIndex();
     ReleasePendingResourceRemovals(frameIndex);
 
+    auto pCommandList = m_pDirectCommandQueue->GetCommandList();
     // ....
+    pCommandList->SetRootSignature(m_pRootSignature);
+    pCommandList->SetPipelineState(m_pPipelineState);
+    D3D12_VIEWPORT viewport{};
+    viewport.MaxDepth = 0;
+    viewport.MinDepth = 1;
+    viewport.TopLeftX = viewport.TopLeftY = 0;
+    viewport.Width = Display::Get()->GetWidth();
+    viewport.Height = Display::Get()->GetHeight();
+    pCommandList->SetViewport(viewport);
+    D3D12_RECT scissorRect{};
+    scissorRect.left = scissorRect.top = 0;
+    scissorRect.right = viewport.Width;
+    scissorRect.bottom = viewport.Height;
+    pCommandList->SetScissorRects(scissorRect);
+
+    // TODO: Set rtv
+    // TODO: Clear rtv (texture)
+    //pCommandList->ClearTexture()
+
+    auto pBackBuffer = m_SwapChain->GetCurrentBackBuffer();
+    //pCommandList->SetRenderTarget();
+
+    pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
+
+    struct RootConstData
+    {
+        const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
+        uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
+    } rootConstData;
+    //rootConstData.texIndex[0] = m_Texture.GetDescriptorIndex();
+    //rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = m_NullTexture.GetDescriptorIndex();
+    pCommandList->SetGraphicsRoot32BitConstants(0, 4 * 2, &rootConstData);
+
+    // TODO: Bind textures. The DynamicDescriptorHeap does not support bindless I think...
+
+    struct ConstantBufferData
+    {
+        float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
+    } textIndex;
+    pCommandList->SetGraphicsDynamicConstantBuffer(1, sizeof(textIndex), (void*)&textIndex);
+
+    pCommandList->DrawInstanced(6, 1, 0, 0);
 
     m_CurrentFrameIndex = m_SwapChain->Present(nullptr);
 
@@ -111,10 +163,8 @@ void RS::DX12Core3::ReleaseStaleDescriptors()
 {
     const uint64 frameNumber = EngineLoop::GetCurrentFrameNumber();
 
-    m_pShaderResourceDescriptorHeap->ReleaseStaleDescriptors(frameNumber);
-    m_pSamplerDescriptorHeap->ReleaseStaleDescriptors(frameNumber);
-    m_pRTVDescriptorHeap->ReleaseStaleDescriptors(frameNumber);
-    m_pDSVDescriptorHeap->ReleaseStaleDescriptors(frameNumber);
+    for (uint32 i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+        m_pDescriptorHeaps[i]->ReleaseStaleDescriptors(frameNumber);
 }
 
 uint32 RS::DX12Core3::GetCurrentFrameIndex() const
@@ -142,7 +192,7 @@ void RS::DX12Core3::CreatePipelineState()
 {
     DX12::Shader shader;
     DX12::Shader::Description shaderDesc{};
-    shaderDesc.path = "tmpShaders.hlsl";
+    shaderDesc.path = "TmpCore3Shaders.hlsl";
     shaderDesc.typeFlags = DX12::Shader::TypeFlag::Pixel | DX12::Shader::TypeFlag::Vertex;
     shader.Create(shaderDesc);
 
@@ -241,7 +291,7 @@ void RS::DX12Core3::CreatePipelineState()
 
 void RS::DX12Core3::CreateRootSignature()
 {
-    m_pRootSignature = std::make_unique<RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    m_pRootSignature = std::make_shared<RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     uint32 registerSpace = 0;
     uint32 currentShaderRegisterCBV = 0;
@@ -256,6 +306,8 @@ void RS::DX12Core3::CreateRootSignature()
     auto& rootSignature = *m_pRootSignature.get();
     rootSignature[0].Constants(4 * 2, currentShaderRegisterCBV++, registerSpace);
     rootSignature[1].CBV(currentShaderRegisterCBV++, registerSpace);
+
+    // All bindless buffers, textures overlap using different spaces.
     rootSignature[2][0].CBVBindless(0, cbvRegSpace, 0);
     rootSignature[2][1].SRVBindless(0, srvRegSpace, 0);
     rootSignature[2][2].UAVBindless(0, uavRegSpace, 0);

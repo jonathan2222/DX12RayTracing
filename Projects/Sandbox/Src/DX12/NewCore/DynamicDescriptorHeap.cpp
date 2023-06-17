@@ -142,22 +142,22 @@ D3D12_GPU_DESCRIPTOR_HANDLE RS::DynamicDescriptorHeap::CopyDescriptor(CommandLis
     return hGPU;
 }
 
-void RS::DynamicDescriptorHeap::ParseRootSignature(const RootSignature& rootSignature)
+void RS::DynamicDescriptorHeap::ParseRootSignature(const std::shared_ptr<RootSignature>& pRootSignature)
 {
     // If the root signature changes, all descriptors must be (re)bound to the command list.
     m_StaleDescriptorTableBitMask = 0;
 
-    const auto& rootSignatureDesc = rootSignature.GetRootSignatureDesc();
+    const auto& rootSignatureDesc = pRootSignature->GetRootSignatureDesc();
 
     // Get a bit mask that represents the root parameter indices that match the descriptor heap type for this dynamic descriptor heap.
-    m_DescriptorTableBitMask = rootSignature.GetDescriptorTableBitMask(m_DescriptorHeapType);
+    m_DescriptorTableBitMask = pRootSignature->GetDescriptorTableBitMask(m_DescriptorHeapType);
     uint32 descriptorTableBitMask = m_DescriptorTableBitMask;
 
     uint32 currentOffset = 0;
     DWORD rootIndex = 0;
     while (_BitScanForward(&rootIndex, descriptorTableBitMask) && rootIndex < rootSignatureDesc.Desc_1_1.NumParameters)
     {
-        uint32 numDescriptors = rootSignature.GetNumDescriptors(rootIndex);
+        uint32 numDescriptors = pRootSignature->GetNumDescriptors(rootIndex);
 
         DescriptorTableCache& descriptorTableCache = m_DescriptorTableCache[rootIndex];
         descriptorTableCache.numDescriptors = numDescriptors;

@@ -4,9 +4,10 @@
 
 #include "DX12/NewCore/Resource.h"
 #include "DX12/NewCore/ResourceStateTracker.h"
-#include "DX12/NewCore/UploadBuffer.h"
 #include "DX12/NewCore/DynamicDescriptorHeap.h"
 #include "DX12/NewCore/RenderTarget.h"
+#include "DX12/NewCore/RootSignature.h"
+#include "DX12/NewCore/UploadBuffer.h"
 
 #define DX12_COMMAND_LIST_TYPE ID3D12GraphicsCommandList2
 
@@ -24,7 +25,16 @@ namespace RS
 
 		void Close();
 
-		Resource* CreateBufferResource();
+		void SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY primitiveTopology);
+
+		void ClearTexture(const std::shared_ptr<Texture>& pTexture, const float clearColor[4]);
+		void ClearDSV(const std::shared_ptr<Texture>& pTexture, D3D12_CLEAR_FLAGS clearFlags, float depth, uint8 stencil);
+
+		std::shared_ptr<Buffer> CreateBufferResource(uint64 size, const std::string& name);
+		std::shared_ptr<Buffer> CreateBufferResource(uint64 size, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name);
+		std::shared_ptr<VertexBuffer> CreateVertexBufferResource(uint64 size, uint32 stride, const std::string& name);
+		Microsoft::WRL::ComPtr<ID3D12Resource> CreateBuffer(size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags);
+		void UploadToBuffer(std::shared_ptr<Buffer> pBuffer, size_t bufferSize, const void* bufferData);
 
 		void TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
 		void TransitionBarrier(const std::shared_ptr<Resource>& pResource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
@@ -41,11 +51,21 @@ namespace RS
 		void CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstResource, Microsoft::WRL::ComPtr<ID3D12Resource> srcResource);
 		void CopyResource(const std::shared_ptr<Resource>& dstResource, const std::shared_ptr<Resource>& srcResource);
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> CopyBuffer(size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags);
+		void SetViewport(const D3D12_VIEWPORT& viewport);
+		void SetViewports(const std::vector<D3D12_VIEWPORT>& viewports);
+		void SetScissorRects(const D3D12_RECT scissorRect);
+		void SetScissorRects(const std::vector<D3D12_RECT>& scissorRects);
 
-		void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12DescriptorHeap* pHeap) {}
+		void SetPipelineState(ID3D12PipelineState* pPipelineState);
+		void SetRootSignature(const std::shared_ptr<RootSignature>& pRootSignature);
+		void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12DescriptorHeap* pHeap);
+		void BindDescriptorHeaps();
 
 		void SetGraphicsDynamicConstantBuffer(uint32 rootParameterIndex, size_t sizeInBytes, const void* bufferData);
+
+		void SetGraphicsRoot32BitConstants(uint32 rootParameterIndex, uint32 numConstants, const void* pConstants);
+
+		void SetVertexBuffers(uint32 slot, const std::shared_ptr<VertexBuffer>& pVertexBuffer);
 
 		/** Binds a resource as an SRV.
 		* @param rootParameterIndex The root parameter index to assign the SRV to. The root parameter must be of type D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE.
@@ -85,7 +105,7 @@ namespace RS
 
 		void SetRenderTarget(const RenderTarget& renderTarget);
 
-		void Draw(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
+		void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
 
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> GetGraphicsCommandList() const { return m_d3d12CommandList; }
 
@@ -98,7 +118,10 @@ namespace RS
 
 		std::unique_ptr<UploadBuffer> m_pUploadBuffer;
 		std::unique_ptr<DynamicDescriptorHeap> m_pDynamicDescriptorHeap[2]; // CBV_SRV_UAV and SAMPER
+		ID3D12DescriptorHeap* m_pDescriptorHeaps[2];
 
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
+		ID3D12RootSignature* m_pRootSignature;
+		ID3D12PipelineState* m_pPipelineState;
 	};
 }

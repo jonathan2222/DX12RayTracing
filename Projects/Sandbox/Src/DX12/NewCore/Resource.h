@@ -9,9 +9,6 @@ namespace RS
 	class Resource
 	{
 	public:
-		Resource();
-		virtual ~Resource();
-
 		Microsoft::WRL::ComPtr<ID3D12Resource> GetD3D12Resource() const { return m_pD3D12Resource; }
 
 		D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const;
@@ -29,14 +26,28 @@ namespace RS
 
 		D3D12_RESOURCE_DESC GetD3D12ResourceDesc() const;
 
+		bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport) const;
+		bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
+
+		bool IsValid() const;
+
 	protected:
+		Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue = nullptr);
+		Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D3D12_CLEAR_VALUE* pClearValue = nullptr);
+		virtual ~Resource();
+
+		D3D12_RESOURCE_DESC CheckFeatureSupport();
+
 		friend class CommandList;
 
+		std::unique_ptr<D3D12_CLEAR_VALUE> m_pD3D12ClearValue;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_pD3D12Resource;
 		mutable bool m_WasFreed;
 
 		DescriptorAllocation m_DescriptorAllocation; // Releases the descriptor back to the pool when the destructor is called.
 
 		std::string m_Name;
+
+		D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
 	};
 }

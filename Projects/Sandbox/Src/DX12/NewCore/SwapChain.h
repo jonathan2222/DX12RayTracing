@@ -17,6 +17,8 @@ namespace RS
 		// Return the next back buffer index.
 		uint32 Present(const std::shared_ptr<Texture>& texture);
 
+		void Resize(uint32 width, uint32 height, bool isFullscreen);
+
 		std::shared_ptr<Texture> GetBackBuffer(uint32 index) { return m_BackBufferTextures[index]; }
 		std::shared_ptr<Texture> GetCurrentBackBuffer() { return m_BackBufferTextures[m_BackBufferIndex]; }
 		uint32 GetCurrentBackBufferIndex() const { return m_BackBufferIndex; }
@@ -31,7 +33,7 @@ namespace RS
 
 	private:
 		Microsoft::WRL::ComPtr<IDXGISwapChain3>	m_SwapChain;
-		std::shared_ptr<Texture>				m_BackBufferTextures[BackBufferCount]{};
+		std::shared_ptr<Texture>				m_BackBufferTextures[BackBufferCount]{ nullptr };
 
 		bool				m_UseVSync			= false;
 		bool				m_IsFullscreen		= false;

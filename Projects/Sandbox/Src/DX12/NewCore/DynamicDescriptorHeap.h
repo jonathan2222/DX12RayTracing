@@ -51,7 +51,7 @@ namespace RS
 		/**
 		* Parse the root signature to determine which root parameters contain descriptor tables and determine the number of descriptors needed for each table.
 		*/
-		void ParseRootSignature(const RootSignature& rootSignature);
+		void ParseRootSignature(const std::shared_ptr<RootSignature>& pRootSignature);
 
 		/**
 		* Reset used descriptors.

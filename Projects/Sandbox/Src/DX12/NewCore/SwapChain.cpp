@@ -33,7 +33,7 @@ uint32 RS::SwapChain::Present(const std::shared_ptr<Texture>& pTexture)
         if (pTexture->GetD3D12ResourceDesc().SampleDesc.Count > 1)
         {
             //pCommandList->ResolveSubresource(backBuffer, texture);
-            LOG_ERROR("Does not support multisample!");
+            RS_ASSERT(false, "Does not support multisample!");
         }
         else
         {
@@ -84,6 +84,10 @@ uint32 RS::SwapChain::Present(const std::shared_ptr<Texture>& pTexture)
     return m_BackBufferIndex;
 }
 
+void RS::SwapChain::Resize(uint32 width, uint32 height, bool isFullscreen)
+{
+}
+
 void RS::SwapChain::CreateSwapChain(HWND window, uint32 width, uint32 height, DXGI_FORMAT format, DX12::DXGIFlags flags)
 {
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -124,7 +128,7 @@ void RS::SwapChain::CreateResources(DXGI_FORMAT format)
     {
         auto pTexture = m_BackBufferTextures[i];
 
-        auto descAllocator = DX12Core3::Get()->GetRTVDescriptorAllocator();
+        auto descAllocator = DX12Core3::Get()->GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         pTexture->SetDescriptor(descAllocator->Allocate(1));
 
         // Fill the texture with data.

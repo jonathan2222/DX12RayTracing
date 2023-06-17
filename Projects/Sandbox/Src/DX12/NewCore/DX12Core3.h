@@ -38,14 +38,12 @@ namespace RS
 		DX12_DEVICE_PTR GetD3D12Device() const { return m_Device.GetD3D12Device(); }
 		DX12_FACTORY_PTR GetDXGIFactory() const { return m_Device.GetDXGIFactory(); }
 
-		DescriptorAllocator* GetShaderResourceDescriptorAllocator() { return m_pShaderResourceDescriptorHeap.get(); };
-		DescriptorAllocator* GetSamplerDescriptorAllocator() { return m_pSamplerDescriptorHeap.get(); };
-		DescriptorAllocator* GetRTVDescriptorAllocator() { return m_pRTVDescriptorHeap.get(); };
-		DescriptorAllocator* GetDSVDescriptorAllocator() { return m_pDSVDescriptorHeap.get(); };
-
 		CommandQueue* GetDirectCommandQueue() const { return m_pDirectCommandQueue.get(); }
 
 		void Flush();
+
+		DescriptorAllocator* GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
+		DescriptorAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type);
 
 	private:
 		DX12Core3();
@@ -69,15 +67,14 @@ namespace RS
 		std::unique_ptr<SwapChain>		m_SwapChain;
 		std::unique_ptr<CommandQueue>	m_pDirectCommandQueue;
 
-		std::unique_ptr<DescriptorAllocator> m_pShaderResourceDescriptorHeap;
-		std::unique_ptr<DescriptorAllocator> m_pSamplerDescriptorHeap;
-		std::unique_ptr<DescriptorAllocator> m_pRTVDescriptorHeap;
-		std::unique_ptr<DescriptorAllocator> m_pDSVDescriptorHeap;
+		std::unique_ptr<DescriptorAllocator> m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 		uint64 m_FenceValues[FRAME_BUFFER_COUNT];
 
 		// TODO: Move these!
-		std::unique_ptr<RootSignature> m_pRootSignature;
+		std::shared_ptr<RootSignature> m_pRootSignature;
 		ID3D12PipelineState* m_pPipelineState = nullptr;
+		std::shared_ptr<VertexBuffer> m_pVertexBufferResource;
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
 	};
 }
