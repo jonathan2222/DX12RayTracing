@@ -220,3 +220,9 @@ void RS::ResourceStateTracker::RemoveGlobalResourceState(ID3D12Resource* resourc
         ms_GlobalResourceState.erase(resource);
     }
 }
+
+uint32 RS::ResourceStateTracker::GetNumberOfGlobalResources()
+{
+    std::lock_guard<std::mutex> lock(ms_GlobalMutex);
+    return (uint32)ms_GlobalResourceState.size();
+}

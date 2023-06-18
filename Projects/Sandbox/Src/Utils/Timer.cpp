@@ -32,6 +32,13 @@ TimeStamp Timer::CalcDelta()
 	return m_TimeStamp;
 }
 
+long long RS::Timer::GetCurrentTimeSeconds()
+{
+	std::chrono::time_point<std::chrono::steady_clock> time = std::chrono::high_resolution_clock::now();
+	auto duration = time.time_since_epoch();
+	return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+}
+
 float TimeStamp::GetDeltaTimeSec() const
 {
 	return (float)(m_DT / 1000.0);

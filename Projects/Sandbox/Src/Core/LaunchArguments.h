@@ -47,6 +47,7 @@ namespace RS
 		static void Init(int argc, char* argv[]);
 		static void Release();
 
+		// TODO: Thread safe this!
 		/*
 		* Search through all params that starts with a '-' sign.
 		*/

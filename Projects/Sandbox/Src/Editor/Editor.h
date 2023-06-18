@@ -3,6 +3,7 @@
 #include "Render/ImGuiRenderer.h"
 
 #include "Editor/Windows/ConsoleInspector.h"
+#include "Editor/Windows/LifetimeTracker.h"
 
 namespace RSE
 {
@@ -32,5 +33,6 @@ namespace RSE
 		ImGuiDockNodeFlags m_DockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 		ConsoleInspector m_ConsoleInspector;
+		LifetimeTracker m_LifetimeTracker;
 	};
 }

@@ -21,6 +21,16 @@ void RS::DX12Core3::Flush()
     m_pDirectCommandQueue->Flush();
 }
 
+void RS::DX12Core3::WaitForGPU()
+{
+    Flush();
+    uint64 fenceValue = m_pDirectCommandQueue->Signal();
+    m_pDirectCommandQueue->WaitForFenceValue(fenceValue);
+
+    for (uint32 frameIndex = 0; frameIndex < FRAME_BUFFER_COUNT; ++frameIndex)
+        ReleasePendingResourceRemovals(frameIndex);
+}
+
 RS::DescriptorAllocator* RS::DX12Core3::GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE type) const
 {
     return m_pDescriptorHeaps[type].get();
@@ -29,6 +39,58 @@ RS::DescriptorAllocator* RS::DX12Core3::GetDescriptorAllocator(D3D12_DESCRIPTOR_
 RS::DescriptorAllocation RS::DX12Core3::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type)
 {
     return GetDescriptorAllocator(type)->Allocate(1);
+}
+
+void RS::DX12Core3::AddToLifetimeTracker(uint64 id, const std::string& name)
+{
+    std::lock_guard<std::mutex> lock(s_ResourceLifetimeTrackingMutex);
+    s_ResourceLifetimeTrackingData[id] = LifetimeStats(name);
+}
+
+void RS::DX12Core3::RemoveFromLifetimeTracker(uint64 id)
+{
+    std::lock_guard<std::mutex> lock(s_ResourceLifetimeTrackingMutex);
+    s_ResourceLifetimeTrackingData.erase(id);
+}
+
+void RS::DX12Core3::SetNameOfLifetimeTrackedResource(uint64 id, const std::string& name)
+{
+    std::lock_guard<std::mutex> lock(s_ResourceLifetimeTrackingMutex);
+    strcpy_s(s_ResourceLifetimeTrackingData[id].name, name.c_str());
+}
+
+void RS::DX12Core3::LogLifetimeTracker()
+{
+    if (LaunchArguments::Contains(LaunchParams::logResources))
+    {
+        LOG_DEBUG("Resource Lifetime tracker:");
+        std::lock_guard<std::mutex> lock(s_ResourceLifetimeTrackingMutex);
+        uint64 currentTime = Timer::GetCurrentTimeSeconds();
+        uint32 index = 0;
+        for (auto& entry : s_ResourceLifetimeTrackingData)
+        {
+            const uint64 id = entry.first;
+            LifetimeStats& stats = entry.second;
+            LOG_DEBUG("[{}]\tID: {} [{}] AliveTime: {} s", index, id, stats.name, currentTime - stats.startTime);
+            ++index;
+        }
+
+        uint32 frameIndex = RS::DX12Core3::Get()->GetCurrentFrameIndex();
+        std::array<uint32, FRAME_BUFFER_COUNT> numPendingRemovals = RS::DX12Core3::Get()->GetNumberOfPendingPremovals();
+        LOG_DEBUG("Penging Removals:");
+        for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)
+            LOG_DEBUG("{}\t[{}] -> {}", frameIndex == i ? "x" : "", i, numPendingRemovals[i]);
+        LOG_DEBUG("Global resource states: {}", RS::ResourceStateTracker::GetNumberOfGlobalResources());
+    }
+}
+
+std::array<uint32, FRAME_BUFFER_COUNT> RS::DX12Core3::GetNumberOfPendingPremovals()
+{
+    std::lock_guard<std::mutex> lock(m_ResourceRemovalMutex);
+    std::array<uint32, FRAME_BUFFER_COUNT> arrayData;
+    for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)
+        arrayData[i] = (uint32)m_PendingResourceRemovals[i].size();
+    return arrayData;
 }
 
 RS::DX12Core3::DX12Core3()
@@ -146,8 +208,9 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
 
 void RS::DX12Core3::Release()
 {
-    //ImGuiRenderer::Get()->FreeDescriptor();
     ImGuiRenderer::Get()->Release();
+    WaitForGPU();
+    DX12Core3::LogLifetimeTracker();
     m_Device.Release();
 }
 
@@ -330,7 +393,8 @@ void RS::DX12Core3::ReleasePendingResourceRemovals(uint32 frameIndex)
     for (auto resource : pendingRemovals)
     {
         ResourceStateTracker::RemoveGlobalResourceState(resource.Get());
-        resource->Release();
+        //resource->Release();
+        resource.Reset();
     }
 }
 

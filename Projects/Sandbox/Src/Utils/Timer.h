@@ -29,6 +29,8 @@ namespace RS
 		*/
 		TimeStamp CalcDelta();
 
+		static long long GetCurrentTimeSeconds();
+
 	private:
 		std::chrono::time_point<std::chrono::steady_clock> m_StartTime;
 		std::chrono::time_point<std::chrono::steady_clock> m_EndTime;

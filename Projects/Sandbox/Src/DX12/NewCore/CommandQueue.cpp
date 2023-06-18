@@ -70,7 +70,7 @@ RS::CommandQueue::~CommandQueue()
 uint64 RS::CommandQueue::Signal()
 {
     uint64 fenceValueForSignal = ++m_FenceValue;
-    DXCall(m_d3d12CommandQueue->Signal(m_d3d12Fence.Get(), fenceValueForSignal));
+    DXCallVerbose(m_d3d12CommandQueue->Signal(m_d3d12Fence.Get(), fenceValueForSignal));
     return fenceValueForSignal;
 }
 
@@ -86,7 +86,7 @@ void RS::CommandQueue::WaitForFenceValue(uint64 fenceValue)
         HANDLE eventHandle = ::CreateEvent(NULL, FALSE, FALSE, NULL);
         RS_ASSERT_NO_MSG(eventHandle, "Failed to create fence event handle!");
 
-        DXCall(m_d3d12Fence->SetEventOnCompletion(fenceValue, eventHandle));
+        DXCallVerbose(m_d3d12Fence->SetEventOnCompletion(fenceValue, eventHandle));
         ::WaitForSingleObject(eventHandle, DWORD_MAX);
 
         ::CloseHandle(eventHandle);

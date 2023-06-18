@@ -3,6 +3,10 @@
   "Id": "f4c124e3-60a1-a37e-69b9-2e55d5170ae0",
   "Items": [
     {
+      "Id": "1e6122a1-251b-4861-87bb-059f25ba13d9",
+      "Command": "-logResources"
+    },
+    {
       "Id": "26b7be36-791d-4f8d-8aca-35d8846831c7",
       "Command": "-logDXCalls"
     },

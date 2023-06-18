@@ -60,14 +60,14 @@ namespace Internal
 RS::Buffer::Buffer(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name)
 	: Resource(resourceDesc, pClearValue)
 {
-	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    SetName(name);
     CreateViews();
 }
 
 RS::Buffer::Buffer(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name)
 	: Resource(pResource)
 {
-	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    SetName(name);
     CreateViews();
 }
 
@@ -156,14 +156,14 @@ D3D12_VERTEX_BUFFER_VIEW RS::VertexBuffer::CreateView() const
 RS::Texture::Texture(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name)
 	: Resource(resourceDesc, pClearValue)
 {
-	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    SetName(name);
     CreateViews();
 }
 
 RS::Texture::Texture(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name)
 	: Resource(pResource)
 {
-	DX12_SET_DEBUG_NAME(m_pD3D12Resource.Get(), name);
+    SetName(name);
     CreateViews();
 }
 

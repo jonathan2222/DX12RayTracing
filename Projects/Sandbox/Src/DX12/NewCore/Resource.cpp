@@ -25,6 +25,12 @@ RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEA
 
     ResourceStateTracker::AddGlobalResourceState(m_pD3D12Resource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
+    if (LaunchArguments::Contains(LaunchParams::logResources))
+    {
+        m_ID = GenerateID();
+        DX12Core3::AddToLifetimeTracker(m_ID);
+    }
+
     CheckFeatureSupport();
 }
 
@@ -34,6 +40,12 @@ RS::Resource::Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D
 {
     if (pClearValue)
         m_pD3D12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*pClearValue);
+
+    if (LaunchArguments::Contains(LaunchParams::logResources))
+    {
+        m_ID = GenerateID();
+        DX12Core3::AddToLifetimeTracker(m_ID);
+    }
 
     CheckFeatureSupport();
 }
@@ -64,12 +76,18 @@ void RS::Resource::Free() const
 
     DX12Core3::Get()->FreeResource(m_pD3D12Resource);
     m_WasFreed = true;
+
+    if (LaunchArguments::Contains(LaunchParams::logResources))
+        DX12Core3::RemoveFromLifetimeTracker(m_ID);
 }
 
 void RS::Resource::SetName(const std::string& name)
 {
     DXCallVerbose(m_pD3D12Resource->SetName(Utils::ToWString(name).c_str()));
     m_Name = name;
+
+    if (LaunchArguments::Contains(LaunchParams::logResources))
+        DX12Core3::SetNameOfLifetimeTrackedResource(m_ID, name);
 }
 
 std::string RS::Resource::GetName() const
@@ -132,4 +150,10 @@ RS::DescriptorAllocation RS::Resource::CreateUnorderedAccessView(const D3D12_UNO
     pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
 
     return uav;
+}
+
+uint64 RS::Resource::GenerateID() const
+{
+    std::lock_guard<std::mutex> lock(s_IDGeneratorMutex);
+    return s_IDGenerator++;
 }

@@ -31,8 +31,8 @@ RS::CommandList::~CommandList()
 
 void RS::CommandList::Reset()
 {
-    DXCall(m_d3d12CommandAllocator->Reset());
-    DXCall(m_d3d12CommandList->Reset(m_d3d12CommandAllocator.Get(), nullptr));
+    DXCallVerbose(m_d3d12CommandAllocator->Reset());
+    DXCallVerbose(m_d3d12CommandList->Reset(m_d3d12CommandAllocator.Get(), nullptr));
 
     m_pResourceStateTracker->Reset();
     m_pUploadBuffer->Reset();

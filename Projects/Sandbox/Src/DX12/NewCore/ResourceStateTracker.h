@@ -94,6 +94,8 @@ namespace RS
 		*/
 		static void RemoveGlobalResourceState(ID3D12Resource* resource);
 
+		static uint32 GetNumberOfGlobalResources();
+
 	private:
 		// An array (vector) of resource barriers.
 		using ResourceBarriers = std::vector<D3D12_RESOURCE_BARRIER>;

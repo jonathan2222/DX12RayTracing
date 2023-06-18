@@ -68,6 +68,7 @@ void RSE::Editor::Render()
     ImGui::End();
 
     m_ConsoleInspector.Render();
+    m_LifetimeTracker.Render();
 }
 
 void RSE::Editor::Resize(uint32 width, uint32 height)
@@ -111,6 +112,7 @@ void RSE::Editor::RenderMenuBar()
             }
 
             ImGui::MenuItem("Console Inspector", "", &m_ConsoleInspector.m_Enabled, pConsole);
+            ImGui::MenuItem("Lifetime Tracker", "", &m_LifetimeTracker.m_Enabled);
 
             ImGui::EndMenu();
         }

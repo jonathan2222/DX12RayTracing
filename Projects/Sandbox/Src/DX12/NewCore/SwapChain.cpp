@@ -101,6 +101,9 @@ void RS::SwapChain::Resize(uint32 width, uint32 height, bool isFullscreen)
         for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
             m_BackBufferTextures[i].reset();
 
+        // Remove all pending resources.
+        DX12Core3::Get()->WaitForGPU();
+
         // Resize dxgi swap chain back buffers.
         DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
         DXCall(m_pSwapChain->GetDesc(&swapChainDesc));

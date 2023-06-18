@@ -41,6 +41,9 @@ namespace RS
 		DescriptorAllocation CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const;
 		DescriptorAllocation CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const;
 
+	private:
+		uint64 GenerateID() const;
+
 	protected:
 		friend class CommandList;
 
@@ -51,5 +54,9 @@ namespace RS
 		std::string m_Name;
 
 		D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
+
+		inline static std::mutex s_IDGeneratorMutex;
+		inline static uint64 s_IDGenerator = 0;
+		uint64 m_ID;
 	};
 }

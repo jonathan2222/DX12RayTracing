@@ -14,6 +14,8 @@
 // TODO: Move these
 #include "DX12/NewCore/RootSignature.h"
 
+#include "Utils/Timer.h"
+
 namespace RS
 {
 	class DX12Core3
@@ -44,10 +46,22 @@ namespace RS
 
 		CommandQueue* GetDirectCommandQueue() const { return m_pDirectCommandQueue.get(); }
 
+		/*
+		* Flushes the current 
+		*/
 		void Flush();
+		void WaitForGPU();
 
 		DescriptorAllocator* GetDescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 		DescriptorAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type);
+
+		// Debug code
+		static void AddToLifetimeTracker(uint64 id, const std::string& name = "");
+		static void RemoveFromLifetimeTracker(uint64 id);
+		static void SetNameOfLifetimeTrackedResource(uint64 id, const std::string& name);
+		static void LogLifetimeTracker();
+
+		std::array<uint32, FRAME_BUFFER_COUNT> GetNumberOfPendingPremovals();
 
 	private:
 		DX12Core3();
@@ -68,20 +82,20 @@ namespace RS
 		DX12::Dx12Device				m_Device;
 		// Would like to have multiple of these such that we can have more windows open.
 		//DX12::Dx12Surface				m_Surface; // TODO: This should not be called surface. Maybe canvas or swap chain?
-		std::unique_ptr<SwapChain>		m_pSwapChain;
-		std::unique_ptr<CommandQueue>	m_pDirectCommandQueue;
+		std::unique_ptr<SwapChain>		m_pSwapChain; // These resources will not be released before we call Release()!
+		std::unique_ptr<CommandQueue>	m_pDirectCommandQueue; // These resources will not be released before we call Release()!
 
 		std::unique_ptr<DescriptorAllocator> m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 		uint64 m_FenceValues[FRAME_BUFFER_COUNT];
 
 		// TODO: Move these!
-		std::shared_ptr<RootSignature> m_pRootSignature;
+		std::shared_ptr<RootSignature> m_pRootSignature; // These resources will not be released before we call Release()!
 		ID3D12PipelineState* m_pPipelineState = nullptr;
-		std::shared_ptr<VertexBuffer> m_pVertexBufferResource;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
-		std::shared_ptr<Texture> m_NullTexture;
-		std::shared_ptr<Texture> m_NormalTexture;
+		std::shared_ptr<VertexBuffer> m_pVertexBufferResource; // These resources will not be released before we call Release()!
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource; // These resources will not be released before we call Release()!
+		std::shared_ptr<Texture> m_NullTexture; // These resources will not be released before we call Release()!
+		std::shared_ptr<Texture> m_NormalTexture; // These resources will not be released before we call Release()!
 
 		struct RootParameter
 		{
@@ -93,5 +107,24 @@ namespace RS
 			static const uint32 ConstantBufferViews = 3;
 			static const uint32 UnordedAccessViews = 4;
 		};
+
+	public:
+		// Resource lifetime tracking debug code (-logResources)
+		inline static std::mutex s_ResourceLifetimeTrackingMutex;
+		struct LifetimeStats
+		{
+			char name[256];
+			uint64 startTime;
+			LifetimeStats() : name(""), startTime(0) {}
+			LifetimeStats(const std::string& name)
+			{
+				startTime = Timer::GetCurrentTimeSeconds();
+				if (name.empty())
+					strcpy_s(this->name, "Unknown Resource");
+				else
+					strcpy_s(this->name, name.c_str());
+			}
+		};
+		inline static std::unordered_map<uint64, LifetimeStats> s_ResourceLifetimeTrackingData;
 	};
 }
