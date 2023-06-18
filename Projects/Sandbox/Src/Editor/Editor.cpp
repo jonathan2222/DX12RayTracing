@@ -5,6 +5,10 @@
 #include "Core/Display.h"
 #include "GUI/LogNotifier.h"
 
+#include "Editor/Windows/ConsoleInspector.h"
+#include "Editor/Windows/LifetimeTracker.h"
+#include "Editor/Windows/Canvas.h"
+
 RSE::Editor* RSE::Editor::Get()
 {
     static std::unique_ptr<Editor> pEditor(new Editor());
@@ -16,18 +20,33 @@ void RSE::Editor::Init()
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Think this is for Multiple windows.
+
+    RegisterEditorWindows();
+
+    for (EditorWindow* pWindow : m_EditorWindows)
+        pWindow->Init();
 }
 
 void RSE::Editor::Release()
 {
+    for (EditorWindow* pWindow : m_EditorWindows)
+    {
+        pWindow->Release();
+        delete pWindow;
+    }
+    m_EditorWindows.clear();
 }
 
 void RSE::Editor::Update()
 {
+    for (EditorWindow* pWindow : m_EditorWindows)
+        pWindow->SuperUpdate();
 }
 
 void RSE::Editor::FixedUpdate()
 {
+    for (EditorWindow* pWindow : m_EditorWindows)
+        pWindow->SuperFixedUpdate();
 }
 
 void RSE::Editor::Render()
@@ -67,8 +86,8 @@ void RSE::Editor::Render()
 
     ImGui::End();
 
-    m_ConsoleInspector.Render();
-    m_LifetimeTracker.Render();
+    for (EditorWindow* pWindow : m_EditorWindows)
+        pWindow->SuperRender();
 }
 
 void RSE::Editor::Resize(uint32 width, uint32 height)
@@ -111,8 +130,8 @@ void RSE::Editor::RenderMenuBar()
                 else pConsole->Enable();
             }
 
-            ImGui::MenuItem("Console Inspector", "", &m_ConsoleInspector.m_Enabled, pConsole);
-            ImGui::MenuItem("Lifetime Tracker", "", &m_LifetimeTracker.m_Enabled);
+            for (EditorWindow* pWindow : m_EditorWindows)
+                ImGui::MenuItem(pWindow->GetName().c_str(), "", &pWindow->GetEnable(), pWindow->GetEnableRequirements());
 
             ImGui::EndMenu();
         }
@@ -129,4 +148,11 @@ void RSE::Editor::RenderMenuBar()
 
         ImGui::EndMenuBar();
     }
+}
+
+void RSE::Editor::RegisterEditorWindows()
+{
+    RegisterEditorWindow<ConsoleInspector>("Console Inspector");
+    RegisterEditorWindow<LifetimeTracker>("Lifetime Tracker");
+    RegisterEditorWindow<Canvas>("Canvas", true);
 }

@@ -298,10 +298,9 @@ Microsoft::WRL::ComPtr<ID3D12Resource> RS::CommandList::CreateBuffer(size_t buff
     return d3d12Resource;
 }
 
-std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name)
+std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags)
 {
     RS_ASSERT_NO_MSG(width != 0 && height != 0);
-    RS_ASSERT_NO_MSG(pPixelData);
 
     D3D12_RESOURCE_DESC textureDesc{};
     textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -314,7 +313,7 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
     textureDesc.SampleDesc.Count = 1;
     textureDesc.SampleDesc.Quality = 0;
     textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    textureDesc.Flags = flags;
 
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
 
@@ -328,15 +327,18 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
 
     ResourceStateTracker::AddGlobalResourceState(pResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
-    uint32 numChannels = DX12::GetChannelCountFromFormat(format);
+    if (pPixelData)
+    {
+        uint32 numChannels = DX12::GetChannelCountFromFormat(format);
 
-    // Copy data to the intermediate upload heap and then schedule a copy from the upload heap to the texture resource.
-    D3D12_SUBRESOURCE_DATA textureData = {};
-    textureData.pData = pPixelData;
-    textureData.RowPitch = static_cast<LONG_PTR>(numChannels * textureDesc.Width);
-    textureData.SlicePitch = textureData.RowPitch * textureDesc.Height;
+        // Copy data to the intermediate upload heap and then schedule a copy from the upload heap to the texture resource.
+        D3D12_SUBRESOURCE_DATA textureData = {};
+        textureData.pData = pPixelData;
+        textureData.RowPitch = static_cast<LONG_PTR>(numChannels * textureDesc.Width);
+        textureData.SlicePitch = textureData.RowPitch * textureDesc.Height;
 
-    UploadTextureSubresourceData(pTexture, 0, 1, &textureData);
+        UploadTextureSubresourceData(pTexture, 0, 1, &textureData);
+    }
 
     return pTexture;
 }

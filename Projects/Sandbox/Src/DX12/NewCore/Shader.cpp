@@ -2,12 +2,13 @@
 #include "Shader.h"
 
 #include "Utils/Utils.h"
+#include "Core/LaunchArguments.h"
 
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
 
-namespace RS::DX12::_ShaderInternal
+namespace RS::_ShaderInternal
 {
 	struct ShaderTypeInfo
 	{
@@ -50,7 +51,7 @@ namespace RS::DX12::_ShaderInternal
 #undef DEF_SHADER_TYPE
 }
 
-RS::DX12::Shader::~Shader()
+RS::Shader::~Shader()
 {
 	for (auto& part : m_ShaderParts)
 	{
@@ -59,7 +60,7 @@ RS::DX12::Shader::~Shader()
 	}
 }
 
-bool RS::DX12::Shader::Create(const Description& description)
+bool RS::Shader::Create(const Description& description)
 {
 	if (!ValidateShaderTypes(description.typeFlags))
 		return false;
@@ -134,7 +135,7 @@ bool RS::DX12::Shader::Create(const Description& description)
 	}
 }
 
-void RS::DX12::Shader::Release()
+void RS::Shader::Release()
 {
 	for (PartData& part : m_ShaderParts)
 	{
@@ -147,7 +148,7 @@ void RS::DX12::Shader::Release()
 	m_ShaderPath = "";
 }
 
-void RS::DX12::Shader::Invalidate()
+void RS::Shader::Invalidate()
 {
 	for (PartData& part : m_ShaderParts)
 	{
@@ -160,7 +161,7 @@ void RS::DX12::Shader::Invalidate()
 	m_ShaderPath = "";
 }
 
-bool RS::DX12::Shader::Combine(Shader& other)
+bool RS::Shader::Combine(Shader& other)
 {
 	TypeFlags overlappingTypes = m_Types & other.m_Types;
 	if (overlappingTypes)
@@ -182,7 +183,7 @@ bool RS::DX12::Shader::Combine(Shader& other)
 	return true;
 }
 
-IDxcBlob* RS::DX12::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) const
+IDxcBlob* RS::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) const
 {
 	if (!Utils::IsPowerOfTwo(type))
 	{
@@ -201,7 +202,7 @@ IDxcBlob* RS::DX12::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) 
 	return nullptr;
 }
 
-ID3D12ShaderReflection* RS::DX12::Shader::GetReflection(TypeFlags type, bool supressWarnings) const
+ID3D12ShaderReflection* RS::Shader::GetReflection(TypeFlags type, bool supressWarnings) const
 {
 	if (!Utils::IsPowerOfTwo(type))
 	{
@@ -220,7 +221,7 @@ ID3D12ShaderReflection* RS::DX12::Shader::GetReflection(TypeFlags type, bool sup
 	return nullptr;
 }
 
-bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& filePath, TypeFlags& remainingTypesToCompile, TypeFlags& finalTypes, TypeFlags& totalTypesSeen, bool isTheOnlyFile)
+bool RS::Shader::CreateShaderPartsFromFile(const std::filesystem::path& filePath, TypeFlags& remainingTypesToCompile, TypeFlags& finalTypes, TypeFlags& totalTypesSeen, bool isTheOnlyFile)
 {
 	// Load shader and its types.
 	if (!CheckValidExtension(filePath))
@@ -283,7 +284,7 @@ bool RS::DX12::Shader::CreateShaderPartsFromFile(const std::filesystem::path& fi
 	return result != 0;
 }
 
-RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File& file) const
+RS::Shader::TypeFlags RS::Shader::GetShaderTypesFromFile(const File& file) const
 {
 	TypeFlags types = TypeFlag::NONE;
 	if (!file.pData || file.size == 0)
@@ -343,7 +344,7 @@ RS::DX12::Shader::TypeFlags RS::DX12::Shader::GetShaderTypesFromFile(const File&
 	return types;
 }
 
-bool RS::DX12::Shader::ValidateSingleFileTypes(TypeFlags types, TypeFlags typesInFile)
+bool RS::Shader::ValidateSingleFileTypes(TypeFlags types, TypeFlags typesInFile)
 {
 	TypeFlags combine = types & typesInFile;
 	if (combine == 0)
@@ -369,7 +370,7 @@ bool RS::DX12::Shader::ValidateSingleFileTypes(TypeFlags types, TypeFlags typesI
 	return true;
 }
 
-bool RS::DX12::Shader::ValidateShaderTypes(TypeFlags types) const
+bool RS::Shader::ValidateShaderTypes(TypeFlags types) const
 {
 	if (types == TypeFlag::NONE)
 	{
@@ -390,7 +391,7 @@ bool RS::DX12::Shader::ValidateShaderTypes(TypeFlags types) const
 	return true;
 }
 
-bool RS::DX12::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToCompile, TypeFlags finalTypes, TypeFlags totalTypesSeen) const
+bool RS::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToCompile, TypeFlags finalTypes, TypeFlags totalTypesSeen) const
 {
 	if ((totalTypesSeen & (~finalTypes)) != TypeFlag::NONE)
 	{
@@ -408,7 +409,7 @@ bool RS::DX12::Shader::ValidateShaderTypesMatches(TypeFlags remainingTypesToComp
 	return true;
 }
 
-bool RS::DX12::Shader::CheckValidExtension(const std::filesystem::path& path) const
+bool RS::Shader::CheckValidExtension(const std::filesystem::path& path) const
 {
 	if (path.has_extension())
 	{
@@ -422,12 +423,12 @@ bool RS::DX12::Shader::CheckValidExtension(const std::filesystem::path& path) co
 	return false;
 }
 
-bool RS::DX12::Shader::CheckIfOnlyOneTypeIsSet(TypeFlags type) const
+bool RS::Shader::CheckIfOnlyOneTypeIsSet(TypeFlags type) const
 {
 	return Utils::IsPowerOfTwo(type);
 }
 
-bool RS::DX12::Shader::CompileShaderPart(const File& file, TypeFlags type)
+bool RS::Shader::CompileShaderPart(const File& file, TypeFlags type)
 {
 	std::string typeStr = TypesToString(type);
 	if (!CheckIfOnlyOneTypeIsSet(type))
@@ -437,9 +438,9 @@ bool RS::DX12::Shader::CompileShaderPart(const File& file, TypeFlags type)
 	}
 
 	// These objects are not thread safe, create a speparate instance for each thread.
-	ComPtr<IDxcUtils> utils;
-	ComPtr<IDxcIncludeHandler> includeHandler;
-	ComPtr<IDxcCompiler3> pCompiler;
+	Microsoft::WRL::ComPtr<IDxcUtils> utils;
+	Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler;
+	Microsoft::WRL::ComPtr<IDxcCompiler3> pCompiler;
 	{ // TODO: Move this outside of here and in to an initialize function that all shaders uses. Shader library class?
 		DXCallVerbose(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(utils.ReleaseAndGetAddressOf())));
 		DXCallVerbose(utils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf()));
@@ -557,7 +558,7 @@ bool RS::DX12::Shader::CompileShaderPart(const File& file, TypeFlags type)
 	return true;
 }
 
-void RS::DX12::Shader::ConstructEntryPointsArray(const std::vector<std::pair<TypeFlags, std::string>>& customEntryPoints)
+void RS::Shader::ConstructEntryPointsArray(const std::vector<std::pair<TypeFlags, std::string>>& customEntryPoints)
 {
 	constexpr uint32 typeCount = TypeFlag::COUNT - 1;
 
@@ -584,7 +585,7 @@ void RS::DX12::Shader::ConstructEntryPointsArray(const std::vector<std::pair<Typ
 	}
 }
 
-RS::DX12::Shader::File RS::DX12::Shader::ReadFile(const std::string& path) const
+RS::Shader::File RS::Shader::ReadFile(const std::string& path) const
 {
 	File file;
 	if (std::filesystem::exists(path) == false)
@@ -615,7 +616,7 @@ RS::DX12::Shader::File RS::DX12::Shader::ReadFile(const std::string& path) const
 	return file;
 }
 
-std::string RS::DX12::Shader::TypesToString(TypeFlags types) const
+std::string RS::Shader::TypesToString(TypeFlags types) const
 {
 	std::string result;
 

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "Core/Console.h"
+#include "EditorWindow.h"
 
 namespace RSE
 {
-	class LifetimeTracker
+	class LifetimeTracker : public EditorWindow
 	{
 	public:
-		bool m_Enabled = false;
+		LifetimeTracker(const std::string& name, bool enabled) : EditorWindow(name, enabled) {}
 
-		void Render();
+		virtual void Render() override;
 
 	private:
 	};

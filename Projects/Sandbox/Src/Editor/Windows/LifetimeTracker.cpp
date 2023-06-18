@@ -6,15 +6,12 @@
 
 void RSE::LifetimeTracker::Render()
 {
-	if (!m_Enabled) return;
-
-	if (ImGui::Begin("Lifetime Tracker"))
+	if (ImGui::Begin(m_Name.c_str()))
 	{
 		if (RS::LaunchArguments::Contains(RS::LaunchParams::logResources))
 		{
 			static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Sortable;
 
-			ImGui::Text("This does not take into account pending removals!");
 			bool open = ImGui::CollapsingHeader("Resources", ImGuiTreeNodeFlags_DefaultOpen);
 			if (open && ImGui::BeginTable("Table1", 3, flags, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 5)))
 			{
@@ -49,6 +46,8 @@ void RSE::LifetimeTracker::Render()
 
 				ImGui::EndTable();
 			}
+
+			// TODO: Should these be moved to another window?
 			std::array<uint32, FRAME_BUFFER_COUNT> numPendingRemovals = RS::DX12Core3::Get()->GetNumberOfPendingPremovals();
 			ImGui::Text("Penging Removals:");
 			for (uint32 i = 0; i < FRAME_BUFFER_COUNT; ++i)

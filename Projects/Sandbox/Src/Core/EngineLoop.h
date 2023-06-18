@@ -2,7 +2,7 @@
 
 #include "Core/FrameTimer.h"
 #include "Core/Display.h"
-#include "DX12/Dx12Core.h"
+#include "DX12/NewCore/DX12Core3.h"
 #include "DX12/RaytracingHlslCompat.h"
 
 namespace RS
@@ -22,7 +22,7 @@ namespace RS
         };
     }
 
-	class EngineLoop : public DX12::IDeviceNotify, public IDisplaySizeChange
+	class EngineLoop : public IDeviceNotify, public IDisplaySizeChange
 	{
 	public:
 		EngineLoop() = default;

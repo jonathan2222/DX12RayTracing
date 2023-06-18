@@ -12,8 +12,6 @@ using namespace RS;
 void RSE::ConsoleInspector::Render()
 {
 	Console* pConsole = Console::Get();
-	if (!pConsole) return;
-	if (!m_Enabled) return;
 
 	uint64 currentConsoleStateHash = pConsole->GetStateHash();
 	if (m_StoredConsoleStateHash != currentConsoleStateHash)
@@ -24,7 +22,7 @@ void RSE::ConsoleInspector::Render()
 		m_StoredConsoleStateHash = currentConsoleStateHash;
 	}
 
-	if (ImGui::Begin("Console Inspector"))
+	if (ImGui::Begin(m_Name.c_str()))
 	{
 		static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_Sortable;
 

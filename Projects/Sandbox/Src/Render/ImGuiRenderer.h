@@ -4,7 +4,7 @@
 #include <mutex>
 #include <functional>
 
-#include "DX12/Dx12Resources.h"
+#include "DX12/Dx12Device.h"
 #include "GUI/IconsFontAwesome6.h"
 #include "GUI/ImGuiNotify.h"
 

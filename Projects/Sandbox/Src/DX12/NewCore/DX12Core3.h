@@ -1,7 +1,6 @@
 #pragma once
 
 #include "DX12/Dx12Device.h"
-#include "DX12/Dx12Surface.h"
 
 #include "DX12/NewCore/CommandQueue.h"
 #include "DX12/NewCore/DescriptorAllocator.h"
@@ -10,14 +9,18 @@
 #include <mutex>
 #include <vector>
 
-
 // TODO: Move these
-#include "DX12/NewCore/RootSignature.h"
-
 #include "Utils/Timer.h"
 
 namespace RS
 {
+	// Provides an interface for an application that owns DeviceResources to be notified of the device being lost or created.
+	interface IDeviceNotify
+	{
+		virtual void OnDeviceLost() = 0;
+		virtual void OnDeviceRestored() = 0;
+	};
+
 	class DX12Core3
 	{
 	public:
@@ -68,45 +71,21 @@ namespace RS
 
 		void ReleasePendingResourceRemovals(uint32 frameIndex);
 
-		// TODO: Move these!
-		void CreatePipelineState();
-		void CreateRootSignature();
-
 	private:
 		std::mutex m_ResourceRemovalMutex;
 		std::unordered_map<uint64, std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>> m_PendingResourceRemovals;
 
 		uint32 m_CurrentFrameIndex = 0;
 
-		// TODO: Remake these.
+		// TODO: Remake this.
 		DX12::Dx12Device				m_Device;
 		// Would like to have multiple of these such that we can have more windows open.
-		//DX12::Dx12Surface				m_Surface; // TODO: This should not be called surface. Maybe canvas or swap chain?
 		std::unique_ptr<SwapChain>		m_pSwapChain; // These resources will not be released before we call Release()!
 		std::unique_ptr<CommandQueue>	m_pDirectCommandQueue; // These resources will not be released before we call Release()!
 
 		std::unique_ptr<DescriptorAllocator> m_pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 		uint64 m_FenceValues[FRAME_BUFFER_COUNT];
-
-		// TODO: Move these!
-		std::shared_ptr<RootSignature> m_pRootSignature; // These resources will not be released before we call Release()!
-		ID3D12PipelineState* m_pPipelineState = nullptr;
-		std::shared_ptr<VertexBuffer> m_pVertexBufferResource; // These resources will not be released before we call Release()!
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource; // These resources will not be released before we call Release()!
-		std::shared_ptr<Texture> m_NullTexture; // These resources will not be released before we call Release()!
-		std::shared_ptr<Texture> m_NormalTexture; // These resources will not be released before we call Release()!
-
-		struct RootParameter
-		{
-			static const uint32 PixelData = 0;
-			static const uint32 PixelData2 = 1;
-
-			// TODO: Same Table
-			static const uint32 Textures = 2;
-			static const uint32 ConstantBufferViews = 3;
-			static const uint32 UnordedAccessViews = 4;
-		};
 
 	public:
 		// Resource lifetime tracking debug code (-logResources)

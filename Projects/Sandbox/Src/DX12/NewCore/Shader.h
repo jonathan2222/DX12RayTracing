@@ -1,11 +1,11 @@
 #pragma once
 
-#include "DX12/Dx12Core2.h"
+#include "DX12/NewCore/DX12Core3.h"
 
 #include <dxcapi.h>
 #include <filesystem>
 
-namespace RS::DX12
+namespace RS
 {
 	class Shader
 	{

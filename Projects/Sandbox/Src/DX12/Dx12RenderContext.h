@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Dx12Core2.h"
-#include "Dx12Resources.h"
-#include "Dx12Surface.h"
+#include "DX12/NewCore/DX12Core3.h"
 
 namespace RS::DX12
 {
@@ -18,7 +16,5 @@ namespace RS::DX12
 		void ClearRTV(const float clearColor[4]);
 
 	private:
-		Dx12FrameCommandList	m_FrameCommandList;
-		Dx12Surface				m_Surface;
 	};
 }

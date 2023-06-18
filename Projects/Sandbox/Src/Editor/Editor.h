@@ -2,8 +2,7 @@
 
 #include "Render/ImGuiRenderer.h"
 
-#include "Editor/Windows/ConsoleInspector.h"
-#include "Editor/Windows/LifetimeTracker.h"
+#include "Editor/Windows/EditorWindow.h"
 
 namespace RSE
 {
@@ -29,10 +28,20 @@ namespace RSE
 
 		void RenderMenuBar();
 
+		void RegisterEditorWindows();
+
+		template<class T>
+		void RegisterEditorWindow(const std::string& name, bool enabled = false);
+
 	private:
 		ImGuiDockNodeFlags m_DockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
 
-		ConsoleInspector m_ConsoleInspector;
-		LifetimeTracker m_LifetimeTracker;
+		std::vector<EditorWindow*> m_EditorWindows;
 	};
+
+	template<class T>
+	inline void Editor::RegisterEditorWindow(const std::string& name, bool enabled)
+	{
+		m_EditorWindows.push_back(new T(name, enabled));
+	}
 }

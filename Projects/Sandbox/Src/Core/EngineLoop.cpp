@@ -7,7 +7,6 @@
 #include "DX12/DirecXRaytracingHelper.h"
 #include "Raytracing.hlsl.h"
 
-//#include "DX12/Dx12Core2.h"
 #include "DX12/NewCore/DX12Core3.h"
 
 #include "Core/Console.h"
@@ -226,18 +225,19 @@ void RS::EngineLoop::RecreateD3D()
     // Give GPU a chance to finish its execution in progress.
     try
     {
-        DX12::Dx12Core::Get()->WaitForGpu();
+        DX12Core3::Get()->WaitForGPU();
     }
     catch (DX12::HrException&)
     {
         // Do nothing, currently attached adapter is unresponsive.
     }
-    DX12::Dx12Core::Get()->HandleDeviceLost();
+    //DX12Core3::Get()->HandleDeviceLost();
 }
 
 void RS::EngineLoop::DoRaytracing()
 {
-    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
+    RS_ASSERT(false, "Not implemented!");
+    ID3D12GraphicsCommandList* commandList = nullptr;// DX12Core3::Get()->GetCommandList();
 
     auto pDisplay = Display::Get();
 
@@ -271,16 +271,16 @@ void RS::EngineLoop::DoRaytracing()
 
 void RS::EngineLoop::CreateRaytracingInterfaces()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
-    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
-
-    DX12::ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), "Couldn't get DirectX Raytracing interface for the device.");
-    DX12::ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), "Couldn't get DirectX Raytracing interface for the command list.");
+    auto device = DX12Core3::Get()->GetD3D12Device();
+    //auto commandList = DX12Core3::Get()->GetCommandList();
+    //
+    //DX12::ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&m_dxrDevice)), "Couldn't get DirectX Raytracing interface for the device.");
+    //DX12::ThrowIfFailed(commandList->QueryInterface(IID_PPV_ARGS(&m_dxrCommandList)), "Couldn't get DirectX Raytracing interface for the command list.");
 }
 
 void RS::EngineLoop::SerializeAndCreateRaytracingRootSignature(D3D12_ROOT_SIGNATURE_DESC& desc, ComPtr<ID3D12RootSignature>* rootSig)
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12Core3::Get()->GetD3D12Device();
     ComPtr<ID3DBlob> blob;
     ComPtr<ID3DBlob> error;
 
@@ -406,7 +406,7 @@ void RS::EngineLoop::CreateRaytracingPipelineStateObject()
 
 void RS::EngineLoop::CreateDescriptorHeap()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12Core3::Get()->GetD3D12Device();
 
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
     // Allocate a heap for a single descriptor:
@@ -423,8 +423,8 @@ void RS::EngineLoop::CreateDescriptorHeap()
 
 void RS::EngineLoop::CreateRaytracingOutputResource()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
-    auto backbufferFormat = DX12::Dx12Core::Get()->GetBackBufferFormat();
+    auto device = DX12Core3::Get()->GetD3D12Device();
+    auto backbufferFormat = DX12Core3::Get()->GetSwapChain()->GetFormat();
 
     auto pDisplay = Display::Get();
 
@@ -446,7 +446,7 @@ void RS::EngineLoop::CreateRaytracingOutputResource()
 
 void RS::EngineLoop::BuildGeometry()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12Core3::Get()->GetD3D12Device();
     Index indices[] =
     {
         0, 1, 2
@@ -470,10 +470,11 @@ void RS::EngineLoop::BuildGeometry()
 
 void RS::EngineLoop::BuildAccelerationStructures()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
-    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
-    auto commandQueue = DX12::Dx12Core::Get()->GetCommandQueue();
-    auto commandAllocator = DX12::Dx12Core::Get()->GetCommandAllocator();
+    RS_ASSERT(false, "Not implemented!");
+    auto device = DX12Core3::Get()->GetD3D12Device();
+    ID3D12GraphicsCommandList* commandList = nullptr;
+    ID3D12CommandQueue* commandQueue = nullptr;
+    ID3D12CommandAllocator* commandAllocator = nullptr;
 
     // Reset the command list for the acceleration structure construction.
     commandList->Reset(commandAllocator, nullptr);
@@ -566,15 +567,15 @@ void RS::EngineLoop::BuildAccelerationStructures()
     BuildAccelerationStructure(m_dxrCommandList.Get());
 
     // Kick off acceleration structure construction.
-    DX12::Dx12Core::Get()->ExecuteCommandList();
+    //DX12::Dx12Core::Get()->ExecuteCommandList();
 
     // Wait for GPU to finish as the locally created temporary GPU resources will get released once we go out of scope.
-    DX12::Dx12Core::Get()->WaitForGpu();
+    //DX12::Dx12Core::Get()->WaitForGpu();
 }
 
 void RS::EngineLoop::BuildShaderTables()
 {
-    auto device = DX12::Dx12Core::Get()->GetD3DDevice();
+    auto device = DX12Core3::Get()->GetD3D12Device();
 
     void* rayGenShaderIdentifier;
     void* missShaderIdentifier;
@@ -654,8 +655,9 @@ void RS::EngineLoop::UpdateForSizeChange(UINT clientWidth, UINT clientHeight)
 
 void RS::EngineLoop::CopyRaytracingOutputToBackbuffer()
 {
-    auto commandList = DX12::Dx12Core::Get()->GetCommandList();
-    auto renderTarget = DX12::Dx12Core::Get()->GetRenderTarget();
+    RS_ASSERT(false, "Not implemented!");
+    ID3D12GraphicsCommandList* commandList = nullptr;
+    ID3D12Resource* renderTarget = nullptr;
 
     D3D12_RESOURCE_BARRIER preCopyBarriers[2];
     preCopyBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(renderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_DEST);
