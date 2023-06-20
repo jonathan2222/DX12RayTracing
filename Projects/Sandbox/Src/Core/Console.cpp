@@ -366,8 +366,9 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 
 	if (argCountMustMatch && args.size() != validArgs.size())
 	{
+		const bool isMany = args.size() > validArgs.size();
 		PrintStart();
-		Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many arguments! Wanted {}, got {}", validArgs.size(), args.size());
+		Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo {} arguments! Wanted {}, got {}", isMany ? "many" : "few", validArgs.size(), args.size());
 	}
 
 	return !failed;

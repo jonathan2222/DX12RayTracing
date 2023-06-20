@@ -126,6 +126,9 @@ void RSE::Canvas::Render()
 	if (ImGui::Begin(m_Name.c_str()))
 	{
         // ImTextureID is the GPU descriptor handle for a srv resource.
+        // TODO: Use a ImGuiRenderer::GetPipeline()->BindTexture(); Such that we can get the GPU ptr
+        //  This leads to us needing a custom ImGui Renderer.
+        //  Or use CopyDescriptor();
         //ImTextureID textureID = (ImTextureID*)m_RenderTarget->GetAttachment(AttachmentPoint::Color0)->Get;
         //ImGui::Image(textureID, )
 		ImGui::End();

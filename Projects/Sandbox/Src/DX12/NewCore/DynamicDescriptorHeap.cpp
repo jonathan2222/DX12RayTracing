@@ -88,6 +88,7 @@ void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList
 			uint32 pDestDescriptorRangeSizes[] = { numSrcDescriptors };
 
 			// Copy the staged CPU visible descriptors to the GPU visible descriptor heap.
+			// TODO: Only copy descriptor if it was staged! This will fix the sparse binding problem.
 			device->CopyDescriptors(1, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes, numSrcDescriptors, pSrcDescriptorHandles, nullptr, m_DescriptorHeapType);
 
 			// Set the descriptors on the command list using the passed-in setter function.

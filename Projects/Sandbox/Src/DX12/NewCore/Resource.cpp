@@ -154,6 +154,7 @@ RS::DescriptorAllocation RS::Resource::CreateUnorderedAccessView(const D3D12_UNO
 
 uint64 RS::Resource::GenerateID() const
 {
+    // TODO: Bad generator, should use the ones that gets freed too. This might loop around to some id that is not free!
     std::lock_guard<std::mutex> lock(s_IDGeneratorMutex);
     return s_IDGenerator++;
 }
