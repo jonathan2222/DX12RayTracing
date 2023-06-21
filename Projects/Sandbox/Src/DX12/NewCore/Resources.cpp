@@ -57,8 +57,8 @@ namespace Internal
     }
 }
 
-RS::Buffer::Buffer(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name)
-	: Resource(resourceDesc, pClearValue)
+RS::Buffer::Buffer(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name, D3D12_HEAP_TYPE heapType)
+	: Resource(resourceDesc, pClearValue, heapType)
 {
     SetName(name);
     CreateViews();
@@ -125,8 +125,32 @@ D3D12_CPU_DESCRIPTOR_HANDLE RS::Buffer::GetUnorderedAccessView(const D3D12_UNORD
     return iter->second.GetDescriptorHandle();
 }
 
-RS::VertexBuffer::VertexBuffer(uint32 stride, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name)
-    : Buffer(resourceDesc, pClearValue, name)
+bool RS::Buffer::Map(uint32 subresource, const D3D12_RANGE* pReadRange, void** ppData)
+{
+    return m_pD3D12Resource->Map(subresource, pReadRange, ppData) == S_OK;
+}
+
+void RS::Buffer::Unmap(uint32 subresource, const D3D12_RANGE* pWrittenRange)
+{
+    m_pD3D12Resource->Unmap(subresource, pWrittenRange);
+}
+
+bool RS::Buffer::Map(uint32 subresource, void** ppData)
+{
+    D3D12_RANGE range;
+    memset(&range, 0, sizeof(D3D12_RANGE));
+    return Map(subresource, &range, ppData);
+}
+
+void RS::Buffer::Unmap(uint32 subresource)
+{
+    D3D12_RANGE range;
+    memset(&range, 0, sizeof(D3D12_RANGE));
+    Unmap(subresource, &range);
+}
+
+RS::VertexBuffer::VertexBuffer(uint32 stride, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name, D3D12_HEAP_TYPE heapType)
+    : Buffer(resourceDesc, pClearValue, name, heapType)
     , m_StrideInBytes(stride)
     , m_SizeInBytes(resourceDesc.Width)
 {
@@ -150,6 +174,34 @@ D3D12_VERTEX_BUFFER_VIEW RS::VertexBuffer::CreateView() const
     view.BufferLocation = m_pD3D12Resource->GetGPUVirtualAddress();
     view.SizeInBytes = m_SizeInBytes;
     view.StrideInBytes = m_StrideInBytes;
+    return view;
+}
+
+RS::IndexBuffer::IndexBuffer(bool is32Bit, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, const std::string& name, D3D12_HEAP_TYPE heapType)
+    : Buffer(resourceDesc, pClearValue, name, heapType)
+    , m_SizeInBytes(resourceDesc.Width)
+    , m_Format(is32Bit ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT)
+{
+}
+
+RS::IndexBuffer::IndexBuffer(bool is32Bit, Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name)
+    : Buffer(pResource, name)
+{
+    auto desc = GetD3D12ResourceDesc();
+    m_SizeInBytes = desc.Width;
+    m_Format = is32Bit ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+}
+
+RS::IndexBuffer::~IndexBuffer()
+{
+}
+
+D3D12_INDEX_BUFFER_VIEW RS::IndexBuffer::CreateView() const
+{
+    D3D12_INDEX_BUFFER_VIEW view = {};
+    view.BufferLocation = m_pD3D12Resource->GetGPUVirtualAddress();
+    view.SizeInBytes = m_SizeInBytes;
+    view.Format = m_Format;
     return view;
 }
 

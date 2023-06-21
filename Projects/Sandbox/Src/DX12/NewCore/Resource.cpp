@@ -12,18 +12,22 @@ RS::Resource::~Resource()
     }
 }
 
-RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue)
+RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue, D3D12_HEAP_TYPE heapType)
     : m_WasFreed(false)
 {
     if (pClearValue)
         m_pD3D12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*pClearValue);
 
+    D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
+    if (heapType == D3D12_HEAP_TYPE_UPLOAD)
+        resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
     DXCall(pDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &resourceDesc,
-        D3D12_RESOURCE_STATE_COMMON, m_pD3D12ClearValue.get(), IID_PPV_ARGS(&m_pD3D12Resource)));
+        &CD3DX12_HEAP_PROPERTIES(heapType), D3D12_HEAP_FLAG_NONE, &resourceDesc,
+        resourceState, m_pD3D12ClearValue.get(), IID_PPV_ARGS(&m_pD3D12Resource)));
 
-    ResourceStateTracker::AddGlobalResourceState(m_pD3D12Resource.Get(), D3D12_RESOURCE_STATE_COMMON);
+    ResourceStateTracker::AddGlobalResourceState(m_pD3D12Resource.Get(), resourceState);
 
     if (LaunchArguments::Contains(LaunchParams::logResources))
     {

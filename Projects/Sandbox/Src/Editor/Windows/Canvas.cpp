@@ -131,6 +131,10 @@ void RSE::Canvas::Render()
         //  Or use CopyDescriptor();
         //ImTextureID textureID = (ImTextureID*)m_RenderTarget->GetAttachment(AttachmentPoint::Color0)->Get;
         //ImGui::Image(textureID, )
+
+        auto pTexture = m_RenderTarget->GetAttachment(AttachmentPoint::Color0);
+        ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
+        //ImGui::Image(textureID, ImVec2(400.0f, 400.0f));
 		ImGui::End();
 	}
 }
@@ -281,17 +285,16 @@ void RSE::Canvas::CreatePipelineState()
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     psoDesc.NumRenderTargets = 1;
-    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Get this format from the render target
     psoDesc.SampleDesc.Count = 1;
     //psoDesc.CachedPSO
     psoDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
     psoDesc.NodeMask = 0; // Single GPU -> Set to 0.
     //psoDesc.StreamOutput;
-#ifdef RS_CONFIG_DEBUG
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-#else
-    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
-#endif
+//#ifdef RS_CONFIG_DEBUG
+//    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
+//#endif
     DXCall(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pPipelineState)));
 
     shader.Release();

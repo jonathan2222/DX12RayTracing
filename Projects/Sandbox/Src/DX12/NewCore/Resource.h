@@ -31,7 +31,7 @@ namespace RS
 		bool IsValid() const;
 
 	protected:
-		Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue = nullptr);
+		Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue = nullptr, D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT);
 		Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D3D12_CLEAR_VALUE* pClearValue = nullptr);
 		virtual ~Resource();
 

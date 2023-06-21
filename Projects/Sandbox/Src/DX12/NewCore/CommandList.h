@@ -73,6 +73,9 @@ namespace RS
 		void SetGraphicsRoot32BitConstants(uint32 rootParameterIndex, uint32 numConstants, const void* pConstants);
 
 		void SetVertexBuffers(uint32 slot, const std::shared_ptr<VertexBuffer>& pVertexBuffer);
+		void SetIndexBuffer(const std::shared_ptr<IndexBuffer>& pIndexBuffer);
+
+		void SetBlendFactor(const float blend_factor[4]);
 
 		/** Binds a resource as an SRV.
 		* @param rootParameterIndex The root parameter index to assign the SRV to. The root parameter must be of type D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE.
@@ -119,6 +122,7 @@ namespace RS
 		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget);
 
 		void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
+		void DrawIndexInstanced(uint32 indexCountPerInstance, uint32 instanceCount, uint32 startIndexLocation, int32 baseVertexLocation, uint32 startInstanceLocation);
 
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> GetGraphicsCommandList() const { return m_d3d12CommandList; }
 

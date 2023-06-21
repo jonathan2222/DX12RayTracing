@@ -479,6 +479,21 @@ void RS::CommandList::SetVertexBuffers(uint32 slot, const std::shared_ptr<Vertex
     m_d3d12CommandList->IASetVertexBuffers(slot, 1, &view);
 }
 
+void RS::CommandList::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& pIndexBuffer)
+{
+    RS_ASSERT_NO_MSG(pIndexBuffer);
+
+    D3D12_INDEX_BUFFER_VIEW view = pIndexBuffer->CreateView();
+    m_d3d12CommandList->IASetIndexBuffer(&view);
+}
+
+void RS::CommandList::SetBlendFactor(const float blendFactor[4])
+{
+    RS_ASSERT_NO_MSG(blendFactor);
+
+    m_d3d12CommandList->OMSetBlendFactor(blendFactor);
+}
+
 void RS::CommandList::BindShaderResourceView(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Resource>& pResource, D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources, const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
 {
     RS_ASSERT_NO_MSG(pResource);
@@ -589,4 +604,14 @@ void RS::CommandList::DrawInstanced(uint32 vertexCount, uint32 instanceCount, ui
         m_pDynamicDescriptorHeap[i]->CommitStagedDescriptorsForDraw(*this); // Binds the descriptors
 
     m_d3d12CommandList->DrawInstanced(vertexCount, instanceCount, startVertex, startInstance);
+}
+
+void RS::CommandList::DrawIndexInstanced(uint32 indexCountPerInstance, uint32 instanceCount, uint32 startIndexLocation, int32 baseVertexLocation, uint32 startInstanceLocation)
+{
+    FlushResourceBarriers();
+
+    for (int i = 0; i < 2; ++i)
+        m_pDynamicDescriptorHeap[i]->CommitStagedDescriptorsForDraw(*this); // Binds the descriptors
+
+    m_d3d12CommandList->DrawIndexedInstanced(indexCountPerInstance, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
