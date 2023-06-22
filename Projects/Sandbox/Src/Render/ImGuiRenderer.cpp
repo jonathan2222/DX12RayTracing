@@ -2,7 +2,7 @@
 #include "ImGuiRenderer.h"
 
 #include "GUI/ImGuiAdapter.h"
-#include <backends/imgui_impl_dx12.h>
+//#include <backends/imgui_impl_dx12.h>
 
 #include "DX12/NewCore/DX12Core3.h"
 #include "Core/Display.h"
@@ -32,23 +32,13 @@ void RS::ImGuiRenderer::FreeDescriptor()
 		LOG_WARNING("ImGuiRenderer is not initialized!");
 		return;
 	}
-
-	//DX12::Dx12DescriptorHeap* srvHeap = DX12Core2::Get()->GetDescriptorHeapGPUResources();
-	//srvHeap->Free(m_ImGuiFontDescriptorHandle);
-	//m_ImGuiFontDescriptorHandle = {};
 }
 
 void RS::ImGuiRenderer::Release()
 {
-	//ImGui_ImplDX12_Shutdown();
 	ImplDX12Shutdown();
 	ImGuiAdapter::Release();
 	ImGui::DestroyContext();
-	if (m_SRVHeap)
-	{
-		m_SRVHeap->Release();
-		m_SRVHeap = nullptr;
-	}
 
 	m_IsReleased = true;
 	m_IsInitialized = false;
@@ -81,7 +71,6 @@ void RS::ImGuiRenderer::Render()
 		InternalResize();
 	}
 
-	//ImGui_ImplDX12_NewFrame();
 	ImplDX12NewFrame();
 	ImGuiAdapter::NewFrame();
 	ImGui::NewFrame();
@@ -102,14 +91,9 @@ void RS::ImGuiRenderer::Render()
 	// Rendering
 	ImGui::Render();
 
-	// This is necessary if it has already been set.
-	//auto pD3D12CommandList = pCommandList->GetGraphicsCommandList().Get();
-	//pD3D12CommandList->SetDescriptorHeaps(1, &m_SRVHeap);
-
 	auto pRenderTarget = DX12Core3::Get()->GetSwapChain()->GetCurrentRenderTarget();
 	pCommandList->SetRenderTarget(pRenderTarget);
 
-	//ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pD3D12CommandList);
 	ImplDX12RenderDrawData(ImGui::GetDrawData(), pCommandList);
 
 	pCommandQueue->ExecuteCommandList(pCommandList);
@@ -149,7 +133,7 @@ float RS::ImGuiRenderer::GetGuiScale()
 ImTextureID RS::ImGuiRenderer::GetImTextureID(std::shared_ptr<Texture> pTexture)
 {
 	TrackTextureResource(pTexture);
-	return pTexture.get();
+	return (ImTextureID)pTexture.get();
 }
 
 void RS::ImGuiRenderer::InternalInit()
@@ -157,22 +141,8 @@ void RS::ImGuiRenderer::InternalInit()
 	m_IsInitialized = true;
 	m_IsReleased = false;
 
-	DescriptorAllocation alloc = DX12Core3::Get()->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
 	auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
 	auto pCommandList = pCommandQueue->GetCommandList();
-
-	DXGI_FORMAT format = DX12Core3::Get()->GetSwapChain()->GetFormat();
-
-	{
-		auto pDevice = DX12Core3::Get()->GetD3D12Device();
-		D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		desc.NumDescriptors = 1;
-		desc.NodeMask = 0;
-		desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		DXCall(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_SRVHeap)));
-	}
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -189,7 +159,8 @@ void RS::ImGuiRenderer::InternalInit()
 	ReScale(pDisplay->GetWidth(), pDisplay->GetHeight());
 
 	ImGuiAdapter::Init(Display::Get()->GetGLFWWindow(), true, ImGuiAdapter::ClientAPI::DX12);
-	//ImGui_ImplDX12_Init(DX12Core3::Get()->GetD3D12Device(), FRAME_BUFFER_COUNT, format, m_SRVHeap, m_SRVHeap->GetCPUDescriptorHandleForHeapStart(), m_SRVHeap->GetGPUDescriptorHandleForHeapStart());
+
+	DXGI_FORMAT format = DX12Core3::Get()->GetSwapChain()->GetFormat();
 	ImplDX12Init(format);
 
 	// Add icon font:
@@ -467,22 +438,7 @@ void RS::ImGuiRenderer::ImplDX12SetupRenderState(ImDrawData* draw_data, std::sha
 	vp.TopLeftX = vp.TopLeftY = 0.0f;
 	pCommandList->SetViewport(vp);
 
-	// Bind shader and vertex buffers
-	//unsigned int stride = sizeof(ImDrawVert);
-	//unsigned int offset = 0;
-	//D3D12_VERTEX_BUFFER_VIEW vbv;
-	//memset(&vbv, 0, sizeof(D3D12_VERTEX_BUFFER_VIEW));
-	//vbv.BufferLocation = fr->pVertexBuffer->GetD3D12Resource()->GetGPUVirtualAddress() + offset;
-	//vbv.SizeInBytes = fr->pVertexBuffer->GetSize() * stride;
-	//vbv.StrideInBytes = stride;
-	//ctx->IASetVertexBuffers(0, 1, &vbv);
 	pCommandList->SetVertexBuffers(0, fr->pVertexBuffer);
-	//D3D12_INDEX_BUFFER_VIEW ibv;
-	//memset(&ibv, 0, sizeof(D3D12_INDEX_BUFFER_VIEW));
-	//ibv.BufferLocation = fr->pIndexBuffer->GetD3D12Resource()->GetGPUVirtualAddress();
-	//ibv.SizeInBytes = fr->pIndexBuffer->GetSize() * sizeof(ImDrawIdx);
-	//ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-	//ctx->IASetIndexBuffer(&ibv);
 	pCommandList->SetIndexBuffer(fr->pIndexBuffer);
 
 	pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -505,12 +461,6 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 	ImplDX12BackendRendererData* bd = ImplDX12GetBackendData();
 	ImplDX12ViewportData* vd = (ImplDX12ViewportData*)draw_data->OwnerViewport->RendererUserData;
 	ImplDX12RenderBuffers* fr = &vd->renderBuffers;
-
-	// Clear tracked objects.
-	{
-		FreeAllTextureResources();
-		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
-	}
 
 	// Create and grow vertex/index buffers if needed
 	if (fr->pVertexBuffer == nullptr || (fr->pVertexBuffer && fr->pVertexBuffer->GetCount() < draw_data->TotalVtxCount))
@@ -571,11 +521,15 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 	if (!fr->pVertexBuffer->Map(0, &vtx_resource))
 	{
 		pCommandList->FlushResourceBarriers();
+		FreeAllTextureResources();
+		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
 		return;
 	}
 	if (!fr->pIndexBuffer->Map(0, &idx_resource))
 	{
 		pCommandList->FlushResourceBarriers();
+		FreeAllTextureResources();
+		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
 		return;
 	}
 	ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
@@ -627,7 +581,7 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 
 				// Apply Scissor/clipping rectangle, Bind texture, Draw
 				const D3D12_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
-				Texture* pTexture = pcmd->GetTexID(); // TODO: Change this to an index or an actual pointer and not a shared pointer!
+				Texture* pTexture = (Texture*)pcmd->GetTexID();
 				if (pTexture)
 					pCommandList->BindTexture(1, 0, m_TrackedTextureResources[pTexture]);
 				pCommandList->SetScissorRect(r);
@@ -642,6 +596,8 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 	if (!calledDraw)
 	{
 		pCommandList->FlushResourceBarriers();
+		FreeAllTextureResources();
+		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
 	}
 }
 
@@ -686,7 +642,7 @@ bool RS::ImGuiRenderer::ImplDX12CreateDeviceObjects()
 	if (!bd)
 		return false;
 	if (bd->pPipelineState)
-		ImGui_ImplDX12_InvalidateDeviceObjects();
+		ImplDX12InvalidateDeviceObjects();
 
 	ImplDX12CreatePipelineState(bd);
 }
@@ -716,6 +672,7 @@ RS::ImGuiRenderer::ImplDX12BackendRendererData* RS::ImGuiRenderer::ImplDX12GetBa
 
 void RS::ImGuiRenderer::ImplDX12InitPlatformInterface()
 {
+	LOG_CRITICAL("ImplDX12InitPlatformInterface is not implemented");
 	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
 	platform_io.Renderer_CreateWindow = ImplDX12CreateWindow;
 	platform_io.Renderer_DestroyWindow = ImplDX12DestroyWindow;

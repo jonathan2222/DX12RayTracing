@@ -3,7 +3,7 @@
 #include "DX12/NewCore/DX12Core3.h"
 #include "DX12/NewCore/RootSignature.h"
 #include "DX12/NewCore/Resources.h"
-#define ImTextureID RS::Texture*
+//#define ImTextureID RS::Texture*
 #include <imgui.h>
 #include <mutex>
 #include <functional>
@@ -116,8 +116,6 @@ namespace RS
 		uint32									m_OldHeight;
 
 		ImGuiConfigFlags						m_ImGuiConfigFlags = 0;
-
-		ID3D12DescriptorHeap*					m_SRVHeap = nullptr;
 
 		std::unordered_map<Texture*, std::shared_ptr<Texture>>	m_TrackedTextureResources;
 	};
