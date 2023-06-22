@@ -5,7 +5,7 @@
 #include "Core/Input.h"
 
 #include "DX12/DirecXRaytracingHelper.h"
-#include "Raytracing.hlsl.h"
+//#include "Raytracing.hlsl.h"
 
 #include "DX12/NewCore/DX12Core3.h"
 
@@ -353,8 +353,8 @@ void RS::EngineLoop::CreateRaytracingPipelineStateObject()
     // This contains the shaders and their entrypoints for the state object.
     // Since shaders are not considered a subobject, they need to be passed in via DXIL library subobjects.
     auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-    D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing, ARRAYSIZE(g_pRaytracing));
-    lib->SetDXILLibrary(&libdxil);
+    //D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing, ARRAYSIZE(g_pRaytracing));
+    //lib->SetDXILLibrary(&libdxil);
     // Define which shader exports to surface from the library.
     // If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
     // In this sample, this could be omitted for convenience since the sample uses all shaders in the library. 

@@ -52,6 +52,7 @@ project "Sandbox"
 	filter {"system:windows"}
 		--D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Projects\Sandbox
 		postbuildcommands {"xcopy /y /d %{dllDir.dxc}dxil.dll %{wks.location}Build\\bin\\" .. outputdir .. "\\%{prj.name}\\"}
+		postbuildcommands {"xcopy /y /d %{dllDir.dxc}dxcompiler.dll %{wks.location}Build\\bin\\" .. outputdir .. "\\%{prj.name}\\"}
 	filter {}
 
 	filter "configurations:Debug"

@@ -1,12 +1,14 @@
 # TODO
 
 - [ ] Start with implementing support for a normal DX12 pipleline
-  - [ ] Add a Pipleline class that encapsulates the creation of the different states, shaders and rootsigniatures.
   - [x] Shaders.
-  - [ ] shader hot realoading.
-  - [ ] Buffer resource class.
-  - [ ] Texture resource class.
+  - [ ] shader hot reloading.
+    - [ ] Allow includes to also be included in the hot shader reloading.
+  - [x] Buffer resource class.
+  - [x] Texture resource class.
   - [ ] Try using the DX12 residency manager.
+  - [ ] Make the descriptor allocator be able to have null resources. (Atm it needs to match the root signature)
+  - [ ] 
 
 - [ ] DX12 Raytracing.
   - [ ] Add a new Pipleling for Raytracing.
