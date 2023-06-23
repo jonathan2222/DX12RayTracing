@@ -9,6 +9,8 @@
 #define STBI_FAILURE_USERMSG
 #include <stb_image.h>
 
+#include "Core/Console.h"
+
 using namespace RS;
 
 void RSE::Canvas::Init()
@@ -116,6 +118,13 @@ void RSE::Canvas::Release()
     m_NormalTexture.reset();
     m_NullTexture.reset();
     m_pVertexBufferResource.reset();
+
+    m_pRootSignature.reset();
+    if (m_pPipelineState)
+    {
+        m_pPipelineState->Release();
+        m_pPipelineState = nullptr;
+    }
 }
 
 void RSE::Canvas::Render()
@@ -125,16 +134,24 @@ void RSE::Canvas::Render()
 
 	if (ImGui::Begin(m_Name.c_str()))
 	{
-        // ImTextureID is the GPU descriptor handle for a srv resource.
-        // TODO: Use a ImGuiRenderer::GetPipeline()->BindTexture(); Such that we can get the GPU ptr
-        //  This leads to us needing a custom ImGui Renderer.
-        //  Or use CopyDescriptor();
-        //ImTextureID textureID = (ImTextureID*)m_RenderTarget->GetAttachment(AttachmentPoint::Color0)->Get;
-        //ImGui::Image(textureID, )
+        // Allows us to fill the window.
+        ImGui::BeginChild("Canvas Texture Child");
+        ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
         auto pTexture = m_RenderTarget->GetAttachment(AttachmentPoint::Color0);
+        auto textureDesc = pTexture->GetD3D12ResourceDesc();
+        if ((uint64)windowSize.x != textureDesc.Width || (uint32)windowSize.y != textureDesc.Height)
+        {
+            // TODO: It does not resize the content of the texture!
+            //  -> Create a commandlist function that resizes textures, do it with rendering to a render target and set that as the new d3d12resource.
+            //pTexture->Resize(windowSize.x, windowSize.y, 1);
+            DX12Core3::Get()->ResizeTexture(pTexture, windowSize.x, windowSize.y);
+        }
+
         ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
-        //ImGui::Image(textureID, ImVec2(400.0f, 400.0f));
+        ImGui::Image(textureID, windowSize);
+        ImGui::EndChild();
+
 		ImGui::End();
 	}
 }
@@ -161,18 +178,17 @@ void RSE::Canvas::RenderDX12()
     scissorRect.bottom = viewport.Height;
     pCommandList->SetScissorRect(scissorRect);
 
-    // This works but we have no way of giving ImGui the GPU descriptor handle atm. So cannot use imgui to render images.
-    //pCommandList->SetRenderTarget(m_RenderTarget);
-    //const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
-    //pCommandList->ClearTexture(m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0), clearColor);
+    pCommandList->SetRenderTarget(m_RenderTarget);
+    const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
+    pCommandList->ClearTexture(m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0), clearColor);
 
     // Clear swap chain backbuffer.
-    {
-        auto pSwapChainRenderTarget = DX12Core3::Get()->GetSwapChain()->GetCurrentRenderTarget();
-        pCommandList->SetRenderTarget(pSwapChainRenderTarget);
-        const float clearColorSwapChain[4] = { 0.1, 0.1, 0.1, 1.0 };
-        pCommandList->ClearTexture(pSwapChainRenderTarget->GetAttachment(RS::AttachmentPoint::Color0), clearColorSwapChain);
-    }
+    //{
+    //    auto pSwapChainRenderTarget = DX12Core3::Get()->GetSwapChain()->GetCurrentRenderTarget();
+    //    pCommandList->SetRenderTarget(pSwapChainRenderTarget);
+    //    const float clearColorSwapChain[4] = { 0.1, 0.1, 0.1, 1.0 };
+    //    pCommandList->ClearTexture(pSwapChainRenderTarget->GetAttachment(RS::AttachmentPoint::Color0), clearColorSwapChain);
+    //}
 
     pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);

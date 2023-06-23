@@ -582,7 +582,7 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 				// Apply Scissor/clipping rectangle, Bind texture, Draw
 				const D3D12_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
 				Texture* pTexture = (Texture*)pcmd->GetTexID();
-				if (pTexture)
+				if (pTexture) // Binding at offset 0 works because we only bind one texture at a time, and because we update the gpu descriptor heap for each draw call.
 					pCommandList->BindTexture(1, 0, m_TrackedTextureResources[pTexture]);
 				pCommandList->SetScissorRect(r);
 				pCommandList->DrawIndexInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);

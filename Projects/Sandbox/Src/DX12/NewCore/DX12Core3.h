@@ -12,6 +12,8 @@
 // TODO: Move these
 #include "Utils/Timer.h"
 
+#include "DX12/NewCore/RootSignature.h"
+
 namespace RS
 {
 	// Provides an interface for an application that owns DeviceResources to be notified of the device being lost or created.
@@ -105,5 +107,11 @@ namespace RS
 			}
 		};
 		inline static std::unordered_map<uint64, LifetimeStats> s_ResourceLifetimeTrackingData;
+
+		void ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint32 newWidth, uint32 newHeight);
+	private:
+		// Resize stuff
+		std::shared_ptr<RootSignature> m_ResizeTextureRootSignature;
+		ID3D12PipelineState* m_ResizeTexturePipelineState = nullptr;
 	};
 }

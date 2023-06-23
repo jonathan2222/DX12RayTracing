@@ -17,6 +17,7 @@ RS::CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type)
     {
         m_pDynamicDescriptorHeap[i] = std::make_unique<DynamicDescriptorHeap>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
         m_pDescriptorHeaps[i] = nullptr;
+        m_pDynamicDescriptorOffsets[i] = 0;
     }
 
     m_pUploadBuffer = std::make_unique<RS::UploadBuffer>();
@@ -43,6 +44,7 @@ void RS::CommandList::Reset()
     {
         m_pDynamicDescriptorHeap[i]->Reset();
         m_pDescriptorHeaps[i] = nullptr;
+        m_pDynamicDescriptorOffsets[i] = 0;
     }
 
     m_pRootSignature = nullptr;
@@ -419,7 +421,10 @@ void RS::CommandList::SetRootSignature(const std::shared_ptr<RootSignature>& pRo
         m_pRootSignature = d3d12RootSignature;
 
         for (uint32 i = 0; i < 2; ++i)
+        {
             m_pDynamicDescriptorHeap[i]->ParseRootSignature(pRootSignature);
+            m_pDynamicDescriptorOffsets[i] = 0;
+        }
 
         m_d3d12CommandList->SetGraphicsRootSignature(m_pRootSignature);
 
@@ -510,7 +515,6 @@ void RS::CommandList::BindShaderResourceView(uint32 rootParameterIndex, uint32 d
         TransitionBarrier(pResource, stateAfter);
     }
 
-    // TODO: Option to create the shader resource view somewhere else and not do it all the time.
     m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pResource.get()->GetShaderResourceView(srv));
 
     TrackResource(pResource);
@@ -532,7 +536,6 @@ void RS::CommandList::BindUnorderedAccessView(uint32 rootParameterIndex, uint32 
         TransitionBarrier(pResource, stateAfter);
     }
 
-    // TODO: Option to create the unordered access view somewhere else and not do it all the time.
     m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pResource.get()->GetUnorderedAccessView(uav));
 
     TrackResource(pResource);
@@ -544,7 +547,6 @@ void RS::CommandList::BindBuffer(uint32 rootParameterIndex, uint32 descriptorOff
 
     TransitionBarrier(pBuffer, stateAfter);
 
-    // TODO: Option to create the shader resource view somewhere else and not do it all the time.
     m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pBuffer->GetShaderResourceView());
 
     TrackResource(pBuffer);
@@ -556,8 +558,22 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, uint32 descriptorOf
 
     TransitionBarrier(pTexture, stateAfter);
 
-    // TODO: Option to create the shader resource view somewhere else and not do it all the time.
     m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView());
+
+    TrackResource(pTexture);
+}
+
+void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture, D3D12_RESOURCE_STATES stateAfter)
+{
+    RS_ASSERT_NO_MSG(pTexture);
+
+    TransitionBarrier(pTexture, stateAfter);
+
+    uint32& descriptorOffset = m_pDynamicDescriptorOffsets[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
+
+    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView());
+
+    descriptorOffset++;
 
     TrackResource(pTexture);
 }

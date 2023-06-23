@@ -119,10 +119,16 @@ namespace RS
 		void BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture,
 			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
+		// Same ass the above except that it will increment the offset for each invocation before the reset.
+		void BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
 		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget);
 
 		void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
 		void DrawIndexInstanced(uint32 indexCountPerInstance, uint32 instanceCount, uint32 startIndexLocation, int32 baseVertexLocation, uint32 startInstanceLocation);
+
+		void ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint32 newWidth, uint32 newHeight);
 
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> GetGraphicsCommandList() const { return m_d3d12CommandList; }
 
@@ -136,6 +142,7 @@ namespace RS
 
 		std::unique_ptr<UploadBuffer> m_pUploadBuffer;
 		std::unique_ptr<DynamicDescriptorHeap> m_pDynamicDescriptorHeap[2]; // CBV_SRV_UAV and SAMPER
+		uint32 m_pDynamicDescriptorOffsets[2]; // CBV_SRV_UAV and SAMPER
 		ID3D12DescriptorHeap* m_pDescriptorHeaps[2];
 
 		ID3D12RootSignature* m_pRootSignature;
