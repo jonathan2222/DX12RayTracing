@@ -166,6 +166,13 @@ void RS::DX12Core3::Render()
     const uint32 frameIndex = GetCurrentFrameIndex();
     ReleasePendingResourceRemovals(frameIndex);
 
+    // Clear swap chain's back buffer.
+    auto pCommandQueue = GetDirectCommandQueue();
+    auto pCommandList = pCommandQueue->GetCommandList();
+    float pClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    pCommandList->ClearTexture(m_pSwapChain->GetCurrentBackBuffer(), pClearColor);
+    pCommandQueue->ExecuteCommandList(pCommandList);
+
     {
         static bool show_demo_window = true;
         static bool show_notification_window = true;
@@ -295,6 +302,9 @@ void RS::DX12Core3::ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint
     std::shared_ptr<RenderTarget> pRenderTarget = std::make_shared<RenderTarget>();
     pTexture->Resize(newWidth, newHeight, textureDesc.DepthOrArraySize);
     pRenderTarget->SetAttachment(AttachmentPoint::Color0, pTexture);
+
+    //float pClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    //pCommandList->ClearTexture(pTexture, pClearColor);
 
     if (m_ResizeTexturePipelineState == nullptr)
     {

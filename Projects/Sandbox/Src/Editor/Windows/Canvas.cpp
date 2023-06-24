@@ -139,15 +139,6 @@ void RSE::Canvas::Render()
         ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
         auto pTexture = m_RenderTarget->GetAttachment(AttachmentPoint::Color0);
-        auto textureDesc = pTexture->GetD3D12ResourceDesc();
-        if ((uint64)windowSize.x != textureDesc.Width || (uint32)windowSize.y != textureDesc.Height)
-        {
-            // TODO: It does not resize the content of the texture!
-            //  -> Create a commandlist function that resizes textures, do it with rendering to a render target and set that as the new d3d12resource.
-            //pTexture->Resize(windowSize.x, windowSize.y, 1);
-            DX12Core3::Get()->ResizeTexture(pTexture, windowSize.x, windowSize.y);
-        }
-
         ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
         ImGui::Image(textureID, windowSize);
         ImGui::EndChild();
