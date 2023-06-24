@@ -303,6 +303,9 @@ bool RS::Console::AddFunction(const std::string& name, Func func, const std::vec
 
 bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags)
 {
+	Console* pConsole = Console::Get();
+	RS_ASSERT_NO_MSG(pConsole);
+
 	const bool argCountMustMatch = flags & ValidateFuncArgsFlag::ArgCountMustMatch;
 	const bool typeMatchOnly = flags & ValidateFuncArgsFlag::TypeMatchOnly;
 
@@ -313,7 +316,7 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 	{
 		if (firstPrint)
 		{
-			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid arguments:");
+			pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Invalid arguments:");
 			firstPrint = false;
 			failed = true;
 		}
@@ -326,7 +329,7 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 		if (arg.name.empty() && arg.type == FuncArg::TypeFlag::NONE)
 		{
 			PrintStart();
-			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tEmpty arguments are not allowed!");
+			pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tEmpty arguments are not allowed!");
 		}
 
 		if (!arg.name.empty())
@@ -339,7 +342,7 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 			if (it == validArgs.end())
 			{
 				PrintStart();
-				Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\t{} is not a valid named argument!", arg.name);
+				pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\t{} is not a valid named argument!", arg.name);
 			}
 		}
 		else
@@ -359,16 +362,16 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 	{
 		PrintStart();
 		if (argCountMustMatch)
-			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tUnsupported number of unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
+			pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tUnsupported number of unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
 		else
-			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
+			pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo many unnamed arguments! Wanted {}, got {}", validNonNamedArgCount, nonNamedArgCount);
 	}
 
 	if (argCountMustMatch && args.size() != validArgs.size())
 	{
 		const bool isMany = args.size() > validArgs.size();
 		PrintStart();
-		Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo {} arguments! Wanted {}, got {}", isMany ? "many" : "few", validArgs.size(), args.size());
+		pConsole->Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "\tToo {} arguments! Wanted {}, got {}", isMany ? "many" : "few", validArgs.size(), args.size());
 	}
 
 	return !failed;

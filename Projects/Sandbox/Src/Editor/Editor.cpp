@@ -19,7 +19,23 @@ void RSE::Editor::Init()
 {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Think this is for Multiple windows.
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // For Multiple windows. TODO: Need to implemented this in the ImGuiRenderer first!
+
+    RS::Console* pConsole = RS::Console::Get();
+    pConsole->AddFunction("Editor.CloseAllWindows", [this](RS::Console::FuncArgs args)
+        {
+            if (!RS::Console::ValidateFuncArgs(args, { {"-a"} }, 0))
+                return;
+
+            bool closeCanvasWindow = args.Get("-a").has_value();
+            for (EditorWindow* pWindow : m_EditorWindows)
+                if (closeCanvasWindow || dynamic_cast<Canvas*>(pWindow) == nullptr)
+                    pWindow->GetEnable() = false;
+            m_ShowImGuiDemoWindow = false;
+            m_ShowToastDemoWindow = false;
+        },
+        RS::Console::Flag::NONE, "Closes all windows except the Canvas window.\nUse '-a' to also close the canvas window."
+    );
 
     RegisterEditorWindows();
 
@@ -88,6 +104,12 @@ void RSE::Editor::Render()
 
     for (EditorWindow* pWindow : m_EditorWindows)
         pWindow->SuperRender();
+
+    // Debug stuff
+    if (m_ShowImGuiDemoWindow)
+        ImGui::ShowDemoWindow(&m_ShowImGuiDemoWindow);
+    if (m_ShowToastDemoWindow)
+        RenderToastDemo();
 }
 
 void RSE::Editor::Resize(uint32 width, uint32 height)
@@ -132,6 +154,13 @@ void RSE::Editor::RenderMenuBar()
 
             for (EditorWindow* pWindow : m_EditorWindows)
                 ImGui::MenuItem(pWindow->GetName().c_str(), "", &pWindow->GetEnable(), pWindow->GetEnableRequirements());
+            
+            if (ImGui::BeginMenu("Other"))
+            {
+                ImGui::MenuItem("ImGui Demo", "", &m_ShowImGuiDemoWindow);
+                ImGui::MenuItem("Toast Demo", "", &m_ShowToastDemoWindow);
+                ImGui::EndMenu();
+            }
 
             ImGui::EndMenu();
         }
@@ -155,4 +184,58 @@ void RSE::Editor::RegisterEditorWindows()
     RegisterEditorWindow<ConsoleInspector>("Console Inspector");
     RegisterEditorWindow<LifetimeTracker>("Lifetime Tracker");
     RegisterEditorWindow<Canvas>("Canvas", true);
+}
+
+void RSE::Editor::RenderToastDemo()
+{
+    static uint32_t position = ImGui::GetDefaultNotificationPosition();
+
+    ImGui::Begin("Notification Test", &m_ShowToastDemoWindow);
+
+    if (ImGui::Button("Warning"))
+        ImGui::InsertNotification({ ImGuiToastType_Warning, 3000, "Hello World! This is a warning! {}", 0x1337 });
+    if (ImGui::Button("Success"))
+        ImGui::InsertNotification({ ImGuiToastType_Success, 3000, "Hello World! This is a success! {}", "We can also format here:)" });
+    if (ImGui::Button("Error"))
+        ImGui::InsertNotification({ ImGuiToastType_Error, 3000, "Hello World! This is an error! {:#10X}", 0xDEADBEEF });
+    if (ImGui::Button("Info"))
+        ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Hello World! This is an info!" });
+    if (ImGui::Button("Info Long"))
+        ImGui::InsertNotification({ ImGuiToastType_Info, 3000, "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation" });
+
+    if (ImGui::Button("Critical"))
+        ImGui::InsertNotification({ ImGuiToastType_Critical, "Hello World! This is an info!" });
+    if (ImGui::Button("Debug"))
+        ImGui::InsertNotification({ ImGuiToastType_Debug, "Hello World! This is an info!" });
+
+    if (ImGui::Button("Custom title"))
+    {
+        // Now using a custom title...
+        ImGuiToast toast(ImGuiToastType_Success, 3000); // <-- content can also be passed here as above
+        toast.set_title("This is a {} title", "wonderful");
+        toast.set_content("Lorem ipsum dolor sit amet");
+        ImGui::InsertNotification(toast);
+    }
+
+    if (ImGui::Button("No dismiss"))
+    {
+        ImGui::InsertNotification({ ImGuiToastType_Error, IMGUI_NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
+            {
+                ImGui::InsertNotification({ ImGuiToastType_Info, "Signaled" });
+            }
+        ).dismissOnSignal();
+    }
+
+    if (ImGui::BeginPopupContextWindow())
+    {
+        if (ImGui::MenuItem("Top-left", NULL, position == ImGuiToastPos_TopLeft)) { position = ImGuiToastPos_TopLeft; ImGui::SetNotificationPosition(position); }
+        if (ImGui::MenuItem("Top-Center", NULL, position == ImGuiToastPos_TopCenter)) { position = ImGuiToastPos_TopCenter; ImGui::SetNotificationPosition(position); }
+        if (ImGui::MenuItem("Top-right", NULL, position == ImGuiToastPos_TopRight)) { position = ImGuiToastPos_TopRight; ImGui::SetNotificationPosition(position); }
+        if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetNotificationPosition(position); }
+        if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetNotificationPosition(position); }
+        if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetNotificationPosition(position); }
+        ImGui::EndPopup();
+    }
+
+    ImGui::End();
 }

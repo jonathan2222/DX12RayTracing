@@ -150,8 +150,11 @@ namespace RS
 		* A function can only hold arguments of type unknown, int32, and float.
 		*/
 		bool AddFunction(const std::string& name, Func func, Flags flags = Flag::NONE, const std::string& docs = "");
+		/*
+		* searchableTypes specifies which variables will show up as potensial matches after this function.
+		*/
 		bool AddFunction(const std::string& name, Func func, const std::vector<FuncArg::TypeFlags>& searchableTypes, Flags flags = Flag::NONE, const std::string& docs = "");
-		bool ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags = ValidateFuncArgsFlag::NONE);
+		static bool ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags = ValidateFuncArgsFlag::NONE);
 
 		bool RemoveVar(const std::string& name);
 

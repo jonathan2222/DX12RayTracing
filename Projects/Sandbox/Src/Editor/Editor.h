@@ -33,10 +33,15 @@ namespace RSE
 		template<class T>
 		void RegisterEditorWindow(const std::string& name, bool enabled = false);
 
+		void RenderToastDemo();
+
 	private:
 		ImGuiDockNodeFlags m_DockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 		std::vector<EditorWindow*> m_EditorWindows;
+
+		bool m_ShowImGuiDemoWindow = false;
+		bool m_ShowToastDemoWindow = false;
 	};
 
 	template<class T>
