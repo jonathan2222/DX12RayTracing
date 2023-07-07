@@ -4,6 +4,9 @@ workspace "RayTracingProjectD3D12"
 	warnings "extra"
 	flags { "MultiProcessorCompile" }
 	
+	cppdialect "C++17"
+	systemversion "latest"
+	
 	-- Disable C4201 nonstandard extension used: nameless struct/union
 	disablewarnings { "4201" }
 
@@ -106,4 +109,6 @@ group "Externals"
 	include "Externals/imgui"
 group ""
 
+include "premake5-helper.lua"
+include "Projects/Engine"
 include "Projects/Sandbox"

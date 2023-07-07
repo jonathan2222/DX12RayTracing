@@ -1,10 +1,6 @@
 #include <iostream>
 
-#include "Core/LaunchArguments.h"
-#include "Core/Config.h"
-#include "Core/Display.h"
-#include "Core/Input.h"
-#include "Core/EngineLoop.h"
+#include "RSEngine.h"
 
 int main(int argc, char* argv[])
 {
