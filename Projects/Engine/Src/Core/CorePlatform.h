@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Format.h"
+
 namespace RS
 {
 	class CorePlatform
@@ -13,5 +15,19 @@ namespace RS
 		std::string GetUserNameStr() const;
 
 		std::string GetConfigurationAsStr() const;
+
+		RS_BEGIN_FLAGS_U32(ImageFlag)
+			RS_FLAG(FLIP_Y)
+			RS_END_FLAGS()
+		struct Image
+		{
+			Image() : pData(nullptr), width(0u), height(0u), format(RS_FORMAT_UNKNOWN) {}
+			virtual ~Image();
+			uint8* pData;
+			uint32 width;
+			uint32 height;
+			Format format;
+		};
+		std::unique_ptr<Image> LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags = ImageFlag::NONE);
 	};
 }

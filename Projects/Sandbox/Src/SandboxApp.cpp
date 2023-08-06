@@ -1,16 +1,96 @@
-#include "PreCompiled.h"
-#include "Canvas.h"
+#include "SandboxApp.h"
 
-#include "DX12/NewCore/DX12Core3.h"
-#include "DX12/NewCore/Shader.h"
-#include "Core/Display.h"
-
-#include "Core/Console.h"
 #include "Core/CorePlatform.h"
+#include "DX12/NewCore/Shader.h"
 
-using namespace RS;
+SandboxApp::SandboxApp()
+{
+    Init();
+}
 
-void RSE::Canvas::Init()
+SandboxApp::~SandboxApp()
+{
+    if (m_pPipelineState)
+    {
+        m_pPipelineState->Release();
+        m_pPipelineState = nullptr;
+    }
+}
+
+void SandboxApp::FixedTick()
+{
+}
+
+void SandboxApp::Tick(const RS::FrameStats& frameStats)
+{
+    {
+        auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
+        auto pCommandList = pCommandQueue->GetCommandList();
+
+        pCommandList->SetRootSignature(m_pRootSignature);
+        pCommandList->SetPipelineState(m_pPipelineState);
+
+        D3D12_VIEWPORT viewport{};
+        viewport.MaxDepth = 0;
+        viewport.MinDepth = 1;
+        viewport.TopLeftX = viewport.TopLeftY = 0;
+        viewport.Width = RS::Display::Get()->GetWidth();
+        viewport.Height = RS::Display::Get()->GetHeight();
+        pCommandList->SetViewport(viewport);
+
+        D3D12_RECT scissorRect{};
+        scissorRect.left = scissorRect.top = 0;
+        scissorRect.right = viewport.Width;
+        scissorRect.bottom = viewport.Height;
+        pCommandList->SetScissorRect(scissorRect);
+
+        pCommandList->SetRenderTarget(m_RenderTarget);
+        auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
+        pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
+
+        pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
+
+        struct RootConstData
+        {
+            const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
+            uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
+        } rootConstData;
+        rootConstData.texIndex[0] = 0;
+        rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
+        pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
+
+        struct ConstantBufferData
+        {
+            float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
+        } textIndex;
+        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
+
+        pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
+        pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
+
+        pCommandList->DrawInstanced(6, 1, 0, 0);
+
+        // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
+        auto pTexture = m_RenderTarget->GetColorTextures()[0];
+        pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
+
+        pCommandQueue->ExecuteCommandList(pCommandList);
+    }
+
+    // Copy rendertarget to swapchain.
+    //{
+    //    auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
+    //    auto pCommandList = pCommandQueue->GetCommandList();
+    //
+    //    auto pTexture = m_RenderTarget->GetColorTextures()[0];
+    //    pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
+    //
+    //    pCommandQueue->ExecuteCommandList(pCommandList);
+    //}
+}
+
+void SandboxApp::Init()
 {
     CreatePipelineState();
 
@@ -36,11 +116,6 @@ void RSE::Canvas::Init()
 
     const UINT vertexBufferSize = sizeof(triangleVertices);
 
-    //struct ConstantBufferData
-    //{
-    //    float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
-    //} textIndex;
-
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
     m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(Vertex), "Vertex Buffer");
@@ -50,26 +125,32 @@ void RSE::Canvas::Init()
     // Texture
     {
         std::string texturePath = RS_TEXTURE_PATH + std::string("flyToYourDream.jpg");
-        std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
+        std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NormalTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "FlyToYTourDeam Texture Resource");
     }
 
     // Null Texture
     {
         std::string texturePath = RS_TEXTURE_PATH + std::string("NullTexture.png");
-        std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
+        std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NullTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "Null Texture Resource");
     }
 
-    m_RenderTarget = std::make_shared<RenderTarget>();
+    D3D12_CLEAR_VALUE clearValue;
+    clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    clearValue.Color[0] = 0.2f;
+    clearValue.Color[1] = 0.5f;
+    clearValue.Color[2] = 0.1f;
+    clearValue.Color[3] = 1.0f;
+    m_RenderTarget = std::make_shared<RS::RenderTarget>();
     auto pRenderTexture = pCommandList->CreateTexture(
-        Display::Get()->GetWidth(),
-        Display::Get()->GetHeight(),
+        RS::Display::Get()->GetWidth(),
+        RS::Display::Get()->GetHeight(),
         nullptr,
-        DXGI_FORMAT_R8G8B8A8_UNORM,
+        clearValue.Format,
         "Canvas Texture",
-        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-    m_RenderTarget->SetAttachment(AttachmentPoint::Color0, pRenderTexture);
+        D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, &clearValue);
+    m_RenderTarget->SetAttachment(RS::AttachmentPoint::Color0, pRenderTexture);
 
     uint64 fenceValue = pCommandQueue->ExecuteCommandList(pCommandList);
 
@@ -77,104 +158,17 @@ void RSE::Canvas::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 }
 
-void RSE::Canvas::Release()
+void SandboxApp::CreatePipelineState()
 {
-    m_RenderTarget->Reset();
-    m_NormalTexture.reset();
-    m_NullTexture.reset();
-    m_pVertexBufferResource.reset();
-
-    m_pRootSignature.reset();
-    if (m_pPipelineState)
-    {
-        m_pPipelineState->Release();
-        m_pPipelineState = nullptr;
-    }
-}
-
-void RSE::Canvas::Render()
-{
-    // TODO: Move this such that it does not get called in a lambda as it does now (EngineLoop::Tick()->Editor::Render()).
-    RenderDX12();
-
-	if (ImGui::Begin(m_Name.c_str()))
-	{
-        // Allows us to fill the window.
-        ImGui::BeginChild("Canvas Texture Child");
-        ImVec2 windowSize = ImGui::GetContentRegionAvail();
-
-        auto pTexture = m_RenderTarget->GetAttachment(AttachmentPoint::Color0);
-        ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
-        ImGui::Image(textureID, windowSize);
-        ImGui::EndChild();
-
-		ImGui::End();
-	}
-}
-
-void RSE::Canvas::RenderDX12()
-{
-    auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
-    auto pCommandList = pCommandQueue->GetCommandList();
-
-    pCommandList->SetRootSignature(m_pRootSignature);
-    pCommandList->SetPipelineState(m_pPipelineState);
-
-    D3D12_VIEWPORT viewport{};
-    viewport.MaxDepth = 0;
-    viewport.MinDepth = 1;
-    viewport.TopLeftX = viewport.TopLeftY = 0;
-    viewport.Width = RS::Display::Get()->GetWidth();
-    viewport.Height = RS::Display::Get()->GetHeight();
-    pCommandList->SetViewport(viewport);
-
-    D3D12_RECT scissorRect{};
-    scissorRect.left = scissorRect.top = 0;
-    scissorRect.right = viewport.Width;
-    scissorRect.bottom = viewport.Height;
-    pCommandList->SetScissorRect(scissorRect);
-
-    pCommandList->SetRenderTarget(m_RenderTarget);
-    const float clearColor[4] = { 0.1, 0.7, 0.3, 1.0 };
-    pCommandList->ClearTexture(m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0), clearColor);
-
-    pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
-
-    struct RootConstData
-    {
-        const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
-        uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
-    } rootConstData;
-    rootConstData.texIndex[0] = 0;
-    rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
-    pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
-
-    struct ConstantBufferData
-    {
-        float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
-    } textIndex;
-    pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
-
-    pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
-    pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
-
-    pCommandList->DrawInstanced(6, 1, 0, 0);
-
-    pCommandQueue->ExecuteCommandList(pCommandList);
-}
-
-void RSE::Canvas::CreatePipelineState()
-{
-    Shader shader;
-    Shader::Description shaderDesc{};
+    RS::Shader shader;
+    RS::Shader::Description shaderDesc{};
     shaderDesc.path = "TmpCore3Shaders.hlsl";
-    shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex;
+    shaderDesc.typeFlags = RS::Shader::TypeFlag::Pixel | RS::Shader::TypeFlag::Vertex;
     shader.Create(shaderDesc);
 
     // TODO: Remove this
     { // Test reflection
-        ID3D12ShaderReflection* reflection = shader.GetReflection(Shader::TypeFlag::Pixel);
+        ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
 
         D3D12_SHADER_DESC d12ShaderDesc{};
         DXCall(reflection->GetDesc(&d12ShaderDesc));
@@ -188,7 +182,7 @@ void RSE::Canvas::CreatePipelineState()
 
     CreateRootSignature();
 
-    auto pDevice = DX12Core3::Get()->GetD3D12Device();
+    auto pDevice = RS::DX12Core3::Get()->GetD3D12Device();
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> inputElementDescs;
     // TODO: Move this, and don't hardcode it!
@@ -236,11 +230,11 @@ void RSE::Canvas::CreatePipelineState()
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
     psoDesc.InputLayout = inputLayoutDesc;
     psoDesc.pRootSignature = m_pRootSignature->GetRootSignature().Get();
-    psoDesc.VS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Vertex, true));
-    psoDesc.PS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Pixel, true));
-    psoDesc.DS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Domain, true));
-    psoDesc.HS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Hull, true));
-    psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Geometry, true));
+    psoDesc.VS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Vertex, true));
+    psoDesc.PS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Pixel, true));
+    psoDesc.DS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Domain, true));
+    psoDesc.HS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Hull, true));
+    psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Geometry, true));
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psoDesc.DepthStencilState.DepthEnable = FALSE;
@@ -256,17 +250,17 @@ void RSE::Canvas::CreatePipelineState()
     psoDesc.NodeMask = 0; // Single GPU -> Set to 0.
     //psoDesc.StreamOutput;
     psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-//#ifdef RS_CONFIG_DEBUG
-//    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
-//#endif
+    //#ifdef RS_CONFIG_DEBUG
+    //    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
+    //#endif
     DXCall(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pPipelineState)));
 
     shader.Release();
 }
 
-void RSE::Canvas::CreateRootSignature()
+void SandboxApp::CreateRootSignature()
 {
-    m_pRootSignature = std::make_shared<RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+    m_pRootSignature = std::make_shared<RS::RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     uint32 registerSpace = 0;
     uint32 currentShaderRegisterCBV = 0;

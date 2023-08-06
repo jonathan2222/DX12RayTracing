@@ -38,7 +38,7 @@ namespace RS
 		std::shared_ptr<VertexBuffer> CreateVertexBufferResource(uint64 size, uint32 stride, const std::string& name);
 		Microsoft::WRL::ComPtr<ID3D12Resource> CreateBuffer(size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags);
 
-		std::shared_ptr<Texture> CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+		std::shared_ptr<Texture> CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE, D3D12_CLEAR_VALUE* pClearValue = nullptr);
 
 		void UploadToBuffer(std::shared_ptr<Buffer> pBuffer, size_t bufferSize, const void* bufferData);
 		void UploadTextureSubresourceData(const std::shared_ptr<Texture>& pTexture, uint32 firstSubresource, uint32 numSubresources, D3D12_SUBRESOURCE_DATA* pSubresourceData);

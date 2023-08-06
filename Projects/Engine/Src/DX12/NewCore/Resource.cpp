@@ -5,6 +5,9 @@
 
 RS::Resource::~Resource()
 {
+    if (m_pD3D12ClearValue) delete m_pD3D12ClearValue;
+    m_pD3D12ClearValue = nullptr;
+
     if (!m_WasFreed)
     {
         Free();
@@ -16,7 +19,15 @@ RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEA
     : m_WasFreed(false)
 {
     if (pClearValue)
-        m_pD3D12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*pClearValue);
+    {
+        if (m_pD3D12ClearValue == nullptr) m_pD3D12ClearValue = new D3D12_CLEAR_VALUE();
+        memcpy(m_pD3D12ClearValue, pClearValue, sizeof(D3D12_CLEAR_VALUE));
+    }
+    else
+    {
+        if (m_pD3D12ClearValue) delete m_pD3D12ClearValue;
+        m_pD3D12ClearValue = nullptr;
+    }
 
     D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
     if (heapType == D3D12_HEAP_TYPE_UPLOAD)
@@ -25,7 +36,7 @@ RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEA
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
     DXCall(pDevice->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(heapType), D3D12_HEAP_FLAG_NONE, &resourceDesc,
-        resourceState, m_pD3D12ClearValue.get(), IID_PPV_ARGS(&m_pD3D12Resource)));
+        resourceState, m_pD3D12ClearValue, IID_PPV_ARGS(&m_pD3D12Resource)));
 
     ResourceStateTracker::AddGlobalResourceState(m_pD3D12Resource.Get(), resourceState);
 
@@ -43,7 +54,15 @@ RS::Resource::Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D
     , m_WasFreed(false)
 {
     if (pClearValue)
-        m_pD3D12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*pClearValue);
+    {
+        if (m_pD3D12ClearValue == nullptr) m_pD3D12ClearValue = new D3D12_CLEAR_VALUE();
+        memcpy(m_pD3D12ClearValue, pClearValue, sizeof(D3D12_CLEAR_VALUE));
+    }
+    else
+    {
+        if (m_pD3D12ClearValue) delete m_pD3D12ClearValue;
+        m_pD3D12ClearValue = nullptr;
+    }
 
     if (LaunchArguments::Contains(LaunchParams::logResources))
     {
@@ -121,6 +140,11 @@ bool RS::Resource::CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const
 bool RS::Resource::IsValid() const
 {
     return m_pD3D12Resource != nullptr;
+}
+
+D3D12_CLEAR_VALUE* RS::Resource::GetClearValue() const
+{
+    return m_pD3D12ClearValue;
 }
 
 D3D12_RESOURCE_DESC RS::Resource::CheckFeatureSupport()

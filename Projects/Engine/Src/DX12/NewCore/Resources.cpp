@@ -236,7 +236,7 @@ void RS::Texture::Resize(uint32 width, uint32 height, uint32 depthOrArraySize)
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
             D3D12_RESOURCE_STATE_COMMON,
-            m_pD3D12ClearValue.get(),
+            m_pD3D12ClearValue,
             IID_PPV_ARGS(&m_pD3D12Resource)
         ));
 

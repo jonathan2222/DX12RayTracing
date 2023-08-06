@@ -30,6 +30,8 @@ namespace RS
 
 		bool IsValid() const;
 
+		D3D12_CLEAR_VALUE* GetClearValue() const;
+
 	protected:
 		Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* pClearValue = nullptr, D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT);
 		Resource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const D3D12_CLEAR_VALUE* pClearValue = nullptr);
@@ -47,7 +49,7 @@ namespace RS
 	protected:
 		friend class CommandList;
 
-		std::unique_ptr<D3D12_CLEAR_VALUE> m_pD3D12ClearValue;
+		D3D12_CLEAR_VALUE* m_pD3D12ClearValue = nullptr;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_pD3D12Resource;
 		mutable bool m_WasFreed;
 

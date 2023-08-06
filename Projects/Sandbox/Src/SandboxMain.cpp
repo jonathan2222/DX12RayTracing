@@ -1,9 +1,7 @@
 #include <iostream>
 
-#include "RSEngine.h"
-
-void FixedTick();
-void Tick();
+#include <RSEngine.h>
+#include "SandboxApp.h"
 
 int main(int argc, char* argv[])
 {
@@ -23,23 +21,16 @@ int main(int argc, char* argv[])
 
     auto pEngineLook = RS::EngineLoop::Get();
     pEngineLook->Init();
-    pEngineLook->additionalFixedTickFunction = FixedTick;
-    pEngineLook->additionalTickFunction = Tick;
-    RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
-    pEngineLook->Run();
+    {
+        SandboxApp app; // Need to be here such that it calls descructor before we release the engine loop.
+        pEngineLook->additionalFixedTickFunction = [&]() { app.FixedTick(); };
+        pEngineLook->additionalTickFunction = [&](const RS::FrameStats& frameStats) { app.Tick(frameStats); };
+        RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
+        pEngineLook->Run();
+    }
     pEngineLook->Release();
 
     RS::Display::Get()->Release();
     RS::LaunchArguments::Release();
     return 0;
-}
-
-void FixedTick()
-{
-
-}
-
-void Tick()
-{
-
 }

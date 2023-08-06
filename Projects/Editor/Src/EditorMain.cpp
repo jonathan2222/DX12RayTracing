@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     RS::ImGuiRenderer::Get()->additionalResizeFunction = [](uint32 width, uint32 height) { RSE::Editor::Get()->Resize(width, height); };
     auto pEngineLook = RS::EngineLoop::Get();
     pEngineLook->additionalFixedTickFunction = []() { RSE::Editor::Get()->FixedUpdate(); };
-    pEngineLook->additionalTickFunction = []()
+    pEngineLook->additionalTickFunction = [](const RS::FrameStats& frameStats)
         {
             RSE::Editor::Get()->Update();
             RS::ImGuiRenderer::Get()->Draw([&]()

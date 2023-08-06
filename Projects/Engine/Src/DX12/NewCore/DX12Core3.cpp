@@ -169,9 +169,9 @@ void RS::DX12Core3::Render()
     // Clear swap chain's back buffer.
     auto pCommandQueue = GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-    float pClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-    pCommandList->ClearTexture(m_pSwapChain->GetCurrentBackBuffer(), pClearColor);
-    pCommandQueue->ExecuteCommandList(pCommandList);
+    //float pClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    //pCommandList->ClearTexture(m_pSwapChain->GetCurrentBackBuffer(), pClearColor);
+    //pCommandQueue->ExecuteCommandList(pCommandList);
 
     {
         // TODO: Move these!

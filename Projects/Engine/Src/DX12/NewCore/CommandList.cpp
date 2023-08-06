@@ -300,7 +300,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> RS::CommandList::CreateBuffer(size_t buff
     return d3d12Resource;
 }
 
-std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags)
+std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags, D3D12_CLEAR_VALUE* pClearValue)
 {
     RS_ASSERT_NO_MSG(width != 0 && height != 0);
 
@@ -322,10 +322,17 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
     ComPtr<ID3D12Resource> pResource;
     DXCall(pDevice->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
-        &textureDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
+        &textureDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue,
         IID_PPV_ARGS(&pResource)));
 
     std::shared_ptr<Texture> pTexture = std::make_shared<Texture>(pResource, name);
+
+    if (pClearValue)
+    {
+        RS_ASSERT_NO_MSG(pTexture->m_pD3D12ClearValue == nullptr);
+        pTexture->m_pD3D12ClearValue = new D3D12_CLEAR_VALUE();
+        memcpy(pTexture->m_pD3D12ClearValue, pClearValue, sizeof(D3D12_CLEAR_VALUE));
+    }
 
     ResourceStateTracker::AddGlobalResourceState(pResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 

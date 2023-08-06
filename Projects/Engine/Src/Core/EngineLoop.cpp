@@ -96,7 +96,7 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
     m_CurrentFrameNumber++;
 
     if (additionalTickFunction)
-        additionalTickFunction();
+        additionalTickFunction(frameStats);
 
     DX12Core3::Get()->Render();
 }
