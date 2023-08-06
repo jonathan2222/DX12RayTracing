@@ -8,8 +8,6 @@
 #include "Core/Display.h"
 #include "Core/Console.h"
 
-#include "Editor/Editor.h"
-
 #include "DX12/NewCore/Shader.h"
 
 RS::ImGuiRenderer* RS::ImGuiRenderer::Get()
@@ -58,6 +56,9 @@ void RS::ImGuiRenderer::Draw(std::function<void(void)> callback)
 
 void RS::ImGuiRenderer::Render()
 {
+	if (m_DrawCalls.empty())
+		return;
+
 	if (!m_IsInitialized)
 	{
 		LOG_WARNING("ImGuiRenderer is not initialized!");
@@ -192,7 +193,8 @@ void RS::ImGuiRenderer::InternalResize()
 		}
 		InternalInit();
 
-		RSE::Editor::Get()->Resize(width, height);
+		if (additionalResizeFunction)
+			additionalResizeFunction(width, height);
 
 		m_OldWidth = width;
 		m_OldHeight = height;

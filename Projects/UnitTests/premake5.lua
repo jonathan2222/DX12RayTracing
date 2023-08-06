@@ -1,4 +1,4 @@
-project "Editor"
+project "UnitTests"
 	kind "ConsoleApp"
 	language "C++"
 

@@ -2,6 +2,9 @@
 
 #include "RSEngine.h"
 
+void FixedTick();
+void Tick();
+
 int main(int argc, char* argv[])
 {
     RS::Logger::Init();
@@ -18,12 +21,25 @@ int main(int argc, char* argv[])
     RS::Display::Get()->Init(displayDesc);
     RS::Input::Get()->Init();
 
-    RS::EngineLoop::Get()->Init();
-    RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(RS::EngineLoop::Get().get()));
-    RS::EngineLoop::Get()->Run();
+    auto pEngineLook = RS::EngineLoop::Get();
+    pEngineLook->Init();
+    pEngineLook->additionalFixedTickFunction = FixedTick;
+    pEngineLook->additionalTickFunction = Tick;
+    RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
+    pEngineLook->Run();
+    pEngineLook->Release();
 
-    RS::EngineLoop::Get()->Release();
     RS::Display::Get()->Release();
     RS::LaunchArguments::Release();
     return 0;
+}
+
+void FixedTick()
+{
+
+}
+
+void Tick()
+{
+
 }

@@ -10,7 +10,6 @@
 #include "DX12/NewCore/DX12Core3.h"
 
 #include "Core/Console.h"
-#include "Editor/Editor.h"
 
 using namespace RS;
 
@@ -30,39 +29,12 @@ void EngineLoop::Init()
     Console::Get()->Init();
     RS::Input::Get()->AlwaysListenToKey(RS::Key::MICRO); // For console.
 
-    /* ------ Test for Utils::Split ------
-    std::vector<std::string> v1 = Utils::Split("Test.Hej.alla", '.');
-    std::vector<std::string> v2 = Utils::Split("Test.Hej.alla.", '.');
-    std::vector<std::string> v3 = Utils::Split("TestHejalla", '.');
-    std::vector<std::string> v4 = Utils::Split("..", '.');
-    std::vector<std::string> v5 = Utils::Split("hej..", '.');
-    std::vector<std::string> v6 = Utils::Split("..San", '.');
-    std::vector<std::string> v7 = Utils::Split("hej..San", '.');
-    std::vector<std::string> v8 = Utils::Split("", '.');
-    std::vector<std::string> v9 = Utils::Split("c", '.');
-    std::vector<std::string> v10 = Utils::Split("ac", '.');
-    std::vector<std::string> v11 = Utils::Split(".a", '.');
-    std::vector<std::string> v12 = Utils::Split("b.", '.');
-    */
-
-    //bool res0 = Utils::EndsWith("", ""); // This should throw an assert.
-    //bool resA = Utils::EndsWith("", "san"); // This should throw an assert.
-    //bool resB = Utils::EndsWith("Hejsan", ""); // This should throw an assert.
-    bool resC = Utils::EndsWith("Hejsan", "santamaria");
-    bool resD = Utils::EndsWith("./test/this/thing.png", ".png");
-    bool resE = Utils::EndsWith("./test/this/thing.png", "thing.png");
-    bool resF = Utils::EndsWith("./test/this/thing.png", "thing");
-
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
-
-    RSE::Editor::Get()->Init();
 }
 
 void EngineLoop::Release()
 {
-    RSE::Editor::Get()->Release();
-
     DX12Core3::Get()->Release();
 
     Console::Get()->Release();
@@ -115,20 +87,17 @@ void EngineLoop::Run()
 
 void EngineLoop::FixedTick()
 {
-    RSE::Editor::Get()->FixedUpdate();
+    if (additionalFixedTickFunction)
+        additionalFixedTickFunction();
 }
 
 void EngineLoop::Tick(const RS::FrameStats& frameStats)
 {
     m_CurrentFrameNumber++;
 
-    RSE::Editor::Get()->Update();
+    if (additionalTickFunction)
+        additionalTickFunction();
 
-    ImGuiRenderer::Get()->Draw([&]()
-        {
-            RSE::Editor::Get()->Render();
-        }
-    );
     DX12Core3::Get()->Render();
 }
 

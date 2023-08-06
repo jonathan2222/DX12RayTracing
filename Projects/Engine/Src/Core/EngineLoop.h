@@ -41,6 +41,8 @@ namespace RS
 
         static uint64 GetCurrentFrameNumber();
 
+        std::function<void(void)> additionalFixedTickFunction;
+        std::function<void(void)> additionalTickFunction;
 	private:
 		void CreateDeviceDependentResources();
 		void CreateWindowSizeDependentResources();

@@ -155,10 +155,9 @@ namespace RS::Utils
 		const size_t stringLength = string.size();
 		const size_t endingLength = ending.size();
 
-		RS_ASSERT_NO_MSG(endingLength > 0);
-		RS_ASSERT_NO_MSG(stringLength > 0);
 		if (endingLength > stringLength) return false;
 		if (endingLength == stringLength) return string == ending;
+		if (endingLength == 0 || stringLength == 0) return false;
 
 		// Using string view to skip allocating memory.
 		const std::string_view stringView = string;
@@ -176,10 +175,9 @@ namespace RS::Utils
 		const size_t stringLength = string.size();
 		const size_t startingLength = starting.size();
 
-		RS_ASSERT_NO_MSG(startingLength > 0);
-		RS_ASSERT_NO_MSG(stringLength > 0);
 		if (startingLength > stringLength) return false;
 		if (startingLength == stringLength) return string == starting;
+		if (startingLength == 0 || stringLength == 0) return false;
 
 		// Using string view to skip allocating memory.
 		const std::string_view stringView = string;

@@ -1,8 +1,9 @@
 #pragma once
 
+#include "RSEngine.h"
 #include "Render/ImGuiRenderer.h"
 
-#include "Editor/Windows/EditorWindow.h"
+#include "Windows/EditorWindow.h"
 
 namespace RSE
 {

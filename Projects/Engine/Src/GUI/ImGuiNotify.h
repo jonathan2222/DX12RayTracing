@@ -361,6 +361,8 @@ namespace ImGui
 
 	namespace _Internal
 	{
+		IMGUI_NOTIFY_INLINE bool hasToastNotifications = false;
+
 		IMGUI_NOTIFY_INLINE uint32_t notificationPosition = GetDefaultNotificationPosition();
 
 		IMGUI_NOTIFY_INLINE ImVec2 GetWinPos(float height, const ImVec2& vpSize)
@@ -402,6 +404,11 @@ namespace ImGui
 				return ImVec2(1.0f, 1.0f);
 			}
 		}
+	}
+
+	IMGUI_NOTIFY_INLINE bool HasToastNotifications()
+	{
+		return _Internal::hasToastNotifications;
 	}
 
 	IMGUI_NOTIFY_INLINE std::unordered_map<uint64, ImGuiToast> notifications;
@@ -452,6 +459,8 @@ namespace ImGui
 			notificationsBuffer.reserve(notifications.size());
 			for (auto& pair : notifications)
 				notificationsBuffer.push_back(pair.second);
+
+			_Internal::hasToastNotifications = notifications.empty() == false;
 		}
 
 		bool removeAllNotifications = false;

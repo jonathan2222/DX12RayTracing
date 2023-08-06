@@ -18,13 +18,24 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#ifdef RS_CONFIG_DEVELOPMENT
-	#define RS_ASSERT_NO_MSG(exp, ...) {assert(exp);}
-	#define RS_ASSERT(exp, ...) {if(!(exp)){LOG_CRITICAL(__VA_ARGS__); LOG_FLUSH();} assert(exp); }
+#ifdef RS_THROW_INSTEAD_OF_ASSERT
+	#include <stdexcept>
+	#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) { if (!(exp)) throw std::runtime_error("Error"); }
+	#define RS_INTERNAL_ASSERT(exp, ...) { if (!(exp)) throw std::runtime_error(RS::Utils::Format(__VA_ARGS__)); }
+#elif defined(RS_NO_ASSERT)
+	#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...)
+	#define RS_INTERNAL_ASSERT(exp, ...)
 #else
-	#define RS_ASSERT_NO_MSG(exp, ...) {assert(exp);}
-	#define RS_ASSERT(exp, ...) {assert(exp);}
+	#ifdef RS_CONFIG_DEVELOPMENT
+		#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) {assert(exp);}
+		#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){LOG_CRITICAL(__VA_ARGS__); LOG_FLUSH();} assert(exp); }
+	#else
+		#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) {assert(exp);}
+		#define RS_INTERNAL_ASSERT(exp, ...) {assert(exp);}
+	#endif
 #endif
+#define RS_ASSERT_NO_MSG(exp, ...) RS_INTERNAL_ASSERT_NO_MSG(exp, __VA_ARGS__)
+#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
 
 #define RS_LOG_FILE_PATH "../../Debug/Tmp/"
 #define RS_ASSETS_PATH "../../Assets/"

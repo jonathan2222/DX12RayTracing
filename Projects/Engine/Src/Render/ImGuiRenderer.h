@@ -39,6 +39,7 @@ namespace RS
 
 		ImTextureID GetImTextureID(std::shared_ptr<Texture> pTexture);
 
+		std::function<void(uint32, uint32)> additionalResizeFunction;
 	private:
 		struct ImplDX12BackendRendererData
 		{

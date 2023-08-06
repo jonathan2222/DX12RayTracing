@@ -111,4 +111,6 @@ group ""
 
 include "premake5-helper.lua"
 include "Projects/Engine"
+include "Projects/Editor"
 include "Projects/Sandbox"
+include "Projects/UnitTests"

@@ -175,17 +175,20 @@ void RS::DX12Core3::Render()
 
     {
         // TODO: Move these!
-        ImGuiRenderer::Get()->Draw([&]() {
-            Console::Get()->Render();
+        if (Console::Get()->IsEnabled() || ImGui::HasToastNotifications())
+        {
+            ImGuiRenderer::Get()->Draw([&]() {
+                Console::Get()->Render();
 
-            // Render toasts on top of everything, at the end of your code!
-            // You should push style vars here
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
-            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
-            ImGui::RenderNotifications(); // <-- Here we render all notifications
-            ImGui::PopStyleVar(1); // Don't forget to Pop()
-            ImGui::PopStyleColor(1);
-        });
+                // Render toasts on top of everything, at the end of your code!
+                // You should push style vars here
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
+                ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
+                ImGui::RenderNotifications(); // <-- Here we render all notifications
+                ImGui::PopStyleVar(1); // Don't forget to Pop()
+                ImGui::PopStyleColor(1);
+                });
+        }
 
         // ImGui
         ImGuiRenderer::Get()->Render();
@@ -226,7 +229,6 @@ void RS::DX12Core3::ReleasePendingResourceRemovals(uint32 frameIndex)
 
 void RS::DX12Core3::ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint32 newWidth, uint32 newHeight)
 {
-
     std::string copyName = pTexture->GetName() + " Copy";
     auto textureDesc = pTexture->GetD3D12ResourceDesc();
     std::shared_ptr<Texture> pSRVTexture;

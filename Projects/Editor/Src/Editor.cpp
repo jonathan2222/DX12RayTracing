@@ -5,9 +5,9 @@
 #include "Core/Display.h"
 #include "GUI/LogNotifier.h"
 
-#include "Editor/Windows/ConsoleInspector.h"
-#include "Editor/Windows/LifetimeTracker.h"
-#include "Editor/Windows/Canvas.h"
+#include "Windows/ConsoleInspector.h"
+#include "Windows/LifetimeTracker.h"
+#include "Windows/Canvas.h"
 
 RSE::Editor* RSE::Editor::Get()
 {

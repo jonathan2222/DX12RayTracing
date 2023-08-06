@@ -8,6 +8,7 @@
 	path = Externals/json
 	url = https://github.com/nlohmann/json.git
 [submodule "Externals/imgui"]
+	branch = docking
 	path = Externals/imgui
 	url = https://github.com/jonathan2222/imgui.git
 [submodule "Externals/spdlog"]
