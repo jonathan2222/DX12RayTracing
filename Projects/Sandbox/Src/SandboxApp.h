@@ -2,6 +2,11 @@
 
 #include <RSEngine.h>
 
+struct Entity
+{
+
+};
+
 class SandboxApp
 {
 public:
