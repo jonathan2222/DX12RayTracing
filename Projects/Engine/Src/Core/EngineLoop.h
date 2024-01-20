@@ -2,6 +2,7 @@
 
 #include "Core/FrameTimer.h"
 #include "Core/Display.h"
+#include "Core/RenderDoc.h"
 #include "DX12/NewCore/DX12Core3.h"
 #include "DX12/RaytracingHlslCompat.h"
 
@@ -120,5 +121,8 @@ namespace RS
         ComPtr<ID3D12Resource>              m_missShaderTable;
         ComPtr<ID3D12Resource>              m_hitGroupShaderTable;
         ComPtr<ID3D12Resource>              m_rayGenShaderTable;
+
+        // Debugging
+        RenderDoc m_RenderDoc;
 	};
 }

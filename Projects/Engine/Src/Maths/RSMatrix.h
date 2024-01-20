@@ -48,7 +48,7 @@ namespace RS
 		// Initializes the matrix from row to row. Starting from the top left element.
 		Mat& operator=(const std::initializer_list<Type>& list);
 		Mat& operator=(const Mat& other);
-		Mat& operator=(const Mat&& other);
+		//Mat& operator=(const Mat&& other);
 
 		template<uint32 Row2, uint32 Col2>
 		Mat<Type, Row, Col2> operator*(const Mat<Type, Row2, Col2>& other) const;
@@ -193,7 +193,7 @@ namespace RS
 	template<typename Type, uint32 Row, uint32 Col>
 	inline Mat<Type, Row, Col>& Mat<Type, Row, Col>::operator=(const std::initializer_list<Type>& list)
 	{
-		RS_ASSERT(Row * Col != list.size(), "List need to have the same amount of elements as the matrix!");
+		RS_ASSERT((Row * Col) == list.size(), "List need to have the same amount of elements as the matrix! Want: {}, Got: {}", Row * Col, list.size());
 
 		uint32 index = 0;
 		for (std::initializer_list<Type>::iterator it = list.begin(); it != list.end(); it++)
@@ -214,12 +214,12 @@ namespace RS
 		return *this;
 	}
 
-	template<typename Type, uint32 Row, uint32 Col>
-	inline Mat<Type, Row, Col>& Mat<Type, Row, Col>::operator=(const Mat&& other)
-	{
-		Move(other);
-		return *this;
-	}
+	//template<typename Type, uint32 Row, uint32 Col>
+	//inline Mat<Type, Row, Col>& Mat<Type, Row, Col>::operator=(const Mat&& other)
+	//{
+	//	Move(other);
+	//	return *this;
+	//}
 
 	template<typename Type, uint32 Row, uint32 Col>
 	inline Mat<Type, Row, Col> Mat<Type, Row, Col>::operator+(const Mat& other) const
@@ -627,6 +627,56 @@ namespace RS
 	{
 		os << value.ToString(false);
 		return os;
+	}
+
+	inline Mat<float, 4, 4> CreatePerspectiveProjectionMat4(float fov, float aspectRatio, float zFar, float zNear)
+	{
+		const float tanHalfFOV = (float)std::tan(fov * 0.5 * 3.1415 / 180);
+		const float zRange = zFar - zNear;
+		Mat<float, 4, 4> result =
+		{
+			1.0f / (tanHalfFOV * aspectRatio)	, 0.0f				, 0.0f						, 0.0f,
+			0.0f								, 1.0f / tanHalfFOV	, 0.0f						, 0.0f,
+			0.0f								, 0.0f				, (-zNear - zFar) / zRange	, -(2.0f * zFar * zNear) / zRange,
+			0.0f								, 0.0f				, -1.0f						, 0.0f
+		};
+		return result;
+	}
+
+	inline Mat<float, 4, 4> CreateOrthographicProjectionMat4(float left, float right, float top, float bottom, float zNear, float zFar)
+	{
+		const float zRange = zFar - zNear;
+		Mat<float, 4, 4> result =
+		{
+			2.0f / (right - left)	, 0.0f					, 0.0f				, -(right + left) / (right - left),
+			0.0f					, 2.0f / (top - bottom)	, 0.0f				, -(top + bottom) / (top - bottom),
+			0.0f					, 0.0f					, -2.0f / zRange	, -(zFar + zNear) / zRange,
+			0.0f					, 0.0f					, -1.0f				, 1.0f
+		};
+		return result;
+	}
+
+	inline Mat<float, 4, 4> CreateCameraMat4(Mat<float, 4, 4>& mat, const Vec<float, 3>& right, const Vec<float, 3>& up, const Vec<float, 3>& forward, const Vec<float, 3>& position)
+	{
+#if !RS_MATHS_COLUMN_MAJOR
+		RS_ASSERT(false, "Not Implemented");
+#endif
+
+		mat[0][0] =  right.x;	mat[1][0] =  right.y;	mat[2][0] =  right.z;	mat[3][0] = -position.Dot(right);
+		mat[0][1] =  up.x;		mat[1][1] =  up.y;		mat[2][1] =  up.z;		mat[3][1] = -position.Dot(up);
+		mat[0][2] = -forward.x;	mat[1][2] = -forward.y;	mat[2][2] = -forward.z;	mat[3][2] =  position.Dot(forward);
+		mat[0][3] =  0;			mat[1][3] =  0;			mat[2][3] =  0;			mat[3][3] =  1.0f;
+
+		return mat;
+	}
+
+	inline Mat<float, 4, 4> CreateCameraMat4(const Vec<float, 3>& direction, const Vec<float, 3>& worldUp, const Vec<float, 3>& position)
+	{
+		Mat<float, 4, 4> result;
+		Vec<float, 3> right = worldUp;
+		right = RS::Normalize(RS::Cross(direction, right));
+		Vec<float, 3> up = RS::Normalize(RS::Cross(right, direction));
+		return CreateCameraMat4(result, right, up, direction, position);
 	}
 
 	using Mat2 = Mat<float, 2, 2>;

@@ -21,6 +21,8 @@ namespace RS
 		template<typename MType, uint32 M, typename... Types>
 		Vec(const Vec<MType, M, VectorSwizzlingData<MType, M>>& other, Types... types);
 
+		Vec(const Type* pData, uint32 size = UINT32_MAX);
+
 		template<uint32 M>
 		bool operator==(const Vec<Type, M, VectorSwizzlingData<Type, M>>& other) const;
 		template<uint32 M>
@@ -32,7 +34,7 @@ namespace RS
 		Vec& operator=(const Type& scalar);
 		Vec& operator=(const std::initializer_list<Type>& list);
 		Vec& operator=(const Vec& other);
-		Vec& operator=(const Vec&& other);
+		//Vec& operator=(const Vec&& other);
 
 		Vec operator+(const Vec& other) const;
 		Vec operator-(const Vec& other) const;
@@ -54,6 +56,7 @@ namespace RS
 		Type AtConst(uint32 index) const;
 
 		Type Dot(const Vec& other) const;
+		Type Length() const;
 
 		void Copy(const Vec& other);
 		void Move(const Vec&& other);
@@ -62,6 +65,9 @@ namespace RS
 
 		std::string ToString() const;
 		operator std::string() const;
+
+		Type* Data() const;
+		void SetData(const Type* pData, uint32 size = UINT32_MAX);
 
 	private:
 		template<typename... Types>
@@ -97,6 +103,13 @@ namespace RS
 		: SwizzlingData(false)
 	{
 		Move(std::move(other));
+	}
+
+	template<typename Type, uint32 N, typename SwizzlingData>
+	inline Vec<Type, N, SwizzlingData>::Vec(const Type* pData, uint32 size)
+		: SwizzlingData(false)
+	{
+		SetData(pData, size);
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
@@ -187,17 +200,17 @@ namespace RS
 		return *this;
 	}
 
-	template<typename Type, uint32 N, typename SwizzlingData>
-	inline Vec<Type, N, SwizzlingData>& Vec<Type, N, SwizzlingData>::operator=(const Vec&& other)
-	{
-		Move(other);
-		return *this;
-	}
+	//template<typename Type, uint32 N, typename SwizzlingData>
+	//inline Vec<Type, N, SwizzlingData>& Vec<Type, N, SwizzlingData>::operator=(const Vec&& other)
+	//{
+	//	Move(other);
+	//	return *this;
+	//}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator+(const Vec& other) const
 	{
-		Vec result(this);
+		Vec result(*this);
 		result += other;
 		return result;
 	}
@@ -205,7 +218,7 @@ namespace RS
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator-(const Vec& other) const
 	{
-		Vec result(this);
+		Vec result(*this);
 		result -= other;
 		return result;
 	}
@@ -213,32 +226,32 @@ namespace RS
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator+(const Type& scalar) const
 	{
-		Vec result(this);
-		result += other;
+		Vec result(*this);
+		result += scalar;
 		return result;
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator-(const Type& scalar) const
 	{
-		Vec result(this);
-		result -= other;
+		Vec result(*this);
+		result -= scalar;
 		return result;
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator*(const Type& scalar) const
 	{
-		Vec result(this);
-		result *= other;
+		Vec result(*this);
+		result *= scalar;
 		return result;
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator/(const Type& scalar) const
 	{
-		Vec result(this);
-		result /= other;
+		Vec result(*this);
+		result /= scalar;
 		return result;
 	}
 
@@ -326,6 +339,12 @@ namespace RS
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
+	inline Type Vec<Type, N, SwizzlingData>::Length() const
+	{
+		return (Type)std::sqrtf((float)Dot(*this));
+	}
+
+	template<typename Type, uint32 N, typename SwizzlingData>
 	inline void Vec<Type, N, SwizzlingData>::Copy(const Vec& other)
 	{
 		memcpy(&values[0], &other.values[0], sizeof(Type) * N);
@@ -360,6 +379,22 @@ namespace RS
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
+	inline Type* Vec<Type, N, SwizzlingData>::Data() const
+	{
+		RS_ASSERT_NO_MSG(N > 0);
+		return &values[0];
+	}
+
+	template<typename Type, uint32 N, typename SwizzlingData>
+	inline void Vec<Type, N, SwizzlingData>::SetData(const Type* pData, uint32 size)
+	{
+		RS_ASSERT_NO_MSG(pData != nullptr);
+
+		for (uint32 i = 0; i < std::min(N, size); ++i)
+			values[i] = pData[i];
+	}
+
+	template<typename Type, uint32 N, typename SwizzlingData>
 	template<typename ...Types>
 	inline void Vec<Type, N, SwizzlingData>::Create(uint32 n, Type type, Types ...types)
 	{
@@ -388,6 +423,34 @@ namespace RS
 		result.y = a.z * b.x - a.x * b.z;
 		result.z = a.x * b.y - a.y * b.x;
 		return result;
+	}
+
+	template<typename Type, uint32 N>
+	inline Vec<Type, N> Normalize(const Vec<Type, N>& v)
+	{
+		Type length = v.Length();
+		Vec<Type, N> result(v);
+		result /= length;
+		return result;
+	}
+
+	template<typename Type, uint32 N>
+	inline Vec<Type, N> Project(const Vec<Type, N>& left, const Vec<Type, N>& right)
+	{
+		Type dlr = left.Dot(right);
+		Type drr = right.Dot(right);
+		return right * (dlr / drr);
+	}
+
+	template<typename Type>
+	inline Vec<Type, 3> Rotate(const Vec<Type, 3>& v, float angle, const Vec<Type, 3>& axis)
+	{
+		Vec<Type, 3> vPAxis = Project<Type, 3>(v, axis);
+		Vec<Type, 3> vOAxis = v - vPAxis;
+		float x = (float)std::cos(angle);
+		float y = (float)std::sin(angle);
+		Vec<Type, 3> vOr = (Normalize<Type, 3>(vOAxis) * x + Normalize<Type, 3>(Cross<Type>(axis, vOAxis)) * y) * vOAxis.Length();
+		return vOr + vPAxis;
 	}
 
 	using Vec2 = Vec<float, 2>;

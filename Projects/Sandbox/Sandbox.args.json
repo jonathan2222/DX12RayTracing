@@ -21,6 +21,10 @@
     {
       "Id": "33022683-cc69-4d05-9ad8-967088214b98",
       "Command": "-logShaderDebug"
+    },
+    {
+      "Id": "e9aa2ee1-754f-44ff-94bf-fdd985a7e2b1",
+      "Command": "-injectRenderDoc"
     }
   ]
 }

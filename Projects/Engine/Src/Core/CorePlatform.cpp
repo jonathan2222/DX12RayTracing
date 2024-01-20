@@ -95,3 +95,52 @@ RS::CorePlatform::Image::~Image()
 	height = 0;
 	format = RS_FORMAT_UNKNOWN;
 }
+
+RS::CorePlatform::BinaryFile RS::CorePlatform::LoadBinaryFile(const std::string& path, uint32 offset)
+{
+	BinaryFile file;
+
+	FILE* pFile = stbi__fopen(path.c_str(), "rb");
+	uint8* pData = nullptr;
+	if (!pFile)
+	{
+		LOG_ERROR("[LoadFileData] Cannot open file!");
+		return file;
+	}
+
+	fseek(pFile, 0, SEEK_END);
+	file.size = ftell(pFile);
+	fseek(pFile, (long)offset, SEEK_SET);
+
+	uint8* pContent = new uint8[file.size];
+	fread(pContent, 1, file.size, pFile);
+
+	fclose(pFile);
+
+	file.pData = std::unique_ptr<uint8>(pContent);
+	return file;
+}
+
+std::string RS::CorePlatform::GetLastErrorString()
+{
+	DWORD errorCode = GetLastError();
+	
+	LPTSTR errorText = NULL;
+	FormatMessage(
+	    FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+	    NULL,
+	    errorCode,
+	    MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+	    (LPTSTR)&errorText,  // output 
+	    0, // minimum size for output buffer
+	    NULL);
+	if (errorText != NULL)
+	{
+	    std::string str = RS::Utils::ToString(std::wstring(errorText));
+	    LOG_ERROR("Failed to start renderdoccmd process! {}", errorCode, str.c_str());
+	    LocalFree(errorText);
+	    errorText = NULL;
+		return str;
+	}
+	return "?";
+}

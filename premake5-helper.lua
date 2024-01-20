@@ -11,7 +11,8 @@ function EngineIncludes()
 		"%{includeDir.spdlog}",
 		"%{includeDir.stb}",
 		"%{includeDir.json}",
-		"%{includeDir.glfw}"
+		"%{includeDir.glfw}",
+		"%{includeDir.renderdoc}"
 	}
 end
 

@@ -5,6 +5,8 @@
 
 #include "Maths/RSMatrix.h"
 
+#include "Loaders/openfbx/FBXLoader.h"
+
 SandboxApp::SandboxApp()
 {
     Init();
@@ -68,10 +70,68 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
         } textIndex;
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
 
+        struct VertexConstantBufferData
+        {
+            RS::Mat4 transform;
+            RS::Mat4 camera;
+        } vertexViewData;
+
+        static RS::Vec3 direction(0.0f, 0.0f, 1.0f);
+        static RS::Vec3 up(0.0f, 1.0f, 0.0f);
+
+        RS::Vec3 right = RS::Cross(up, direction);
+        up = RS::Cross(direction, right);
+        
+        auto KeysPressed = [](RS::Key a, RS::Key b)
+        {
+            return (RS::Input::Get()->IsKeyPressed(b) ? 1.f : 0.f) - (RS::Input::Get()->IsKeyPressed(a) ? 1.f : 0.f);
+        };
+        //LOG_WARNING("Dir1: {}", direction.ToString());
+        float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::LEFT, RS::Key::RIGHT);
+        float vAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::DOWN, RS::Key::UP);
+        direction = RS::Rotate(direction, hAngle, { 0.0f, 1.0f, 0.0f });
+        direction = RS::Normalize(direction);
+        right = RS::Cross(up, direction);
+        direction = RS::Rotate(direction, vAngle, right);
+        direction = RS::Normalize(direction);
+        //LOG_WARNING("Dir2: {}", direction.ToString());
+
+        right = RS::Cross(up, direction);
+        right = RS::Normalize(right);
+        up = RS::Cross(direction, right);
+        up = RS::Normalize(up);
+        static RS::Vec3 position(0.0f, -1.0f, -7.0f);
+        float speed = 10.0f;
+        float speedRight = KeysPressed(RS::Key::A, RS::Key::D) * speed;
+        float speedForward = KeysPressed(RS::Key::S, RS::Key::W) * speed;
+        position += right * frameStats.frame.currentDT * speedRight + direction * frameStats.frame.currentDT * speedForward;
+        position.y += frameStats.frame.currentDT * KeysPressed(RS::Key::LEFT_SHIFT, RS::Key::SPACE) * speed;
+
+        //LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
+
+        RS::Mat4 view = RS::CreateCameraMat4(direction, { 0.0f, 1.0f, 0.0f }, position);
+        //LOG_WARNING("view: {}", view.ToString());
+        RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
+        //LOG_WARNING("proj: {}", proj.ToString());
+        vertexViewData.camera = proj * view;
+        //LOG_WARNING("camera: {}", vertexViewData.camera.ToString());
+
+        vertexViewData.transform =
+        {
+            1.f, 0.f, 0.f, 0.f,
+            0.f, 1.f, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f
+        };
+        vertexViewData.camera = RS::Transpose(vertexViewData.camera);
+        vertexViewData.transform = vertexViewData.transform;
+        //RS::CreatePerspectiveProjectionMat4(45.0f, 0.01f, 100.0f);
+        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
+
         pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
         pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
 
-        pCommandList->DrawInstanced(6, 1, 0, 0);
+        pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
 
         // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
         auto pTexture = m_RenderTarget->GetColorTextures()[0];
@@ -96,33 +156,41 @@ void SandboxApp::Init()
 {
     CreatePipelineState();
 
-    struct Vertex
-    {
-        float position[3];
-        float color[4];
-        float uv[2];
-    };
+    RS::Mesh* pMesh = RS::FBXLoader::Load("Sword2.fbx");
 
-    float scale = 0.25f;
-    float aspectRatio = (float)RS::Display::Get()->GetWidth() / RS::Display::Get()->GetHeight();
-    Vertex triangleVertices[] =
-    {
-        { { -scale, +scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
-
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
-    };
-
-    const UINT vertexBufferSize = sizeof(triangleVertices);
+    const UINT vertexBufferSize = sizeof(RS::Vertex) * pMesh->vertices.size();
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(Vertex), "Vertex Buffer");
-    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&triangleVertices[0]);
+    //m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
+    //pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
+    //m_NumVertices = pMesh->vertices.size();
+
     //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
+
+    float scale = 5.0f;//0.25f;
+    float aspectRatio = 1.0f;// (float)RS::Display::Get()->GetWidth() / RS::Display::Get()->GetHeight();
+    RS::Vertex triangleVertices[] =
+    {
+        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
+        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
+
+        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+        { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
+    };
+    m_NumVertices = 6;
+
+    const UINT vertexBufferSize2 = sizeof(triangleVertices);
+    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
+    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
+
+    if (pMesh)
+    {
+        delete pMesh;
+        pMesh = nullptr;
+    }
 
     // Texture
     {
@@ -164,23 +232,23 @@ void SandboxApp::CreatePipelineState()
 {
     RS::Shader shader;
     RS::Shader::Description shaderDesc{};
-    shaderDesc.path = "TmpCore3Shaders.hlsl";
+    shaderDesc.path = "Core/MeshShader.hlsl";
     shaderDesc.typeFlags = RS::Shader::TypeFlag::Pixel | RS::Shader::TypeFlag::Vertex;
     shader.Create(shaderDesc);
 
     // TODO: Remove this
-    { // Test reflection
-        ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
-
-        D3D12_SHADER_DESC d12ShaderDesc{};
-        DXCall(reflection->GetDesc(&d12ShaderDesc));
-
-        D3D12_SHADER_INPUT_BIND_DESC desc{};
-        DXCall(reflection->GetResourceBindingDesc(0, &desc));
-
-        D3D12_SHADER_INPUT_BIND_DESC desc2{};
-        DXCall(reflection->GetResourceBindingDesc(1, &desc2));
-    }
+    //{ // Test reflection
+    //    ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
+    //
+    //    D3D12_SHADER_DESC d12ShaderDesc{};
+    //    DXCall(reflection->GetDesc(&d12ShaderDesc));
+    //
+    //    D3D12_SHADER_INPUT_BIND_DESC desc{};
+    //    DXCall(reflection->GetResourceBindingDesc(0, &desc));
+    //
+    //    D3D12_SHADER_INPUT_BIND_DESC desc2{};
+    //    DXCall(reflection->GetResourceBindingDesc(1, &desc2));
+    //}
 
     CreateRootSignature();
 
@@ -199,8 +267,8 @@ void SandboxApp::CreatePipelineState()
         inputElementDesc.InstanceDataStepRate = 0;
         inputElementDescs.push_back(inputElementDesc);
 
-        inputElementDescs.push_back({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        inputElementDescs.push_back({ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     }
 
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
@@ -277,6 +345,7 @@ void SandboxApp::CreateRootSignature()
     auto& rootSignature = *m_pRootSignature.get();
     rootSignature[RootParameter::PixelData].Constants(4 * 2, currentShaderRegisterCBV++, registerSpace);
     rootSignature[RootParameter::PixelData2].CBV(currentShaderRegisterCBV++, registerSpace);
+    rootSignature[RootParameter::VertexData].CBV(currentShaderRegisterCBV++, registerSpace);
 
     // All bindless buffers, textures overlap using different spaces.
     // TODO: DynamicDescriptorHeap does not like when we have empty descriptors (not set) and not bindless too.

@@ -34,10 +34,13 @@ private:
 	{
 		static const uint32 PixelData = 0;
 		static const uint32 PixelData2 = 1;
+		static const uint32 VertexData = 2;
 
 		// TODO: Same Table
-		static const uint32 Textures = 2;
-		static const uint32 ConstantBufferViews = 3;
-		static const uint32 UnordedAccessViews = 4;
+		static const uint32 Textures = 3;
+		static const uint32 ConstantBufferViews = 4;
+		static const uint32 UnordedAccessViews = 5;
 	};
+
+	uint32 m_NumVertices;
 };

@@ -29,6 +29,8 @@ void EngineLoop::Init()
     Console::Get()->Init();
     RS::Input::Get()->AlwaysListenToKey(RS::Key::MICRO); // For console.
 
+    m_RenderDoc.Init();
+
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 }
@@ -48,6 +50,8 @@ void EngineLoop::Run()
     while (!pDisplay->ShouldClose())
     {
         m_FrameTimer.Begin();
+
+        m_RenderDoc.StartFrameCapture();
 
         pDisplay->PollEvents();
         RS::Input::Get()->PreUpdate();
@@ -80,6 +84,8 @@ void EngineLoop::Run()
         Tick(m_FrameStats);
 
         RS::Input::Get()->PostUpdate(m_FrameStats.frame.currentDT);
+
+        m_RenderDoc.EndFrameCapture();
 
         m_FrameTimer.End();
     }

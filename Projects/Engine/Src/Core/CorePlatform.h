@@ -29,5 +29,14 @@ namespace RS
 			Format format;
 		};
 		std::unique_ptr<Image> LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags = ImageFlag::NONE);
+
+		struct BinaryFile
+		{
+			std::unique_ptr<uint8> pData = nullptr;
+			uint64 size = 0;
+		};
+		static BinaryFile LoadBinaryFile(const std::string& path, uint32 offset = 0);
+
+		static std::string GetLastErrorString();
 	};
 }

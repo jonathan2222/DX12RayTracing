@@ -352,7 +352,7 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 	uint32 validNonNamedArgCount = 0;
 	std::for_each(validArgs.begin(), validArgs.end(), [&](const FuncArg& arg)->void
 		{
-			if (arg.type != FuncArg::TypeFlag::NONE && (arg.type & FuncArg::TypeFlag::Named) != 0 && arg.name.empty())
+			if (arg.type != FuncArg::TypeFlag::NONE && (arg.type & FuncArg::TypeFlag::Named) == 0 && arg.name.empty())
 				validNonNamedArgCount++;
 		}
 	);
