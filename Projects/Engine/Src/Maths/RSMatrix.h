@@ -631,27 +631,29 @@ namespace RS
 
 	inline Mat<float, 4, 4> CreatePerspectiveProjectionMat4(float fov, float aspectRatio, float zFar, float zNear)
 	{
+		// LH to clip space [0, 1]
 		const float tanHalfFOV = (float)std::tan(fov * 0.5 * 3.1415 / 180);
 		const float zRange = zFar - zNear;
 		Mat<float, 4, 4> result =
 		{
-			1.0f / (tanHalfFOV * aspectRatio)	, 0.0f				, 0.0f						, 0.0f,
-			0.0f								, 1.0f / tanHalfFOV	, 0.0f						, 0.0f,
-			0.0f								, 0.0f				, (-zNear - zFar) / zRange	, -(2.0f * zFar * zNear) / zRange,
-			0.0f								, 0.0f				, -1.0f						, 0.0f
+			1.0f / (tanHalfFOV * aspectRatio)	, 0.0f				, 0.0f				, 0.0f,
+			0.0f								, 1.0f / tanHalfFOV	, 0.0f				, 0.0f,
+			0.0f								, 0.0f				, zFar / zRange		, -(zFar * zNear) / zRange,
+			0.0f								, 0.0f				, 1.0f				, 0.0f
 		};
 		return result;
 	}
 
 	inline Mat<float, 4, 4> CreateOrthographicProjectionMat4(float left, float right, float top, float bottom, float zNear, float zFar)
 	{
+		// LH to clip space [0, 1]
 		const float zRange = zFar - zNear;
 		Mat<float, 4, 4> result =
 		{
-			2.0f / (right - left)	, 0.0f					, 0.0f				, -(right + left) / (right - left),
-			0.0f					, 2.0f / (top - bottom)	, 0.0f				, -(top + bottom) / (top - bottom),
-			0.0f					, 0.0f					, -2.0f / zRange	, -(zFar + zNear) / zRange,
-			0.0f					, 0.0f					, -1.0f				, 1.0f
+			2.0f / (right - left)	, 0.0f					, 0.0f				, 0.f,
+			0.0f					, 2.0f / (top - bottom)	, 0.0f				, 0.f,
+			0.0f					, 0.0f					, -1.0f / zRange	, -zNear / zRange,
+			0.0f					, 0.0f					, 0.0f				, 1.0f
 		};
 		return result;
 	}
@@ -662,9 +664,9 @@ namespace RS
 		RS_ASSERT(false, "Not Implemented");
 #endif
 
-		mat[0][0] =  right.x;	mat[1][0] =  right.y;	mat[2][0] =  right.z;	mat[3][0] = -position.Dot(right);
-		mat[0][1] =  up.x;		mat[1][1] =  up.y;		mat[2][1] =  up.z;		mat[3][1] = -position.Dot(up);
-		mat[0][2] = -forward.x;	mat[1][2] = -forward.y;	mat[2][2] = -forward.z;	mat[3][2] =  position.Dot(forward);
+		mat[0][0] =  right.x;	mat[1][0] =  right.y;	mat[2][0] =  right.z;	mat[3][0] = position.Dot(right);
+		mat[0][1] =  up.x;		mat[1][1] =  up.y;		mat[2][1] =  up.z;		mat[3][1] = position.Dot(up);
+		mat[0][2] =  forward.x;	mat[1][2] =  forward.y;	mat[2][2] =  forward.z;	mat[3][2] = position.Dot(forward);
 		mat[0][3] =  0;			mat[1][3] =  0;			mat[2][3] =  0;			mat[3][3] =  1.0f;
 
 		return mat;

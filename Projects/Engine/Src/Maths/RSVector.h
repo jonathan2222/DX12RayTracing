@@ -36,6 +36,8 @@ namespace RS
 		Vec& operator=(const Vec& other);
 		//Vec& operator=(const Vec&& other);
 
+		Vec operator-() const;
+
 		Vec operator+(const Vec& other) const;
 		Vec operator-(const Vec& other) const;
 		Vec operator+(const Type& scalar) const;
@@ -206,6 +208,15 @@ namespace RS
 	//	Move(other);
 	//	return *this;
 	//}
+
+	template<typename Type, uint32 N, typename SwizzlingData>
+	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator-() const
+	{
+		Vec result(*this);
+		for (uint8 i = 0; i < N; ++i)
+			result.values[i] = -result.values[i];
+		return result;
+	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Vec<Type, N, SwizzlingData> Vec<Type, N, SwizzlingData>::operator+(const Vec& other) const

@@ -76,7 +76,7 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
             RS::Mat4 camera;
         } vertexViewData;
 
-        static RS::Vec3 direction(0.0f, 0.0f, 1.0f);
+        static RS::Vec3 direction(0.0f, 0.0f, 1.0f); // LH coordinate system => z is forward
         static RS::Vec3 up(0.0f, 1.0f, 0.0f);
 
         RS::Vec3 right = RS::Cross(up, direction);
@@ -87,7 +87,7 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
             return (RS::Input::Get()->IsKeyPressed(b) ? 1.f : 0.f) - (RS::Input::Get()->IsKeyPressed(a) ? 1.f : 0.f);
         };
         //LOG_WARNING("Dir1: {}", direction.ToString());
-        float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::LEFT, RS::Key::RIGHT);
+        float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::RIGHT, RS::Key::LEFT);
         float vAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::DOWN, RS::Key::UP);
         direction = RS::Rotate(direction, hAngle, { 0.0f, 1.0f, 0.0f });
         direction = RS::Normalize(direction);
@@ -100,32 +100,32 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
         right = RS::Normalize(right);
         up = RS::Cross(direction, right);
         up = RS::Normalize(up);
-        static RS::Vec3 position(0.0f, -1.0f, -7.0f);
+        static RS::Vec3 position(0.0f, -1.0f, -3.0f);
         float speed = 10.0f;
-        float speedRight = KeysPressed(RS::Key::A, RS::Key::D) * speed;
+        float speedRight = KeysPressed(RS::Key::D, RS::Key::A) * speed;
         float speedForward = KeysPressed(RS::Key::S, RS::Key::W) * speed;
         position += right * frameStats.frame.currentDT * speedRight + direction * frameStats.frame.currentDT * speedForward;
         position.y += frameStats.frame.currentDT * KeysPressed(RS::Key::LEFT_SHIFT, RS::Key::SPACE) * speed;
+        // TODO: Fix direction!
+        LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
 
-        //LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
+        // TODO: Perspective projection should be in RH and get it down to an NDC in [0, 1]
 
-        RS::Mat4 view = RS::CreateCameraMat4(direction, { 0.0f, 1.0f, 0.0f }, position);
+        RS::Mat4 view = RS::CreateCameraMat4(-direction, { 0.0f, 1.0f, 0.0f }, position);
         //LOG_WARNING("view: {}", view.ToString());
-        RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
+        RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 10.0f);
         //LOG_WARNING("proj: {}", proj.ToString());
+        float scale = 0.5f;
         vertexViewData.camera = proj * view;
-        //LOG_WARNING("camera: {}", vertexViewData.camera.ToString());
-
         vertexViewData.transform =
         {
-            1.f, 0.f, 0.f, 0.f,
-            0.f, 1.f, 0.f, 0.f,
-            0.f, 0.f, 1.f, 0.f,
+            scale, 0.f, 0.f, 0.f,
+            0.f, scale, 0.f, 0.f,
+            0.f, 0.f, scale, 0.0f,
             0.f, 0.f, 0.f, 1.f
         };
         vertexViewData.camera = RS::Transpose(vertexViewData.camera);
-        vertexViewData.transform = vertexViewData.transform;
-        //RS::CreatePerspectiveProjectionMat4(45.0f, 0.01f, 100.0f);
+        vertexViewData.transform = RS::Transpose(vertexViewData.transform);
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
         pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
@@ -162,29 +162,29 @@ void SandboxApp::Init()
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-    //m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
-    //pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
-    //m_NumVertices = pMesh->vertices.size();
+    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
+    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
+    m_NumVertices = pMesh->vertices.size();
 
     //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
 
-    float scale = 5.0f;//0.25f;
-    float aspectRatio = 1.0f;// (float)RS::Display::Get()->GetWidth() / RS::Display::Get()->GetHeight();
-    RS::Vertex triangleVertices[] =
-    {
-        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
-
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
-    };
-    m_NumVertices = 6;
-
-    const UINT vertexBufferSize2 = sizeof(triangleVertices);
-    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
-    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
+    //float scale = 1.0f;
+    //float aspectRatio = 1.0f;
+    //RS::Vertex triangleVertices[] =
+    //{
+    //    { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
+    //    { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+    //    { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
+    //
+    //    { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+    //    { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
+    //    { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
+    //};
+    //m_NumVertices = 6;
+    //
+    //const UINT vertexBufferSize2 = sizeof(triangleVertices);
+    //m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
+    //pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
 
     if (pMesh)
     {
@@ -297,6 +297,9 @@ void SandboxApp::CreatePipelineState()
     //streamDesc.SizeInBytes = sizeof(streams);
     //DXCall(pDevice->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_PipelineState)));
 
+    // TODO: Make it easier to make these by having some default states.
+    // TODO: Also make keys for each PSO (shader, topology tyep, format, raster state, blend state, etc.)
+    //      such that the renderer can have a SetShader function (Which basically sets the PSO).
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
     psoDesc.InputLayout = inputLayoutDesc;
     psoDesc.pRootSignature = m_pRootSignature->GetRootSignature().Get();
@@ -306,6 +309,8 @@ void SandboxApp::CreatePipelineState()
     psoDesc.HS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Hull, true));
     psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Geometry, true));
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+    psoDesc.RasterizerState.FrontCounterClockwise = false;
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psoDesc.DepthStencilState.DepthEnable = FALSE;
     psoDesc.DepthStencilState.StencilEnable = FALSE;
@@ -330,6 +335,7 @@ void SandboxApp::CreatePipelineState()
 
 void SandboxApp::CreateRootSignature()
 {
+    // TODO: Have a main root signature for all shader to share?
     m_pRootSignature = std::make_shared<RS::RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     uint32 registerSpace = 0;
