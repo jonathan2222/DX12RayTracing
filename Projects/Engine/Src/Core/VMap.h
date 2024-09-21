@@ -34,7 +34,7 @@ namespace RS
 	* int element = vmap["Child"]["SomeData"][2];
 	* 
 	* And one can read from disk and write to it.
-	* vmap.WriteToDisk("./Some/Path.txt", errorMsgOut);
+	* VMap::WriteToDisk(vmap, "./Some/Path.txt", errorMsgOut);
 	* VMap vmap = VMap::ReadFromDisk("./Some/Path.txt", errorMsgOut);
 	* 
 	* Supported types:
@@ -142,7 +142,7 @@ namespace RS
 			m_Type = Type::TABLE;
 		}
 
-		bool WriteToDisk(const std::filesystem::path path, std::optional<std::string>& errorMsg, bool compact = false)
+		static bool WriteToDisk(const VMap& vmap, const std::filesystem::path path, std::optional<std::string>& errorMsg, bool compact = false)
 		{
 			errorMsg.reset();
 			if (!std::filesystem::exists(path.parent_path()))
@@ -157,7 +157,7 @@ namespace RS
 			stream << m_sVersion << "\n";
 			stream << (compact ? "true" : "false") << "\n";
 			uint lineNumber = 2;
-			if (!WriteToStream(stream, *this, 0, compact, errorMsg, lineNumber))
+			if (!WriteToStream(stream, vmap, 0, compact, errorMsg, lineNumber))
 				stream.clear();
 			stream.close();
 			return true;
@@ -282,7 +282,7 @@ namespace RS
 			return *this;
 		}
 
-		void AddToLine(std::string& line, uint indent, const std::string& value)
+		static void AddToLine(std::string& line, uint indent, const std::string& value)
 		{
 			std::string indentStr(indent, '\t');
 			std::stringstream ss;
@@ -290,21 +290,21 @@ namespace RS
 			line += ss.str();
 		}
 
-		void AddToLine(std::string& line, const bool& value)
+		static void AddToLine(std::string& line, const bool& value)
 		{
 			std::stringstream ss;
 			ss << (value ? "true" : "false");
 			line += ss.str();
 		}
 
-		void AddToLine(std::string& line, const auto& value)
+		static void AddToLine(std::string& line, const auto& value)
 		{
 			std::stringstream ss;
 			ss << value;
 			line += ss.str();
 		}
 
-		bool WriteToStream(std::ofstream& stream, const VMap& vmap, uint indentationIndex, bool compact, std::optional<std::string>& errorMsg, uint& lineNumber)
+		static bool WriteToStream(std::ofstream& stream, const VMap& vmap, uint indentationIndex, bool compact, std::optional<std::string>& errorMsg, uint& lineNumber)
 		{
 			auto PushLine = [&stream, &indentationIndex, compact, &lineNumber](uint indent, const auto& value) {
 				if (compact) stream << value << "\n";
