@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     vmap = RS::VMap::ReadFromDisk("./Assets/Config/PresistentData.cfg", errorMsg);
 
     int version = vmap["Version"];
-    int width = vmap["Display"]["Width"];
+    int width = vmap["Display/Width"];
     RS::VArray arr = vmap["Array"];
     auto data = arr[1];
 

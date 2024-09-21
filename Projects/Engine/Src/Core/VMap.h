@@ -212,15 +212,43 @@ namespace RS
 		VMap& At(const std::string& key, bool isElement)
 		{
 			RS_ASSERT(m_Type == Type::TABLE, "VMap must be an array!");
-			VMap& vmap = m_Data[key];
+
+			size_t p = key.find_first_of('/');
+			if (p == std::string::npos)
+			{
+				VMap& vmap = m_Data[key];
+				if (isElement) vmap.m_Type = Type::ELEMENT;
+				vmap.m_Key = key;
+				return vmap;
+			}
+
+			std::string firstKey = key.substr(0, p);
+			VMap& vmap = m_Data.at(firstKey);
 			if (isElement) vmap.m_Type = Type::ELEMENT;
 			vmap.m_Key = key;
+			if (key.size() > (p + 1))
+			{
+				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
+				return vmap.At(restOfTheKeys, isElement);
+			}
 			return vmap;
 		}
 		const VMap& At(const std::string& key) const
 		{
 			RS_ASSERT(m_Type == Type::TABLE, "VMap must be an array!");
-			return m_Data.at(key);
+
+			size_t p = key.find_first_of('/');
+			if (p == std::string::npos)
+				return m_Data.at(key);
+
+			std::string firstKey = key.substr(0, p);
+			const VMap& vmap = m_Data.at(firstKey);
+			if (key.size() > (p+1))
+			{
+				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
+				return vmap.At(restOfTheKeys);
+			}
+			return vmap;
 		}
 
 		void Init(std::initializer_list<VElement> list)
