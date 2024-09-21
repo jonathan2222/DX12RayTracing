@@ -14,6 +14,7 @@
 using namespace RS;
 
 std::shared_ptr<spdlog::logger> Logger::s_MultiLogger;
+std::vector<Logger::Listener> Logger::s_Callbacks;
 
 #if defined(RS_PLATFORM_WINDOWS) && defined(LOG_ENABLE_WINDOWS_DEBUGGER_LOGGING)
 class FilePathFormatter : public spdlog::custom_flag_formatter
@@ -32,6 +33,32 @@ public:
 };
 #endif
 
+
+class rs_hook_sink : public spdlog::sinks::base_sink<std::mutex>
+{
+public:
+    rs_hook_sink() = default;
+
+protected:
+    void sink_it_(const spdlog::details::log_msg& msg) override
+    {
+        spdlog::memory_buf_t formatted;
+        spdlog::sinks::base_sink<std::mutex>::formatter_->format(msg, formatted);
+        formatted.push_back('\0'); // add a null terminator for OutputDebugString
+#    if defined(SPDLOG_WCHAR_TO_UTF8_SUPPORT)
+        //wmemory_buf_t wformatted;
+        //details::os::utf8_to_wstrbuf(string_view_t(formatted.data(), formatted.size()), wformatted);
+        //OutputDebugStringW(wformatted.data());
+#    else
+        std::lock_guard<std::mutex> lock(Logger::s_LoggerMutex);
+        for (Logger::Listener listener : Logger::s_Callbacks)
+            listener(formatted.data(), msg.level);
+#    endif
+    }
+
+    void flush_() override {}
+};
+
 void Logger::Init()
 {
     spdlog::set_level(spdlog::level::trace);
@@ -46,6 +73,10 @@ void Logger::Init()
     msvcSink->set_level(spdlog::level::trace);
     msvcSink->set_formatter(std::move(formatter));
 #endif
+
+    auto rsHookSink = std::make_shared<rs_hook_sink>();
+    rsHookSink->set_level(spdlog::level::trace);
+    rsHookSink->set_pattern("%^[%T.%e] [%s:%#] %v%$");
 
     auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     consoleSink->set_level(spdlog::level::trace);
@@ -62,10 +93,11 @@ void Logger::Init()
     s_MultiLogger = std::shared_ptr<spdlog::logger>(new spdlog::logger("MultiLogger",
         {
             consoleSink,
-            fileSink
+            fileSink,
 #if defined(RS_PLATFORM_WINDOWS) && defined(LOG_ENABLE_WINDOWS_DEBUGGER_LOGGING)
-            ,msvcSink
+            msvcSink,
 #endif
+            rsHookSink
         }));
     s_MultiLogger->set_level(spdlog::level::trace);
     spdlog::register_logger(s_MultiLogger);

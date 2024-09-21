@@ -13,11 +13,14 @@
 
 #include <memory>
 
+class rs_hook_sink;
 namespace RS
 {
 	class Logger
 	{
 	public:
+		using Listener = std::function<void(const std::string&, spdlog::level::level_enum)>;
+
 		static void Init();
 
 		static std::shared_ptr<spdlog::logger> GetMultiLogger()
@@ -27,8 +30,17 @@ namespace RS
 
 		static void Flush();
 
+		static void AddListener(Listener listener)
+		{
+			std::lock_guard<std::mutex> lock(s_LoggerMutex);
+			s_Callbacks.push_back(listener);
+		}
+
 	private:
 		static std::shared_ptr<spdlog::logger> s_MultiLogger;
+		static std::vector<Listener> s_Callbacks;
+		inline static std::mutex s_LoggerMutex;
+		friend class rs_hook_sink;
 	};
 }
 

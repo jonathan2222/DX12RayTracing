@@ -249,6 +249,7 @@ void Input::UpdateKeyInfo(KeyInfo& keyInfo, float dt)
 
 void Input::KeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int mods)
 {
+    //ImGui::InsertNotification({ ImGuiToastType_Info, "Called Key {}", key });
     Key rsKey = (Key)key;
     RS_UNREFERENCED_VARIABLE(wnd);
     RS_UNREFERENCED_VARIABLE(scancode);
@@ -261,6 +262,7 @@ void Input::KeyCallback(GLFWwindow* wnd, int key, int scancode, int action, int 
         if (action == GLFW_RELEASE)
             s_KeyMap[rsKey].State = KeyState::FIRST_RELEASED;
         s_KeyMap[rsKey].Mods = mods;
+        //ImGui::InsertNotification({ ImGuiToastType_Info, "Listening to key {} with new state {}", key, KeyStateToStr(s_KeyMap[rsKey].State).c_str()});
     }
 }
 

@@ -49,6 +49,20 @@ int main(int argc, char* argv[])
         );
     };
 
+    RS::Logger::AddListener([](const std::string& msg, spdlog::level::level_enum level)
+        {
+            //if (level == spdlog::level::level_enum::debug)
+            //    ImGui::InsertNotification({ ImGuiToastType_Debug, msg.c_str() });
+            if (level == spdlog::level::level_enum::info)
+                ImGui::InsertNotification({ ImGuiToastType_Info, msg.c_str()});
+            if (level == spdlog::level::level_enum::warn)
+                ImGui::InsertNotification({ ImGuiToastType_Warning, msg.c_str() });
+            if (level == spdlog::level::level_enum::err)
+                ImGui::InsertNotification({ ImGuiToastType_Error, msg.c_str() });
+            if (level == spdlog::level::level_enum::critical)
+                ImGui::InsertNotification({ ImGuiToastType_Critical, msg.c_str() });
+        });
+
     pEngineLook->Init();
     RSE::Editor::Get()->Init();
     RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
