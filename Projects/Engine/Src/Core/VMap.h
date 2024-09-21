@@ -32,6 +32,7 @@ namespace RS
 	* uint version = vmap["Version"];
 	* int width = vmap["Options/Width"];
 	* float element = vmap["Child"]["SomeData"][2];
+	* bool fullscreen = vmap.Fetch("Options/Fullscreen", true);
 	* 
 	* And one can read from disk and write to it.
 	* VMap::WriteToDisk(vmap, "./Some/Path.txt", errorMsgOut);
@@ -59,6 +60,7 @@ namespace RS
 			VElement(uint32 x) : m_Type(Type::UINT), m_UInt32(x) {};
 			VElement(float x) : m_Type(Type::FLOAT), m_Float(x) {};
 			VElement(const std::string& x) : m_Int32(0), m_Type(Type::STRING), m_String(x) {};
+			VElement(const char* x) : m_Int32(0), m_Type(Type::STRING), m_String(x) {};
 			VElement(const VElement& other) : m_Int32(other.m_Int32), m_Type(other.m_Type), m_String(other.m_String) {}
 			VElement& operator=(const VElement& other) { return Copy(other); }
 			VElement& operator=(VElement&& other) noexcept { Move(std::move(other)); return *this; }
@@ -78,6 +80,22 @@ namespace RS
 			operator float() const				{ RS_ASSERT_NO_MSG(m_Type == Type::FLOAT); return m_Float; }
 			operator std::string&()				{ RS_ASSERT_NO_MSG(m_Type == Type::STRING); return m_String; }
 			operator const std::string&() const	{ RS_ASSERT_NO_MSG(m_Type == Type::STRING); return m_String; }
+
+			template<typename T>
+			bool IsOfType()
+			{
+				switch (m_Type)
+				{
+				case Type::BOOL: return std::is_same<T, bool>::value;
+				case Type::INT: return std::is_same<T, int32>::value;
+				case Type::UINT: return std::is_same<T, uint32>::value;
+				case Type::FLOAT: return std::is_same<T, float>::value;
+				case Type::STRING: return std::is_same<T, std::string>::value;
+				default:
+					break;
+				}
+				return false;
+			}
 
 			Type m_Type = Type::UNKNOWN;
 			union
@@ -135,11 +153,11 @@ namespace RS
 		operator const std::string&() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 
 		// Index operators:
-		VMap& operator[](uint index) { return At(std::format("{}", index), true); }
+		VMap& operator[](uint index) { return Get(std::format("{}", index), true); }
 		const VMap& operator[](uint index) const { return At(std::format("{}", index)); }
-		VMap& operator[](const char* key) { return At(key, false); }
+		VMap& operator[](const char* key) { return Get(key, false); }
 		const VMap& operator[](const char* key) const { return At(key); }
-		VMap& operator[](const std::string& key) { return At(key, false); }
+		VMap& operator[](const std::string& key) { return Get(key, false); }
 		const VMap& operator[](const std::string& key) const { return At(key); }
 
 		void Clear()
@@ -149,18 +167,100 @@ namespace RS
 			m_Type = Type::TABLE;
 		}
 
+		VMap* GetIfExists(const std::string& key)
+		{
+			size_t p = key.find_first_of('/');
+			if (p == std::string::npos)
+			{
+				auto it = m_Data.find(key);
+				if (it != m_Data.end())
+					return &it->second;
+				return nullptr;
+			}
+
+			std::string firstKey = key.substr(0, p);
+			auto it = m_Data.find(firstKey);
+			if (it == m_Data.end())
+				return nullptr;
+			VMap& vmap = it->second;
+			if (key.size() > (p + 1))
+			{
+				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
+				return vmap.GetIfExists(restOfTheKeys);
+			}
+			return &vmap;
+		}
+
+		const VMap* GetIfExists(const std::string& key) const
+		{
+			size_t p = key.find_first_of('/');
+			if (p == std::string::npos)
+			{
+				auto it = m_Data.find(key);
+				if (it != m_Data.end())
+					return &it->second;
+				return nullptr;
+			}
+
+			std::string firstKey = key.substr(0, p);
+			auto it = m_Data.find(firstKey);
+			if (it == m_Data.end())
+				return nullptr;
+			const VMap& vmap = it->second;
+			if (key.size() > (p + 1))
+			{
+				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
+				return vmap.GetIfExists(restOfTheKeys);
+			}
+			return &vmap;
+		}
+
+		bool HasKey(const std::string& key) const
+		{
+			return GetIfExists(key) != nullptr;
+		}
+
+		VMap& Fetch(const std::string& key, const VElement& defaultValue)
+		{
+			VMap* vmap = GetIfExists(key);
+			if (vmap) return *vmap;
+
+			vmap = &Get(key, true);
+			*vmap = defaultValue;
+			return *vmap;
+		}
+
+		VMap& Fetch(const std::string& key, const VMap& defaultValue)
+		{
+			VMap* vmap = GetIfExists(key);
+			if (vmap) return *vmap;
+
+			vmap = &Get(key, defaultValue.m_Type == Type::ELEMENT);
+			*vmap = defaultValue;
+			return *vmap;
+		}
+
+		template<typename T>
+		bool IsOfType()
+		{
+			if (m_Type == Type::TABLE)
+				return false;
+			return m_ElementData.IsOfType<T>();
+		}
+
 		static bool WriteToDisk(const VMap& vmap, const std::filesystem::path path, std::optional<std::string>& errorMsg, bool compact = false)
 		{
 			errorMsg.reset();
 			if (!std::filesystem::exists(path.parent_path()))
 				std::filesystem::create_directories(path.parent_path());
 
-			std::ofstream stream(path, std::ios::out);
+			std::ofstream stream(path, std::ios::out | std::ios::beg);
 			if (stream.is_open() == false)
 			{
 				errorMsg = std::format("Could not open file {}.", path.string());
 				return false;
 			}
+			stream.clear();
 			stream << m_sVersion << "\n";
 			stream << (compact ? "true" : "false") << "\n";
 			uint lineNumber = 2;
@@ -216,10 +316,8 @@ namespace RS
 		}
 
 	private:
-		VMap& At(const std::string& key, bool isElement)
+		VMap& Get(const std::string& key, bool isElement)
 		{
-			RS_ASSERT(m_Type == Type::TABLE, "VMap must be an array!");
-
 			size_t p = key.find_first_of('/');
 			if (p == std::string::npos)
 			{
@@ -230,20 +328,17 @@ namespace RS
 			}
 
 			std::string firstKey = key.substr(0, p);
-			VMap& vmap = m_Data.at(firstKey);
-			if (isElement) vmap.m_Type = Type::ELEMENT;
+			VMap& vmap = m_Data[firstKey];
 			vmap.m_Key = key;
 			if (key.size() > (p + 1))
 			{
 				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
-				return vmap.At(restOfTheKeys, isElement);
+				return vmap.Get(restOfTheKeys, isElement);
 			}
 			return vmap;
 		}
 		const VMap& At(const std::string& key) const
 		{
-			RS_ASSERT(m_Type == Type::TABLE, "VMap must be an array!");
-
 			size_t p = key.find_first_of('/');
 			if (p == std::string::npos)
 				return m_Data.at(key);
@@ -289,11 +384,10 @@ namespace RS
 			return *this;
 		}
 
-		static void AddToLine(std::string& line, uint indent, const std::string& value)
+		static void AddToLine(std::string& line, const std::string& value)
 		{
-			std::string indentStr(indent, '\t');
 			std::stringstream ss;
-			ss << indentStr << "\"" << value << "\"";
+			ss << "\"" << value << "\"";
 			line += ss.str();
 		}
 
@@ -339,7 +433,7 @@ namespace RS
 					case VElement::Type::INT: AddToLine(line, vmap.m_ElementData.m_Int32); break;
 					case VElement::Type::UINT: AddToLine(line, vmap.m_ElementData.m_UInt32); break;
 					case VElement::Type::FLOAT: AddToLine(line, vmap.m_ElementData.m_Float); break;
-					case VElement::Type::STRING: AddToLine(line, 1, vmap.m_ElementData.m_String); break;
+					case VElement::Type::STRING: AddToLine(line, vmap.m_ElementData.m_String); break;
 					default:
 					{
 						AddToLine(line, '_');
