@@ -49,7 +49,7 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 
 #define RS_LOG_FILE_PATH "../../Debug/Tmp/"
 #define RS_ASSETS_PATH "../../Assets/"
-#define RS_CONFIG_FILE_PATH RS_ASSETS_PATH "Config/EngineConfig.json"
+#define RS_CONFIG_FILE_PATH RS_ASSETS_PATH "Config/EngineConfig.cfg"
 #define RS_SHADER_PATH RS_ASSETS_PATH "Shaders/"
 #define RS_TEXTURE_PATH RS_ASSETS_PATH "Textures/"
 #define RS_MODEL_PATH RS_ASSETS_PATH "Models/"

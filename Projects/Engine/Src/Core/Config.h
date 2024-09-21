@@ -1,15 +1,16 @@
 #pragma once
-
+/*
 #pragma warning( push )
 #pragma warning( disable : 26444 )
 #pragma warning( disable : 26451 )
 #pragma warning( disable : 28020 )
 #pragma warning( disable : 4100)
 #include <nlohmann/json.hpp>
-
+*/
 #include "Defines.h"
 
-using json = nlohmann::json;
+//using json = nlohmann::json;
+#include "Core/VMap.h"
 
 namespace RS
 {
@@ -21,34 +22,18 @@ namespace RS
 		static Config* Get();
 
 		void Init(const std::string& fileName);
+		void Destroy();
 
 		template<typename T>
 		T Fetch(const std::string& name, T defaultValue);
 
-	private:
-		enum class ConfigType { STRING = 0, INT, FLOAT, BOOL };
-		const std::string ConfigTypeStr[4] = { "STRING", "INT", "FLOAT", "BOOL" };
-		struct ConfigData
-		{
-			ConfigType type;
-			union
-			{
-				char str[256];
-				int32 i;
-				float f;
-				bool b;
-			};
-		};
+		inline static VMap Map = {};
 
-		void ReadFile(const std::string& fileName);
-		void Load(const std::string& str, json& j);
-
-		template<typename IteratorType, typename T>
-		bool Validate(IteratorType& it, const std::string& name, ConfigType type, T defaultValue);
+		void Load();
+		void Save();
 
 	private:
-		std::unordered_map<std::string, ConfigData> m_map;
-
+		std::string m_FilePath;
 	};
 
 	template<typename T>
@@ -58,73 +43,90 @@ namespace RS
 		return (T)0;
 	}
 
-	template<typename IteratorType, typename T>
-	inline bool Config::Validate(IteratorType& it, const std::string& name, ConfigType type, T defaultValue)
-	{
-		bool succeeded = true;
-		if (it == m_map.end())
-		{
-			succeeded = false;
-		}
-		else if (it->second.type != type)
-		{
-			LOG_WARNING("Config entry is not of type {}!", ConfigTypeStr[(size_t)type]);
-			succeeded = false;
-		}
-
-		if (!succeeded)
-		{
-			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
-		}
-
-		return succeeded;
-	}
-
 	template<>
 	inline int32 Config::Fetch(const std::string& name, int32 defaultValue)
 	{
-		std::unordered_map<std::string, ConfigData>::iterator it = m_map.find(name);
-		if (Validate(it, name, ConfigType::INT, defaultValue))
-			return it->second.i;
-		else
+		VMap* data = Map.GetIfExists(name);
+		if (data == nullptr)
+		{
+			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
 			return defaultValue;
+		}
+		if (!data->IsOfType<int32>())
+		{
+			LOG_WARNING("Config entry is not of type int32! Using default value: {}", defaultValue);
+			return defaultValue;
+		}
+		return *data;
 	}
 
 	template<>
 	inline uint32 Config::Fetch(const std::string& name, uint32 defaultValue)
 	{
-		return (uint32)Fetch<int32>(name, (int32)defaultValue);
+		VMap* data = Map.GetIfExists(name);
+		if (data == nullptr)
+		{
+			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
+			return defaultValue;
+		}
+		if (!data->IsOfType<uint32>())
+		{
+			LOG_WARNING("Config entry is not of type uint32! Using default value: {}", defaultValue);
+			return defaultValue;
+		}
+		return *data;
 	}
 
 	template<>
 	inline float Config::Fetch(const std::string& name, float defaultValue)
 	{
-		std::unordered_map<std::string, ConfigData>::iterator it = m_map.find(name);
-		if (Validate(it, name, ConfigType::FLOAT, defaultValue))
-			return it->second.f;
-		else
+		VMap* data = Map.GetIfExists(name);
+		if (data == nullptr)
+		{
+			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
 			return defaultValue;
+		}
+		if (!data->IsOfType<float>())
+		{
+			LOG_WARNING("Config entry is not of type float! Using default value: {}", defaultValue);
+			return defaultValue;
+		}
+		return *data;
 	}
 
 	template<>
 	inline std::string Config::Fetch(const std::string& name, std::string defaultValue)
 	{
-		std::unordered_map<std::string, ConfigData>::iterator it = m_map.find(name);
-		if (Validate(it, name, ConfigType::STRING, defaultValue))
-			return std::string(it->second.str);
-		else
+		VMap* data = Map.GetIfExists(name);
+		if (data == nullptr)
+		{
+			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
 			return defaultValue;
+		}
+		if (!data->IsOfType<std::string>())
+		{
+			LOG_WARNING("Config entry is not of type string! Using default value: {}", defaultValue);
+			return defaultValue;
+		}
+		return *data;
 	}
 
 	template<>
 	inline bool Config::Fetch(const std::string& name, bool defaultValue)
 	{
-		std::unordered_map<std::string, ConfigData>::iterator it = m_map.find(name);
-		if (Validate(it, name, ConfigType::BOOL, defaultValue))
-			return it->second.b;
-		else
+		VMap* data = Map.GetIfExists(name);
+		if (data == nullptr)
+		{
+			LOG_WARNING("Did not find \"{0}\" in config map! Using default value: {1}", name.c_str(), defaultValue);
 			return defaultValue;
+		}
+		if (!data->IsOfType<bool>())
+		{
+			LOG_WARNING("Config entry is not of type bool! Using default value: {}", defaultValue);
+			return defaultValue;
+		}
+		return *data;
 	}
 }
 
-#pragma warning( pop )
+//#pragma warning( pop )
