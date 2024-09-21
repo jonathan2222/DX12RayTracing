@@ -30,7 +30,7 @@ namespace RS
 	* 
 	* One can also read from it the same way:
 	* float version = vmap["Version"];
-	* int width = vmap["Options"]["Width"];
+	* int width = vmap["Options/Width"];
 	* int element = vmap["Child"]["SomeData"][2];
 	* 
 	* And one can read from disk and write to it.
