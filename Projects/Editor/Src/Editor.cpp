@@ -219,11 +219,13 @@ void RSE::Editor::RenderToastDemo()
 
     if (ImGui::Button("No dismiss"))
     {
-        ImGui::InsertNotification({ ImGuiToastType_Error, IMGUI_NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF }).bind([]()
+        ImGuiToast toast = { ImGuiToastType_Error, IMGUI_NOTIFY_NO_DISMISS, "Test 0x%X", 0xDEADBEEF };
+        toast.bind([]()
             {
                 ImGui::InsertNotification({ ImGuiToastType_Info, "Signaled" });
             }
         ).dismissOnSignal();
+        ImGui::InsertNotification(toast);
     }
 
     if (ImGui::BeginPopupContextWindow())

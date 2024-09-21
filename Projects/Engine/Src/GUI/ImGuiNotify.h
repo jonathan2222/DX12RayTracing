@@ -109,6 +109,19 @@ public:
 		this->callback = other.callback; // Lambda got corrupted. Is it because we are in another thread?
 	}
 
+	IMGUI_NOTIFY_INLINE void Update(const ImGuiToast& other)
+	{
+		this->type = other.type;
+		this->dismiss_time = other.dismiss_time;
+		this->flags = other.flags;
+		this->highlighted = other.highlighted;
+		assert(sizeof(this->title) == sizeof(other.title));
+		assert(sizeof(this->content) == sizeof(other.content));
+		memcpy(this->title, other.title, sizeof(this->title));
+		memcpy(this->content, other.content, sizeof(this->content));
+		// We do not update the id, creation_time and callback
+	}
+
 private:
 	ImGuiToastType				type = ImGuiToastType_None;
 	char						title[IMGUI_NOTIFY_MAX_MSG_LENGTH];
@@ -418,12 +431,11 @@ namespace ImGui
 	/// <summary>
 	/// Insert a new toast in the list
 	/// </summary>
-	IMGUI_NOTIFY_INLINE ImGuiToast& InsertNotification(const ImGuiToast& toast)
+	IMGUI_NOTIFY_INLINE void InsertNotification(const ImGuiToast& toast)
 	{
 		std::lock_guard<std::mutex> lock(notificationsMutex);
 		notifications.insert(std::pair<uint64, ImGuiToast>(toast.get_id(), toast));
 		_Internal::hasToastNotifications = true;
-		return notifications[toast.get_id()];
 	}
 
 	/// <summary>
@@ -623,7 +635,8 @@ namespace ImGui
 			if (is_dirty)
 			{
 				std::lock_guard<std::mutex> lock(notificationsMutex);
-				memcpy(&notifications[current_toast->get_id()], current_toast, sizeof(ImGuiToast));
+				notifications[current_toast->get_id()].Update(*current_toast);
+				//memcpy(&notifications[current_toast->get_id()], current_toast, sizeof(ImGuiToast));
 			}
 		}
 
