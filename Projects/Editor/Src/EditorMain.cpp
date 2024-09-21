@@ -17,9 +17,9 @@ int main(int argc, char* argv[])
     vmap["Array"] = { 1, 2, 3, 4 };
 
     std::optional<std::string> errorMsg;
-    RS::VMap::WriteToDisk(vmap, "./Assets/Config/PresistentData.cfg", errorMsg);
+    RS::VMap::WriteToDisk(vmap, "./Assets/Config/PersistentData.cfg", errorMsg);
     vmap.Clear();
-    vmap = RS::VMap::ReadFromDisk("./Assets/Config/PresistentData.cfg", errorMsg);
+    vmap = RS::VMap::ReadFromDisk("./Assets/Config/PersistentData.cfg", errorMsg);
 
     int version = vmap["Version"];
     int width = vmap["Display/Width"];
