@@ -17,21 +17,21 @@ namespace RS
 	* VMap is a structure that holds variant data and can group them.
 	* Example:
 	* VMap vmap;
-	* vmap["Version"] = 1.0;
+	* vmap["Version"] = 24u;
 	* vmap["Options"]["Fullscreen"] = false;
 	* vmap["Options"]["Width"] = 1920;
 	* vmap["Options"]["Height"] = 1080;
 	* vmap["Title"] = "Example App";
 	* 
 	* VMap subMap;
-	* subMap["SomeData"] = { 1, 2, 3, 4 };
+	* subMap["SomeData"] = { 1.f, 2.f, 3.f, 4.f };
 	* subMap["OtherData"] = { true, 0.12f, "Hej" };
 	* vmap["Child"] = subMap;
 	* 
 	* One can also read from it the same way:
-	* float version = vmap["Version"];
+	* uint version = vmap["Version"];
 	* int width = vmap["Options/Width"];
-	* int element = vmap["Child"]["SomeData"][2];
+	* float element = vmap["Child"]["SomeData"][2];
 	* 
 	* And one can read from disk and write to it.
 	* VMap::WriteToDisk(vmap, "./Some/Path.txt", errorMsgOut);
@@ -41,6 +41,7 @@ namespace RS
 	*	- bool
 	*	- float
 	*	- int
+	*	- uint
 	*	- string
 	*	- array (is just another VMap with TABLE as its type)
 	*/
@@ -51,10 +52,11 @@ namespace RS
 	public:
 		struct VElement
 		{
-			enum class Type { UNKNOWN = 0, BOOL, INT, FLOAT, STRING };
+			enum class Type { UNKNOWN = 0, BOOL, INT, UINT, FLOAT, STRING };
 			VElement() : m_Int32(0u) {}
 			VElement(bool x) : m_Type(Type::BOOL), m_Bool(x) {};
 			VElement(int32 x) : m_Type(Type::INT), m_Int32(x) {};
+			VElement(uint32 x) : m_Type(Type::UINT), m_UInt32(x) {};
 			VElement(float x) : m_Type(Type::FLOAT), m_Float(x) {};
 			VElement(const std::string& x) : m_Int32(0), m_Type(Type::STRING), m_String(x) {};
 			VElement(const VElement& other) : m_Int32(other.m_Int32), m_Type(other.m_Type), m_String(other.m_String) {}
@@ -70,6 +72,8 @@ namespace RS
 			operator bool() const				{ RS_ASSERT_NO_MSG(m_Type == Type::BOOL); return m_Bool; }
 			operator int32&()					{ RS_ASSERT_NO_MSG(m_Type == Type::INT); return m_Int32; }
 			operator int32() const				{ RS_ASSERT_NO_MSG(m_Type == Type::INT); return m_Int32; }
+			operator uint32&()					{ RS_ASSERT_NO_MSG(m_Type == Type::UINT); return m_UInt32; }
+			operator uint32() const				{ RS_ASSERT_NO_MSG(m_Type == Type::UINT); return m_UInt32; }
 			operator float&()					{ RS_ASSERT_NO_MSG(m_Type == Type::FLOAT); return m_Float; }
 			operator float() const				{ RS_ASSERT_NO_MSG(m_Type == Type::FLOAT); return m_Float; }
 			operator std::string&()				{ RS_ASSERT_NO_MSG(m_Type == Type::STRING); return m_String; }
@@ -80,6 +84,7 @@ namespace RS
 			{
 				bool		m_Bool;
 				int32		m_Int32;
+				uint32		m_UInt32;
 				float		m_Float;
 			};
 			std::string m_String;
@@ -122,6 +127,8 @@ namespace RS
 		operator bool() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 		operator int32&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 		operator int32() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator uint32& () { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator uint32() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 		operator float&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 		operator float() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
 		operator std::string&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
@@ -330,6 +337,7 @@ namespace RS
 					{
 					case VElement::Type::BOOL: AddToLine(line, vmap.m_ElementData.m_Bool); break;
 					case VElement::Type::INT: AddToLine(line, vmap.m_ElementData.m_Int32); break;
+					case VElement::Type::UINT: AddToLine(line, vmap.m_ElementData.m_UInt32); break;
 					case VElement::Type::FLOAT: AddToLine(line, vmap.m_ElementData.m_Float); break;
 					case VElement::Type::STRING: AddToLine(line, 1, vmap.m_ElementData.m_String); break;
 					default:
@@ -408,6 +416,12 @@ namespace RS
 							vmap.m_ElementData.m_Int32 = std::stoi(tmp);
 							break;
 						}
+						case RS::VMap::VElement::Type::UINT:
+						{
+							vmap.m_ElementData.m_Type = RS::VMap::VElement::Type::UINT;
+							vmap.m_ElementData.m_UInt32 = (uint32)std::stoull(tmp);
+							break;
+						}
 						case RS::VMap::VElement::Type::FLOAT:
 						{
 							vmap.m_ElementData.m_Type = RS::VMap::VElement::Type::FLOAT;
@@ -480,6 +494,7 @@ namespace RS
 			{
 			case RS::VMap::VElement::Type::BOOL: return "B";
 			case RS::VMap::VElement::Type::INT: return "I";
+			case RS::VMap::VElement::Type::UINT: return "U";
 			case RS::VMap::VElement::Type::FLOAT: return "F";
 			case RS::VMap::VElement::Type::STRING: return "S";
 			case RS::VMap::VElement::Type::UNKNOWN:
@@ -499,6 +514,7 @@ namespace RS
 			if (str.empty()) return VElement::Type::UNKNOWN;
 			if (str[0] == 'B') return VElement::Type::BOOL;
 			if (str[0] == 'I') return VElement::Type::INT;
+			if (str[0] == 'U') return VElement::Type::UINT;
 			if (str[0] == 'F') return VElement::Type::FLOAT;
 			if (str[0] == 'S') return VElement::Type::STRING;
 			return VElement::Type::UNKNOWN;
