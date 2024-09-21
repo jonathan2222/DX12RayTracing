@@ -12,6 +12,16 @@
 
 #define FRAME_BUFFER_COUNT 3
 
+// Concepts
+template <typename T>
+concept NumberType = std::unsigned_integral<T> || std::integral<T> || std::floating_point<T>;
+template<typename T>
+concept ForceUIntType = std::unsigned_integral<T>;
+template<typename T>
+concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
+	{ t > 0 } -> std::convertible_to<bool>;
+};
+
 #define RS_CONFIG_DEVELOPMENT defined(RS_CONFIG_DEBUG) || defined(RS_CONFIG_RELEASE)
 #include "Utils/Logger.h"
 
@@ -97,11 +107,11 @@ typedef uint64_t	uint64;
 *	
 *	All functions which makes it work are hidden inside the nested _Internal struct.
 * */
-#define RS_BEGIN_BITFLAGS(type, field)																						\
-    typedef type field##s;																								\
+#define RS_BEGIN_BITFLAGS(type, field)																					\
+	typedef type field##s;																								\
 	struct field {																										\
 		struct _Internal {																								\
-			inline static constexpr char* fieldName = #field;															\
+			inline static constexpr const char* fieldName = #field;														\
 			inline static constexpr bool containsFlag = RS::Utils::EndsWith(fieldName, "Flag");							\
 			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
 			typedef type BitFieldType;																					\
@@ -127,10 +137,10 @@ typedef uint64_t	uint64;
 * Same interface as bitflags but does not restrict to a power of 2.
 */
 #define RS_BEGIN_FLAGS(type, field)	\
-    typedef type field##s;			\
+	typedef type field##s;			\
 	struct field {					\
 		struct _Internal {			\
-			inline static constexpr char* fieldName = #field;															\
+			inline static constexpr const char* fieldName = #field;														\
 			inline static constexpr bool containsFlag = RS::Utils::EndsWith(fieldName, "Flag");							\
 			static_assert(containsFlag, "Flag name does not contain the last string 'Flag', example field = 'MyFlag'"); \
 			typedef type FlagType;																						\

@@ -148,14 +148,14 @@ public:
 	template<typename... Args>
 	IMGUI_NOTIFY_INLINE auto set_title(const char* format, Args&&...args) -> void
 	{
-		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		std::string str = std::vformat(format, std::make_format_args(args...));
 		strcpy(this->title, str.data());
 	}
 
 	template<typename... Args>
 	IMGUI_NOTIFY_INLINE auto set_content(const char* format, Args&&...args) -> void
 	{
-		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		std::string str = std::vformat(format, std::make_format_args(args...));
 		strcpy(this->content, str.data());
 	}
 
@@ -168,7 +168,7 @@ public:
 
 	IMGUI_NOTIFY_INLINE auto get_title() -> char* { return this->title; };
 
-	IMGUI_NOTIFY_INLINE auto get_default_title() -> char*
+	IMGUI_NOTIFY_INLINE auto get_default_title() -> const char*
 	{
 		if (!strlen(this->title))
 		{
@@ -177,17 +177,17 @@ public:
 			case ImGuiToastType_None:
 				return NULL;
 			case ImGuiToastType_Success:
-				return "Success";
+				return reinterpret_cast<const char*>("Success");
 			case ImGuiToastType_Warning:
-				return "Warning";
+				return reinterpret_cast<const char*>("Warning");
 			case ImGuiToastType_Error:
-				return "Error";
+				return reinterpret_cast<const char*>("Error");
 			case ImGuiToastType_Critical:
-				return "Critical";
+				return reinterpret_cast<const char*>("Critical");
 			case ImGuiToastType_Info:
-				return "Info";
+				return reinterpret_cast<const char*>("Info");
 			case ImGuiToastType_Debug:
-				return "Debug";
+				return reinterpret_cast<const char*>("Debug");
 			}
 		}
 
@@ -224,17 +224,17 @@ public:
 		case ImGuiToastType_None:
 			return NULL;
 		case ImGuiToastType_Success:
-			return u8"\uF058";
+			return reinterpret_cast<const char*>(u8"\uF058");
 		case ImGuiToastType_Warning:
-			return u8"\uF06A";
+			return reinterpret_cast<const char*>(u8"\uF06A");
 		case ImGuiToastType_Error:
-			return u8"\uF057";
+			return reinterpret_cast<const char*>(u8"\uF057");
 		case ImGuiToastType_Critical:
-			return u8"\uF05B";
+			return reinterpret_cast<const char*>(u8"\uF05B");
 		case ImGuiToastType_Info:
-			return u8"\uF059";
+			return reinterpret_cast<const char*>(u8"\uF059");
 		case ImGuiToastType_Debug:
-			return u8"\uF188";// u8"\uE490";
+			return reinterpret_cast<const char*>(u8"\uF188");// u8"\uE490";
 		}
 	}
 

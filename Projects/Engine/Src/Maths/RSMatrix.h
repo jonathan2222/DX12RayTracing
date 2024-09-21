@@ -77,6 +77,9 @@ namespace RS
 		Type& At(uint32 row, uint32 col);
 		Type AtConst(uint32 row, uint32 col) const;
 
+		RS::Vec<Type, Col> GetRow(uint32 index) const;
+		RS::Vec<Type, Row> GetCol(uint32 index) const;
+
 		template<typename MType>
 		void Copy(const Mat<MType, Row, Col>& other);
 		void Move(const Mat&& other);
@@ -113,8 +116,10 @@ namespace RS
 	template<typename Type, uint32 Row, uint32 Col>
 	inline Mat<Type, Row, Col>::Mat(const std::initializer_list<Type>& list)
 	{
+		RS_ASSERT(list.size() == Row * Col, "Size does not match the size of the matrix!");
+
 		uint32 index = 0;
-		for (std::initializer_list<Type>::iterator it = list.begin(); it != list.end(); it++)
+		for (auto it = list.begin(); it != list.end(); it++)
 		{
 			uint32 col = index % Col;
 			uint32 row = index / Col;
@@ -164,7 +169,7 @@ namespace RS
 			return false;
 
 		uint32 index = 0;
-		for (std::initializer_list<Type>::iterator it = list.begin(); it != list.end(); it++)
+		for (auto it = list.begin(); it != list.end(); it++)
 		{
 			uint32 col = index % Col;
 			uint32 row = index / Col;
@@ -196,7 +201,7 @@ namespace RS
 		RS_ASSERT((Row * Col) == list.size(), "List need to have the same amount of elements as the matrix! Want: {}, Got: {}", Row * Col, list.size());
 
 		uint32 index = 0;
-		for (std::initializer_list<Type>::iterator it = list.begin(); it != list.end(); it++)
+		for (auto it = list.begin(); it != list.end(); it++)
 		{
 			uint32 col = index % Col;
 			uint32 row = index / Col;
@@ -360,6 +365,7 @@ namespace RS
 			for (uint32 col = 0; col < Col2; ++col)
 			{
 				Type dot = static_cast<Type>(0);
+				//dot = GetRow(row).Dot(GetCol(col));
 				for (uint32 index = 0; index < Col; ++index)
 					dot += AtConst(row, index) * other.AtConst(index, col);
 				result.At(row, col) = dot;
@@ -392,6 +398,34 @@ namespace RS
 		return data[col].AtConst(row);
 #else
 		return data[row].AtConst(col);
+#endif
+	}
+
+
+	template<typename Type, uint32 Row, uint32 Col>
+	inline RS::Vec<Type, Col> Mat<Type, Row, Col>::GetRow(uint32 index) const
+	{
+#if RS_MATHS_COLUMN_MAJOR
+		RS::Vec<Type, Col> result;
+		for (uint32 colIndex = 0; colIndex < Col; ++colIndex)
+			result[colIndex] = AtConst(index, colIndex);
+		return result;
+#else
+		return data[index];
+#endif
+	}
+
+	template<typename Type, uint32 Row, uint32 Col>
+	inline RS::Vec<Type, Row> Mat<Type, Row, Col>::GetCol(uint32 index) const
+	{
+
+#if RS_MATHS_COLUMN_MAJOR
+		return data[index];
+#else
+		RS::Vec<Type, Row> result;
+		for (uint32 rowIndex = 0; rowIndex < Row; ++rowIndex)
+			result[rowIndex] = AtConst(rowIndex, index);
+		return result;
 #endif
 	}
 
@@ -436,7 +470,7 @@ namespace RS
 						a = 192u;
 						b = 217u;
 					}
-					str += Utils::Format("{}{: >{}}{}", (char)a, "", Col * 3, (char)b);
+					str += std::format("{}{: >{}}{}", (char)a, "", Col * 3, (char)b);
 					str += '\n';
 				}
 				continue;
@@ -446,7 +480,7 @@ namespace RS
 			{
 				Type value = AtConst((row == -1 || row == Row) ? 0 : row, (col == -1 || col == Col) ? 0 : col);
 				Type valueAbs = static_cast<Type>(std::abs(static_cast<double>(value)));
-				std::string valueStr = Utils::Format("{}", valueAbs);
+				std::string valueStr = std::format("{}", valueAbs);
 				char sign = value < 0 ? '-' : ' ';
 				valueStr = sign + valueStr;
 
@@ -631,7 +665,7 @@ namespace RS
 
 	inline Mat<float, 4, 4> CreatePerspectiveProjectionMat4(float fov, float aspectRatio, float zFar, float zNear)
 	{
-		// LH to clip space [0, 1]
+		// LH to clip space. NDC space is in [-1, 1] for x and y, and [0, 1] for z.
 		const float tanHalfFOV = (float)std::tan(fov * 0.5 * 3.1415 / 180);
 		const float zRange = zFar - zNear;
 		Mat<float, 4, 4> result =
@@ -640,6 +674,21 @@ namespace RS
 			0.0f								, 1.0f / tanHalfFOV	, 0.0f				, 0.0f,
 			0.0f								, 0.0f				, zFar / zRange		, -(zFar * zNear) / zRange,
 			0.0f								, 0.0f				, 1.0f				, 0.0f
+		};
+		return result;
+	}
+
+	inline Mat<float, 4, 4> CreatePerspectiveProjectionMat4RH(float fov, float aspectRatio, float zFar, float zNear)
+	{
+		// RH to clip space. NDC space is in [-1, 1] for x and y, and [0, 1] for z.
+		const float tanHalfFOV = (float)std::tan(fov * 0.5 * 3.1415 / 180);
+		const float zRange = zFar - zNear;
+		Mat<float, 4, 4> result =
+		{
+			1.0f / (tanHalfFOV * aspectRatio)	, 0.0f				, 0.0f				, 0.0f,
+			0.0f								, 1.0f / tanHalfFOV	, 0.0f				, 0.0f,
+			0.0f								, 0.0f				, zFar / zRange		, (zFar * zNear) / zRange,
+			0.0f								, 0.0f				, -1.0f				, 0.0f
 		};
 		return result;
 	}
@@ -660,25 +709,43 @@ namespace RS
 
 	inline Mat<float, 4, 4> CreateCameraMat4(Mat<float, 4, 4>& mat, const Vec<float, 3>& right, const Vec<float, 3>& up, const Vec<float, 3>& forward, const Vec<float, 3>& position)
 	{
-#if !RS_MATHS_COLUMN_MAJOR
-		RS_ASSERT(false, "Not Implemented");
-#endif
+		mat.At(0, 0) = right.x;		mat.At(0, 1) = right.y;		mat.At(0, 2) = right.z;		mat.At(0, 3) = -position.Dot(right);
+		mat.At(1, 0) = up.x;		mat.At(1, 1) = up.y;		mat.At(1, 2) = up.z;		mat.At(1, 3) = -position.Dot(up);
+		mat.At(2, 0) = forward.x;	mat.At(2, 1) = forward.y;	mat.At(2, 2) = forward.z;	mat.At(2, 3) = -position.Dot(forward);
+		mat.At(3, 0) = 0;			mat.At(3, 1) = 0;			mat.At(3, 2) = 0;			mat.At(3, 3) = 1.0f;
 
-		mat[0][0] =  right.x;	mat[1][0] =  right.y;	mat[2][0] =  right.z;	mat[3][0] = position.Dot(right);
-		mat[0][1] =  up.x;		mat[1][1] =  up.y;		mat[2][1] =  up.z;		mat[3][1] = position.Dot(up);
-		mat[0][2] =  forward.x;	mat[1][2] =  forward.y;	mat[2][2] =  forward.z;	mat[3][2] = position.Dot(forward);
-		mat[0][3] =  0;			mat[1][3] =  0;			mat[2][3] =  0;			mat[3][3] =  1.0f;
+		return mat;
+	}
+
+	inline Mat<float, 4, 4> CreateCameraMat4RH(Mat<float, 4, 4>& mat, const Vec<float, 3>& right, const Vec<float, 3>& up, const Vec<float, 3>& forward, const Vec<float, 3>& position)
+	{
+		// RH
+		mat.At(0, 0) = right.x;		mat.At(0, 1) = right.y;		mat.At(0, 2) = right.z;	mat.At(0, 3) = position.Dot(right);
+		mat.At(1, 0) = up.x;		mat.At(1, 1) = up.y;		mat.At(1, 2) = up.z;		mat.At(1, 3) = position.Dot(up);
+		mat.At(2, 0) = -forward.x;	mat.At(2, 1) = -forward.y;	mat.At(2, 2) = -forward.z;	mat.At(2, 3) = position.Dot(-forward);
+		mat.At(3, 0) = 0;			mat.At(3, 1) = 0;			mat.At(3, 2) = 0;			mat.At(3, 3) = 1.0f;
 
 		return mat;
 	}
 
 	inline Mat<float, 4, 4> CreateCameraMat4(const Vec<float, 3>& direction, const Vec<float, 3>& worldUp, const Vec<float, 3>& position)
 	{
+		// LH
 		Mat<float, 4, 4> result;
 		Vec<float, 3> right = worldUp;
 		right = RS::Normalize(RS::Cross(direction, right));
 		Vec<float, 3> up = RS::Normalize(RS::Cross(right, direction));
 		return CreateCameraMat4(result, right, up, direction, position);
+	}
+
+	inline Mat<float, 4, 4> CreateCameraMat4RH(const Vec<float, 3>& direction, const Vec<float, 3>& worldUp, const Vec<float, 3>& position)
+	{
+		// RH
+		Mat<float, 4, 4> result;
+		Vec<float, 3> right = worldUp;
+		right = RS::Normalize(RS::Cross(direction, right));
+		Vec<float, 3> up = RS::Normalize(RS::Cross(right, direction));
+		return CreateCameraMat4RH(result, right, up, direction, position);
 	}
 
 	using Mat2 = Mat<float, 2, 2>;

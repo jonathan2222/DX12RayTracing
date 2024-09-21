@@ -6,7 +6,7 @@ namespace RS
 	namespace LaunchParams
 	{
 		// ParamID variables for all launchParams.
-#define DEF_LAUNCH_PARAM(name, numArgs, desc) constexpr ParamID name = __LINE__ - 1; // Can do this as long as LaunchParams.h start using these macros at the first line.
+#define DEF_LAUNCH_PARAM(name, numArgs, desc) constexpr const ParamID name = __LINE__ - 1; // Can do this as long as LaunchParams.h start using these macros at the first line.
 #include "LaunchParams.h"
 #undef DEF_LAUNCH_PARAM
 
@@ -14,14 +14,14 @@ namespace RS
 		{
 			struct LaunchParamInfo
 			{
-				ParamID	value; // Unique ID for this param.
-				uint32	numArgs;
-				char* name;
-				char* description;
+				const ParamID	value; // Unique ID for this param.
+				const uint32	numArgs;
+				const char*		name;
+				const char*		description;
 			};
 
 			// List of param names in the same order as the ParamIDs.
-			constexpr char* c_ParamNames[] = {
+			constexpr const char* c_ParamNames[] = {
 #define DEF_LAUNCH_PARAM(name, numArgs, desc) #name,
 #include "LaunchParams.h"
 #undef DEF_LAUNCH_PARAM
@@ -29,7 +29,7 @@ namespace RS
 
 			// List of full param infos in the same order as the ParamIDs.
 #define DEF_LAUNCH_PARAM(name, numArgs, desc) {(__LINE__ - 1), numArgs, #name, desc},
-			constexpr LaunchParamInfo c_Params[] = {
+			constexpr const LaunchParamInfo c_Params[] = {
 #include "LaunchParams.h"
 #undef DEF_LAUNCH_PARAM
 			};

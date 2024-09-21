@@ -2,6 +2,8 @@
 
 #include <RSEngine.h>
 
+#include "Camera.h"
+
 struct Entity
 {
 
@@ -43,4 +45,6 @@ private:
 	};
 
 	uint32 m_NumVertices;
+
+	RS::Camera m_Camera;
 };

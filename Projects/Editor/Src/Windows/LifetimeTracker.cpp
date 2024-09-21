@@ -23,7 +23,7 @@ void RSE::LifetimeTracker::Render()
 				for (auto& entry : RS::DX12Core3::s_ResourceLifetimeTrackingData)
 				{
 					ImGui::TableNextColumn(); // ID
-					std::string ID = RS::Utils::Format("{}", entry.first);
+					std::string ID = std::format("{}", entry.first);
 					ImGui::Text(ID.c_str());
 
 					ImGui::TableNextColumn(); // Name
@@ -37,7 +37,7 @@ void RSE::LifetimeTracker::Render()
 						ImGuiDataType dataType = ImGuiDataType_U64;
 
 						const char* format = (flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
-						std::string floatLabel = RS::Utils::Format("##Integer-{}", entry.first);
+						std::string floatLabel = std::format("##Integer-{}", entry.first);
 						ImGui::InputScalar(floatLabel.c_str(), dataType, &entry.second.startTime, NULL, NULL, format, flags);
 						ImGui::PopItemWidth();
 						ImGui::EndDisabled();

@@ -141,7 +141,7 @@ void RS::RenderDoc::EndFrameCapture()
         uint32 index = 0;
         char filePath[512];
         uint32 code = m_pRenderDocAPI->GetCapture(index, filePath, NULL, NULL);
-        std::string path = Utils::Format("{}.log", filePath);
+        std::string path = std::format("{}.log", filePath);
         m_pRenderDocAPI->LaunchReplayUI(1, path.c_str());
     }
     else

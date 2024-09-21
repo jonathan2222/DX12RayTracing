@@ -7,6 +7,12 @@
 
 #include "Loaders/openfbx/FBXLoader.h"
 
+//#define GLM_FORCE_LEFT_HANDED 
+#include "glm/vec4.hpp"
+#include "glm/mat4x4.hpp"
+#include "glm/ext/matrix_transform.hpp"
+#include "glm/ext/matrix_clip_space.hpp"
+
 SandboxApp::SandboxApp()
 {
     Init();
@@ -52,6 +58,9 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
         auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
         pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
 
+        auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
+        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH,  pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
+
         pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
 
@@ -72,51 +81,88 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
 
         struct VertexConstantBufferData
         {
-            RS::Mat4 transform;
-            RS::Mat4 camera;
+            glm::mat4 transform;
+            glm::mat4 camera;
         } vertexViewData;
 
-        static RS::Vec3 direction(0.0f, 0.0f, 1.0f); // LH coordinate system => z is forward
-        static RS::Vec3 up(0.0f, 1.0f, 0.0f);
+        // Initial camera orientation and position.
+        //static glm::vec3 direction(0.0f, 0.0f, 1.0f); // LH coordinate system => z is forward
+        //static glm::vec3 up(0.0f, 1.0f, 0.0f);
+        //static glm::vec3 position(0.0f, 0.0f, -3.0f);
+        //
+        //// TODO: Change to quaternions.
+        //glm::vec3 right = glm::cross(direction, up);
+        //up = glm::cross(right, direction);
+        //
+        //// -1 if a, 1 if b, else 0 (a and b is also 0).
+        //auto KeysPressed = [](RS::Key a, RS::Key b)
+        //{
+        //    return (RS::Input::Get()->IsKeyPressed(b) ? 1.f : 0.f) - (RS::Input::Get()->IsKeyPressed(a) ? 1.f : 0.f);
+        //};
+        //float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::RIGHT, RS::Key::LEFT);
+        //float vAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::DOWN, RS::Key::UP);
+        //direction = glm::rotate(hAngle, glm::vec3{0.f, 1.0f, 0.f}) * glm::vec4(direction, 1.0f);
+        //direction = glm::normalize(direction);
+        //right = glm::cross(up, direction); // Ajdust right vector to match with the rotation of direction.
+        //direction = glm::rotate(vAngle, right) * glm::vec4(direction, 1.0f);
+        //direction = glm::normalize(direction);
+        //up = glm::cross(right, direction); // Ajdust up vector to match with the rotation of direction.
+        //up = glm::normalize(up);
+        //
+        //float speed = 10.0f;
+        //float speedRight = KeysPressed(RS::Key::A, RS::Key::D) * speed;
+        //float speedForward = KeysPressed(RS::Key::S, RS::Key::W) * speed;
+        //float speedUp = KeysPressed(RS::Key::LEFT_SHIFT, RS::Key::SPACE) * speed;
+        //position += right * frameStats.frame.currentDT * speedRight + direction * frameStats.frame.currentDT * speedForward;
+        //position.y += frameStats.frame.currentDT * speedUp;
+        //// TODO: Fix direction!
+        ////LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
+        //
+        //RS_New::VecNew<2u, float> newVecNoInit(RS_New::NoInit);
+        //RS_New::VecNew<2u, float> newVecOnes(1.0f);
+        //RS_New::VecNew<2u, float> newVecZeros;
+        //RS_New::VecNew<2u, float> newVec1(1.0f, 2.0f);
+        //RS_New::VecNew<2u, int32> newVec2U(-1, 2);
+        //RS_New::VecNew<2u, float> newVec2F(newVec2U);
+        //uint32 values[3] = { 0, 1, 2 };
+        //RS_New::VecNew<3u, uint32> newVec3U(3, values);
+        //
+        //RS_New::VecNew<2u, float> newVec11 = RS_New::VecNew<2u, float>::Ones;
+        //RS_New::VecNew<2u, float> newVec00 = RS_New::VecNew<2u, float>::Zeros;
+        //
+        ////RS::Mat4 view = RS::CreateCameraMat4(direction, {0.f, 1.0f, 0.0f}, position);
+        ////LOG_WARNING("view: {}", view.ToString());
+        ////RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
+        ////LOG_WARNING("proj: {}", proj.ToString());
+        //
+        //// TODO: Try with glm and see if that fixes it!
+        //glm::mat4 viewG = glm::lookAtLH((glm::vec3)direction, (glm::vec3)(direction + position), { 0.f, 1.0f, 0.0f });
+        //glm::mat4 projG = glm::perspectiveLH_ZO(45.f * 3.1415f / 180.f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
 
-        RS::Vec3 right = RS::Cross(up, direction);
-        up = RS::Cross(direction, right);
-        
-        auto KeysPressed = [](RS::Key a, RS::Key b)
+        static bool sCameraIsActive = false;
+        if (RS::Input::Get()->IsKeyClicked(RS::Key::C))
         {
-            return (RS::Input::Get()->IsKeyPressed(b) ? 1.f : 0.f) - (RS::Input::Get()->IsKeyPressed(a) ? 1.f : 0.f);
-        };
-        //LOG_WARNING("Dir1: {}", direction.ToString());
-        float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::RIGHT, RS::Key::LEFT);
-        float vAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::DOWN, RS::Key::UP);
-        direction = RS::Rotate(direction, hAngle, { 0.0f, 1.0f, 0.0f });
-        direction = RS::Normalize(direction);
-        right = RS::Cross(up, direction);
-        direction = RS::Rotate(direction, vAngle, right);
-        direction = RS::Normalize(direction);
-        //LOG_WARNING("Dir2: {}", direction.ToString());
+            sCameraIsActive ^= 1;
+            if (sCameraIsActive) RS::Input::Get()->LockMouse();
+            else                 RS::Input::Get()->UnlockMouse();
+        }
+        if (sCameraIsActive)
+            m_Camera.Update(frameStats.frame.currentDT);
+        //static float time = 0.f;
+        //time += frameStats.frame.currentDT;
+        //if (time > 1.f)
+        //{
+        //    LOG_WARNING("Camera:");
+        //    LOG_WARNING("\tPos: ({}, {}, {})", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
+        //    LOG_WARNING("\tRight: ({}, {}, {})", m_Camera.GetRight().x, m_Camera.GetRight().y, m_Camera.GetRight().z);
+        //    LOG_WARNING("\tUp: ({}, {}, {})", m_Camera.GetUp().x, m_Camera.GetUp().y, m_Camera.GetUp().z);
+        //    LOG_WARNING("\tForward: ({}, {}, {})", m_Camera.GetDirection().x, m_Camera.GetDirection().y, m_Camera.GetDirection().z);
+        //    LOG_WARNING("----------------------------------------");
+        //    time = 0.f;
+        //}
 
-        right = RS::Cross(up, direction);
-        right = RS::Normalize(right);
-        up = RS::Cross(direction, right);
-        up = RS::Normalize(up);
-        static RS::Vec3 position(0.0f, -1.0f, -3.0f);
-        float speed = 10.0f;
-        float speedRight = KeysPressed(RS::Key::D, RS::Key::A) * speed;
-        float speedForward = KeysPressed(RS::Key::S, RS::Key::W) * speed;
-        position += right * frameStats.frame.currentDT * speedRight + direction * frameStats.frame.currentDT * speedForward;
-        position.y += frameStats.frame.currentDT * KeysPressed(RS::Key::LEFT_SHIFT, RS::Key::SPACE) * speed;
-        // TODO: Fix direction!
-        LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
-
-        // TODO: Perspective projection should be in RH and get it down to an NDC in [0, 1]
-
-        RS::Mat4 view = RS::CreateCameraMat4(-direction, { 0.0f, 1.0f, 0.0f }, position);
-        //LOG_WARNING("view: {}", view.ToString());
-        RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 10.0f);
-        //LOG_WARNING("proj: {}", proj.ToString());
         float scale = 0.5f;
-        vertexViewData.camera = proj * view;
+        vertexViewData.camera = glm::transpose(m_Camera.GetMatrix());
         vertexViewData.transform =
         {
             scale, 0.f, 0.f, 0.f,
@@ -124,8 +170,8 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
             0.f, 0.f, scale, 0.0f,
             0.f, 0.f, 0.f, 1.f
         };
-        vertexViewData.camera = RS::Transpose(vertexViewData.camera);
-        vertexViewData.transform = RS::Transpose(vertexViewData.transform);
+        vertexViewData.camera = vertexViewData.camera;
+        vertexViewData.transform = vertexViewData.transform;
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
         pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
@@ -222,10 +268,26 @@ void SandboxApp::Init()
         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, &clearValue);
     m_RenderTarget->SetAttachment(RS::AttachmentPoint::Color0, pRenderTexture);
 
+    D3D12_CLEAR_VALUE clearValueDepth;
+    clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
+    clearValueDepth.DepthStencil.Depth = 1.0f;
+    clearValueDepth.DepthStencil.Stencil = 0;
+    auto pDepthTexture = pCommandList->CreateTexture(
+        RS::Display::Get()->GetWidth(),
+        RS::Display::Get()->GetHeight(),
+        nullptr,
+        clearValueDepth.Format,
+        "Canvas Depth Texture",
+        D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
+    m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
+
     uint64 fenceValue = pCommandQueue->ExecuteCommandList(pCommandList);
 
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
+
+    float aspect = RS::Display::Get()->GetAspectRatio();
+    m_Camera.Init(aspect, 45.f, { 0.f, 2.f, 0.f }, { 0.f, 2.0f, 1.0f }, 1.0f, 10.f);
 }
 
 void SandboxApp::CreatePipelineState()
@@ -312,13 +374,17 @@ void SandboxApp::CreatePipelineState()
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
     psoDesc.RasterizerState.FrontCounterClockwise = false;
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    psoDesc.DepthStencilState.DepthEnable = FALSE;
-    psoDesc.DepthStencilState.StencilEnable = FALSE;
+    psoDesc.DepthStencilState.DepthEnable = true;
+    psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    psoDesc.DepthStencilState.StencilEnable = false;
+
     //psoDesc.DSVFormat
     psoDesc.SampleMask = UINT_MAX;
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     psoDesc.NumRenderTargets = 1;
-    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Get this format from the render target
+    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Get this format from the render target.
+    psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: Get this format from the render target.
     psoDesc.SampleDesc.Count = 1;
     //psoDesc.CachedPSO
     psoDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;

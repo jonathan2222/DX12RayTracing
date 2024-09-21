@@ -119,8 +119,8 @@ void RSE::ConsoleInspector::RenderFloatVariable(Console::Variable& var)
 	ImGui::PushItemWidth(-1);
 	float v = var.type == Console::Type::Float ? *(float*)var.pVar : (float)*(double*)var.pVar;
 	uint32 numDecimals = Utils::GetNumDecimals(v);
-	std::string format = Utils::Format("%.{}f", std::max(numDecimals, 1u));
-	std::string floatLabel = Utils::Format("##Float-{}", var.name);
+	std::string format = std::format("%.{}f", std::max(numDecimals, 1u));
+	std::string floatLabel = std::format("##Float-{}", var.name);
 	if (ImGui::InputFloat(floatLabel.c_str(), &v, 0.0f, 0.0f, format.c_str(), ImGuiInputTextFlags_None))
 	{
 		if (var.type == Console::Type::Float) *(float*)var.pVar = v;
@@ -148,7 +148,7 @@ void RSE::ConsoleInspector::RenderIntVariable(RS::Console::Variable& var)
 	}
 
 	const char* format = (flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
-	std::string floatLabel = Utils::Format("##Integer-{}", var.name);
+	std::string floatLabel = std::format("##Integer-{}", var.name);
 	ImGui::InputScalar(floatLabel.c_str(), dataType, var.pVar, NULL, NULL, format, flags);
 	ImGui::PopItemWidth();
 }

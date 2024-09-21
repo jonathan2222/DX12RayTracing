@@ -167,9 +167,9 @@ namespace RS
 		void Render();
 
 		template<typename... Args>
-		void Print(const char* format, Args&&...args);
+		void Print(const std::string_view, Args&&...args);
 		template<typename... Args>
-		void Print(const ImVec4& color, const char* format, Args&&...args);
+		void Print(const ImVec4& color, const std::string_view, Args&&...args);
 
 		void Print(const char* txt);
 		void Print(const ImVec4& color, const char* txt);
@@ -286,16 +286,16 @@ namespace RS
 	}
 
 	template<typename... Args>
-	inline void Console::Print(const char* format, Args&&...args)
+	inline void Console::Print(const std::string_view format, Args&&...args)
 	{
-		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		const std::string str = std::vformat(format, std::make_format_args(std::forward<Args>(args)...));
 		Print(str.c_str());
 	}
 
 	template<typename... Args>
-	inline void Console::Print(const ImVec4& color, const char* format, Args&&...args)
+	inline void Console::Print(const ImVec4& color, const std::string_view format, Args&&...args)
 	{
-		std::string str = RS::Utils::Format(format, std::forward<Args>(args)...);
+		const std::string str = std::vformat(format, std::make_format_args(std::forward<Args&>(args)...));
 		Print(color, str.c_str());
 	}
 

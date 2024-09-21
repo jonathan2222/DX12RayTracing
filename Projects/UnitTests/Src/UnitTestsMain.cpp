@@ -68,6 +68,118 @@ TEST_CASE("String comparisons", "[StringUtils.h]")
     }
 }
 
+TEST_CASE("NewVector", "[RSVector2]")
+{
+    RS_New::VecNew<2u, uint32> vec2uZeros;
+    CHECK(sizeof(vec2uZeros) == 8);
+    CHECK(vec2uZeros.data[0] == 0u);
+    CHECK(vec2uZeros.data[1] == 0u);
+    CHECK(vec2uZeros.Size == 2u);
+    RS_New::VecNew<2u, uint32> vec2uOnes(1u);
+    CHECK(vec2uOnes[0] == 1u);
+    RS_New::VecNew<3u, int32> vec3iA(1, -2, 3);
+    CHECK(vec3iA[0] == 1);
+    CHECK(vec3iA[1] == -2);
+    CHECK(vec3iA.At(2) == 3);
+
+    RS_New::VecNew<2u, float> vecNoInit(RS_New::NoInit);
+    RS_New::VecNew<2u, int32> vec2iA({ -1, 2 });
+    CHECK(vec2iA[0] == -1);
+    CHECK(vec2iA[1] == 2);
+    RS_New::VecNew<2u, int32> vec2iB(vec2iA);
+    CHECK(vec2iB[0] == vec2iA[0]);
+    CHECK(vec2iB[1] == vec2iA[1]);
+    RS_New::VecNew<2u, int32> vec2iC(RS_New::VecNew<2u, int32>(5, 3));
+    CHECK(vec2iC[0] == 5);
+    CHECK(vec2iC[1] == 3);
+    RS_New::VecNew<2u, float> vec2fA(vec2iA);
+    CHECK(vec2fA[0] == -1.0f);
+    CHECK(vec2fA[1] == 2.0f);
+
+    uint32 values[3] = { 0, 1, 2 };
+    RS_New::VecNew<3u, uint32> vec3uA(3, values);
+    CHECK(vec3uA[0] == 0u);
+    CHECK(vec3uA[1] == 1u);
+    CHECK(vec3uA[2] == 2u);
+
+    CHECK(RS_New::VecNew<2u, float>::Ones[0] == 1.0f);
+    CHECK(RS_New::VecNew<2u, float>::Ones[1] == 1.0f);
+
+    CHECK(RS_New::VecNew<2u, float>::Zeros[0] == 0.0f);
+    CHECK(RS_New::VecNew<2u, float>::Zeros[1] == 0.0f);
+
+    RS_New::VecNew<3u, uint32> vec3uB(2, 1, 0);
+    vec3uA = vec3uB;
+    CHECK(vec3uA[0] == 2u);
+    CHECK(vec3uA[1] == 1u);
+    CHECK(vec3uA[2] == 0u);
+
+    RS_New::VecNew<4u, int32> vec4iA;
+    vec4iA = { 1, 2, 3, 4 };
+    CHECK(vec4iA[0] == 1);
+    CHECK(vec4iA[1] == 2);
+    CHECK(vec4iA[2] == 3);
+    CHECK(vec4iA[3] == 4);
+    vec4iA = 6;
+    CHECK(vec4iA[0] == 6);
+    CHECK(vec4iA[1] == 6);
+    CHECK(vec4iA[2] == 6);
+    CHECK(vec4iA[3] == 6);
+
+    // Comparisons
+    CHECK((vec2iB == vec2iC) == false);
+    CHECK(vec2iB != vec2iC);
+    CHECK((vec4iA == vec3uA) == false);
+    CHECK(vec4iA != vec3uA);
+    CHECK(vec3uA == std::initializer_list<uint32>{ 2, 1, 0 });
+    CHECK(vec3uA != std::initializer_list<uint32>{ 1, 1, 0 });
+
+    // Math operators
+    using Vec = RS_New::VecNew<2u, int32>;
+    Vec vecA(3, 11);
+    Vec vecB(7, 5);
+
+    Vec vecC = vecA + vecB;
+    CHECK(vecC[0] == 3+7);
+    CHECK(vecC[1] == 11+5);
+    vecC = vecA - vecB;
+    CHECK(vecC[0] == 3-7);
+    CHECK(vecC[1] == 11-5);
+    vecC = vecA * vecB;
+    CHECK(vecC[0] == 3*7);
+    CHECK(vecC[1] == 11*5);
+    vecC = vecA / vecB;
+    CHECK(vecC[0] == 3 / 7);
+    CHECK(vecC[1] == 11 / 5);
+
+    vecC = -vecB;
+    CHECK(vecC[0] == -7);
+    CHECK(vecC[1] == -5);
+
+    vecC = vecA + 6;
+    CHECK(vecC[0] == 3 + 6);
+    CHECK(vecC[1] == 11+6);
+    vecC = vecA - 6;
+    CHECK(vecC[0] == 3 - 6);
+    CHECK(vecC[1] == 11 - 6);
+    vecC = vecA * 6;
+    CHECK(vecC[0] == 3 * 6);
+    CHECK(vecC[1] == 11 * 6);
+    vecC = vecA / 6;
+    CHECK(vecC[0] == 3 / 6);
+    CHECK(vecC[1] == 11 / 6);
+
+    // Functions
+    // vecA = { 3, 11 }
+    // vecB = { 7, 5  }
+    Vec vecD(3, 4);
+    Vec vecE(100, 1);
+    CHECK(vecA.Length2() == (3 * 3 + 11 * 11));
+    CHECK(vecD.Length<float>() == 5);
+    CHECK(vecA.Dot(vecB) == (7 * 3 + 5 * 11));
+    CHECK(vecE.Normalize() == Vec{1, 0});
+}
+
 TEST_CASE("Vector", "[RSVector]")
 {
     RS::Vec2i vecA;

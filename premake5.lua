@@ -4,7 +4,7 @@ workspace "RayTracingProjectD3D12"
 	warnings "extra"
 	flags { "MultiProcessorCompile" }
 	
-	cppdialect "C++17"
+	cppdialect "C++20"
 	systemversion "latest"
 	
 	-- Disable C4201 nonstandard extension used: nameless struct/union

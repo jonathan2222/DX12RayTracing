@@ -231,8 +231,9 @@ void RS::Texture::Resize(uint32 width, uint32 height, uint32 depthOrArraySize)
         resourceDesc.DepthOrArraySize = depthOrArraySize;
 
         auto pDevice = DX12Core3::Get()->GetD3D12Device();
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
         DXCall(pDevice->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+            &heapProps,
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
             D3D12_RESOURCE_STATE_COMMON,

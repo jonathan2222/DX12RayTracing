@@ -27,7 +27,7 @@ namespace RS
 
 		std::shared_ptr<Texture> GetAttachment(AttachmentPoint attachmentPoint) const;
 
-		std::vector<std::shared_ptr<Texture>> GetColorTextures() const { return m_ColorTextures; }
+		const std::vector<std::shared_ptr<Texture>>& GetColorTextures() const { return m_ColorTextures; }
 		std::shared_ptr<Texture> GetDepthTexture() const { return m_pDepthTexture; }
 
 		void Reset();

@@ -28,7 +28,7 @@ void RS::Console::Init()
 
 			{
 				Line line;
-				line.str = Utils::Format("Commands:");
+				line.str = std::format("Commands:");
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
@@ -48,7 +48,7 @@ void RS::Console::Init()
 			{
 				std::string t = IsTypeVariable(v.type) ? "V" : "F";
 				if (hasDetail) t = VarTypeToString(v.type);
-				std::string commandType = Utils::Format("[{}]", t);
+				std::string commandType = std::format("[{}]", t);
 
 				Line line;
 				line.str = "  " + Utils::FillRight(commandType, ' ', hasDetail ? 14 : 4) + v.name;
@@ -592,7 +592,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 		if (numArguments == 0)
 		{ // Reading
 			RS_NOTIFY_SUCCESS("Executing: {}", cmd);
-			std::string line = Utils::Format("{} == {}", cmd, VarValueToString(var.type, var.pVar));
+			std::string line = std::format("{} == {}", cmd, VarValueToString(var.type, var.pVar));
 			Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());
 			m_CommandHistory.push_back(cmdLine);
 			return;
@@ -634,7 +634,7 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 			{
 				RS_NOTIFY_SUCCESS("Executing: {}", cmd);
 				StringToVarValue(var.type, value, var.pVar);
-				std::string line = Utils::Format("{} = {}", cmd, value);
+				std::string line = std::format("{} = {}", cmd, value);
 				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());
 				m_CommandHistory.push_back(cmdLine);
 				return;

@@ -34,8 +34,9 @@ RS::Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEA
         resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
+    CD3DX12_HEAP_PROPERTIES heapProps(heapType);
     DXCall(pDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(heapType), D3D12_HEAP_FLAG_NONE, &resourceDesc,
+        &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc,
         resourceState, m_pD3D12ClearValue, IID_PPV_ARGS(&m_pD3D12Resource)));
 
     ResourceStateTracker::AddGlobalResourceState(m_pD3D12Resource.Get(), resourceState);

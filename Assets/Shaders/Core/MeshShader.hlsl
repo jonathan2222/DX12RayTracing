@@ -20,8 +20,8 @@ PSInput VertexMain(float4 position : POSITION, float4 normal : NORMAL, float2 uv
 {
     PSInput result;
 
-    result.position = mul(mul(vsData.camera, vsData.transform), float4(position.xyz, 1.0f));
-    result.normal = normal;
+    result.position = mul(mul(vsData.camera, vsData.transform), float4(position.xyz, 1.0f)); // Clip space.
+    result.normal = normal;//mul(float4(, 0.0f), vsData.transform); // World space
     result.uv = uv;
 
     return result;
@@ -46,11 +46,14 @@ Texture2D diffseTex[] : register(t0, BINDLESS_TEXTURE_SPACE);
 
 float4 PixelMain(PSInput input) : SV_TARGET
 {
-    //float4 tex = diffseTex[viewData.texIndex.x].Sample(pointSampler, input.uv);
-    //float4 nullTex = diffseTex[viewData.texIndex.y].Sample(pointSampler, input.uv);
-    //float t = step(1.0, input.uv.x + input.uv.y);
-    //float4 finalTex = lerp(tex, nullTex, t);
+    float4 tex = diffseTex[viewData.texIndex.x].Sample(pointSampler, input.uv);
+    float4 nullTex = diffseTex[viewData.texIndex.y].Sample(pointSampler, input.uv);
+    float t = step(1.0, input.uv.x + input.uv.y);
+    float4 finalTex = lerp(tex, nullTex, t);
 
-    float4 finalColor = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    return finalColor;//(finalTex + input.normal * viewData.tint * viewData2.tint);
+    float3 lightDir = normalize(float3(0.5, -1.0, -0.2));
+    float light = max(0, dot(input.normal.xyz, -lightDir));
+
+    //float4 finalColor = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    return (finalTex * 0.01f + light * viewData.tint * viewData2.tint);
 }

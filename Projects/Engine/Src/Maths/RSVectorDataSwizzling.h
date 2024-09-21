@@ -116,7 +116,7 @@ namespace RS
 	};
 
 	template<typename Type, uint32 N>
-	struct VectorSwizzlingData : VectorSwizzlingDataBase<Type, N>
+	struct VectorSwizzlingData : public VectorSwizzlingDataBase<Type, N>
 	{
 		VectorSwizzlingData(bool initialize, Type value = static_cast<Type>(0));
 		VectorSwizzlingData(const std::initializer_list<Type>& list);
@@ -126,7 +126,7 @@ namespace RS
 	inline VectorSwizzlingData<Type, N>::VectorSwizzlingData(bool initialize, Type value)
 	{
 		for (uint8 i = 0; initialize && i < N; ++i)
-			values[i] = value;
+			this->values[i] = value;
 	}
 
 	template<typename Type, uint32 N>
@@ -136,7 +136,7 @@ namespace RS
 
 		// TODO: Might be able to use memcpy if initializer_list guarantees packed allication (not sparse).
 		uint8 i = 0;
-		for (std::initializer_list<Type>::iterator it = list.begin(); it != list.end(); it++)
-			values[i++] = *it;
+		for (auto it = list.begin(); it != list.end(); it++)
+			this->values[i++] = *it;
 	}
 }

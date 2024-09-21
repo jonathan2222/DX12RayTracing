@@ -167,7 +167,7 @@ void RS::SwapChain::CreateResources()
 
         ResourceStateTracker::AddGlobalResourceState(pBackBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON);
 
-        std::string name = Utils::Format("Swap Chain RTV[{}]", i);
+        std::string name = std::format("Swap Chain RTV[{}]", i);
         m_BackBufferTextures[i] = std::make_shared<Texture>(pBackBufferResource, name);
     }
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <format>
+
 namespace RS::Utils
 {
 	/*
@@ -187,12 +189,16 @@ namespace RS::Utils
 	}
 
 	// Format strings
+	//template<typename... Args>
+	//inline std::string Format(const char* formatStr, Args&&...args)
+	//{
+	//	return std::vformat(formatStr, std::make_format_args(std::forward<Args>(args)...));
+	//}
+
 	template<typename... Args>
-	inline std::string Format(fmt::format_string<Args...> fmt, Args &&...args)
+	inline std::string Format(const char* formatStr, Args&&...args)
 	{
-		std::string str;
-		fmt::format_to(std::back_inserter(str), fmt, std::forward<Args>(args)...);
-		return str;
+		return std::vformat(formatStr, std::make_format_args(args...));
 	}
 
 	inline std::string Format(const char* msg)

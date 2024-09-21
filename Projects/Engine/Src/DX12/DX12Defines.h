@@ -175,11 +175,11 @@ namespace RS::_Internal
         //return Utils::ToString(errMsg);
         switch (hr)
         {
-#define RS_DX12_HRESULT(hrV, descV) case hrV: return Utils::Format("\thr: {} ({:#10X})\n\t\t", #hrV, (unsigned long)hrV) + std::string(descV);
+#define RS_DX12_HRESULT(hrV, descV) case hrV: return std::format("\thr: {} ({:#10X})\n\t\t", #hrV, (unsigned long)hrV) + std::string(descV);
 #include "Dx12HResults.h"
 #undef RS_DX12_HRESULT
         default:
-            return Utils::Format("Unmapped error! hr: {:#10X}", (unsigned long)hr);
+            return std::format("Unmapped error! hr: {:#10X}", (unsigned long)hr);
         }
     }
 
@@ -235,10 +235,10 @@ namespace RS::_Internal
     *  The argument after the name copy is a format string with its arguments after.
     *   Example: DX12_SET_DEBUG_NAME_REF(heap, heapDebugName, "My heap #{}", heapIndex);
     */
-    #define DX12_SET_DEBUG_NAME_REF(pResource, nameOut, ...)                         \
+    #define DX12_SET_DEBUG_NAME_REF(pResource, nameOut, ...)                        \
         {                                                                           \
-            nameOut = Utils::Format(__VA_ARGS__);                                   \
-            DXCallVerbose(pResource->SetName(Utils::ToWString(nameOut).c_str()));    \
+            nameOut = std::format(__VA_ARGS__);                                     \
+            DXCallVerbose(pResource->SetName(Utils::ToWString(nameOut).c_str()));   \
             if(LaunchArguments::Contains(LaunchParams::logDXNamedObjects))          \
                 LOG_DEBUG("Named Resource: {}", nameOut.c_str());                   \
         }

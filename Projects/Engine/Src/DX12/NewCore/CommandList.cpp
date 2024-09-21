@@ -98,7 +98,7 @@ void RS::CommandList::ClearDSV(const std::shared_ptr<Texture>& pTexture, D3D12_C
     RS_ASSERT_NO_MSG(pTexture);
 
     TransitionBarrier(pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
-    m_d3d12CommandList->ClearDepthStencilView(pTexture->GetRenderTargetView(), clearFlags, depth, stencil, 0, nullptr);
+    m_d3d12CommandList->ClearDepthStencilView(pTexture->GetDepthStencilView(), clearFlags, depth, stencil, 0, nullptr);
 
     TrackResource(pTexture);
 }
@@ -242,9 +242,11 @@ void RS::CommandList::UploadTextureSubresourceData(const std::shared_ptr<Texture
 
         // Create a temporary (intermediate) resource for uploading the subresoruce
         ComPtr<ID3D12Resource> pIntermediateResrouce;
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(requiredSize);
         DXCall(pDevice->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(requiredSize), D3D12_RESOURCE_STATE_GENERIC_READ,
+            &heapProps, D3D12_HEAP_FLAG_NONE,
+            &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr, IID_PPV_ARGS(&pIntermediateResrouce)));
 
         UpdateSubresources(m_d3d12CommandList.Get(), pDestinationResource.Get(), pIntermediateResrouce.Get(), 0,
@@ -265,9 +267,11 @@ Microsoft::WRL::ComPtr<ID3D12Resource> RS::CommandList::CreateBuffer(size_t buff
     }
 
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
+    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags);
     DXCall(pDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags), D3D12_RESOURCE_STATE_COMMON, nullptr,
+        &heapProps, D3D12_HEAP_FLAG_NONE,
+        &bufferDesc, D3D12_RESOURCE_STATE_COMMON, nullptr,
         IID_PPV_ARGS(&d3d12Resource)));
 
     ResourceStateTracker::AddGlobalResourceState(d3d12Resource.Get(), D3D12_RESOURCE_STATE_COMMON);
@@ -276,9 +280,11 @@ Microsoft::WRL::ComPtr<ID3D12Resource> RS::CommandList::CreateBuffer(size_t buff
     {
         // Create an upload resource to use as an intermediate buffer to copy the buffer resource.
         ComPtr<ID3D12Resource> uploadResource;
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
         DXCall(pDevice->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(bufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+            &heapProps, D3D12_HEAP_FLAG_NONE,
+            &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
             IID_PPV_ARGS(&uploadResource)));
 
         D3D12_SUBRESOURCE_DATA subresourceData = {};
@@ -320,8 +326,9 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
 
     ComPtr<ID3D12Resource> pResource;
+    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
     DXCall(pDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE,
+        &heapProps, D3D12_HEAP_FLAG_NONE,
         &textureDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue,
         IID_PPV_ARGS(&pResource)));
 
@@ -360,9 +367,11 @@ void RS::CommandList::UploadToBuffer(std::shared_ptr<Buffer> pBuffer, size_t buf
 
         // Create an upload resource to use as an intermediate buffer to copy the buffer resource.
         ComPtr<ID3D12Resource> pUploadResource;
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+        CD3DX12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
         DXCall(pDevice->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(bufferSize), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+            &heapProps, D3D12_HEAP_FLAG_NONE,
+            &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
             IID_PPV_ARGS(&pUploadResource)));
 
         D3D12_SUBRESOURCE_DATA subresourceData = {};
@@ -587,7 +596,7 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_p
 
 void RS::CommandList::SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget)
 {
-    std::vector<std::shared_ptr<Texture>>& colorTextures = pRenderTarget->GetColorTextures();
+    const std::vector<std::shared_ptr<Texture>>& colorTextures = pRenderTarget->GetColorTextures();
 
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> renderTargetDescriptors;
 

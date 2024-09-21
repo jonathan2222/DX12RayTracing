@@ -146,7 +146,7 @@ void RSE::Editor::RenderMenuBar()
         {
             RS::Console* pConsole = RS::Console::Get();
             bool selected = pConsole ? pConsole->IsEnabled() : false;
-            if (ImGui::MenuItem("Console", u8"\uE447", selected, pConsole))
+            if (ImGui::MenuItem("Console", (const char*)u8"\uE447", selected, pConsole))
             {
                 if (selected) pConsole->Disable();
                 else pConsole->Enable();

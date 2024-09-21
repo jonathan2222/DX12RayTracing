@@ -13,10 +13,10 @@ namespace RS::_ShaderInternal
 	struct ShaderTypeInfo
 	{
 		Shader::TypeFlags type;
-		char* name;
-		char* defaultEntryPoint;
-		char* typeStr; // e.g vs gs ps etc.
-		char* extension;
+		const char* name;
+		const char* defaultEntryPoint;
+		const char* typeStr; // e.g vs gs ps etc.
+		const char* extension;
 	};
 
 #define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) {type, name, defaultEntryPoint, typeStr, extension},
@@ -26,25 +26,25 @@ namespace RS::_ShaderInternal
 #undef DEF_SHADER_TYPE
 
 #define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) name,
-	constexpr char* g_ShaderTypeNames[] = {
+	constexpr const char* g_ShaderTypeNames[] = {
 #include "ShaderTypes.h"
 	};
 #undef DEF_SHADER_TYPE
 
 #define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) defaultEntryPoint,
-	constexpr char* g_ShaderTypeDefaultEntryPoints[] = {
+	constexpr const char* g_ShaderTypeDefaultEntryPoints[] = {
 #include "ShaderTypes.h"
 	};
 #undef DEF_SHADER_TYPE
 
 #define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) typeStr,
-	constexpr char* g_ShaderTypeStrs[] = {
+	constexpr const char* g_ShaderTypeStrs[] = {
 #include "ShaderTypes.h"
 	};
 #undef DEF_SHADER_TYPE
 
 #define DEF_SHADER_TYPE(type, name, defaultEntryPoint, typeStr, extension) extension,
-	constexpr char* g_ShaderTypeExtensions[] = {
+	constexpr const char* g_ShaderTypeExtensions[] = {
 	".hlsl",
 #include "ShaderTypes.h"
 	};
