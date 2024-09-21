@@ -3,11 +3,28 @@
 #include "RSEngine.h"
 #include "Editor.h"
 
+#include "Core/VMap.h"
+
 int main(int argc, char* argv[])
 {
     RS::Logger::Init();
     RS::LaunchArguments::Init(argc, argv);
     RS::Config::Get()->Init(RS_CONFIG_FILE_PATH);
+
+    RS::VMap vmap;
+    vmap["Version"] = 1;
+    vmap["Display"]["Width"] = 1920;
+    vmap["Array"] = { 1, 2, 3, 4 };
+
+    std::optional<std::string> errorMsg;
+    vmap.WriteToDisk("./Assets/Config/PresistentData.cfg", errorMsg);
+    vmap.Clear();
+    vmap = RS::VMap::ReadFromDisk("./Assets/Config/PresistentData.cfg", errorMsg);
+
+    int version = vmap["Version"];
+    int width = vmap["Display"]["Width"];
+    RS::VArray arr = vmap["Array"];
+    auto data = arr[1];
 
     RS::DisplayDescription displayDesc = {};
     displayDesc.Title                   = RS::Config::Get()->Fetch<std::string>("Display/InitialState/Title", "Editor");

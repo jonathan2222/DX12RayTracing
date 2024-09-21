@@ -188,6 +188,50 @@ namespace RS::Utils
 		return stringStarting == starting;
 	}
 
+	// Trim from start (in place)
+	inline void TrimLeft(std::string& s) {
+		// From: https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring?page=1&tab=scoredesc#tab-top
+		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+			return !std::isspace(ch);
+			}));
+	}
+
+	// Trim from end (in place)
+	inline void TrimRight(std::string& s) {
+		// From: https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring?page=1&tab=scoredesc#tab-top
+		s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+			return !std::isspace(ch);
+			}).base(), s.end());
+	}
+
+	inline void Trim(std::string& str)
+	{
+		TrimLeft(str);
+		TrimRight(str);
+	}
+
+	inline std::string TrimLeftC(const std::string& str)
+	{
+		std::string result = str;
+		TrimLeft(result);
+		return result;
+	}
+
+	inline std::string TrimRightC(const std::string& str)
+	{
+		std::string result = str;
+		TrimRight(result);
+		return result;
+	}
+
+	inline std::string TrimC(const std::string& str)
+	{
+		std::string result = str;
+		TrimLeft(result);
+		TrimRight(result);
+		return result;
+	}
+
 	// Format strings
 	//template<typename... Args>
 	//inline std::string Format(const char* formatStr, Args&&...args)
