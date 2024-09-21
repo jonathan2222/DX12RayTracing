@@ -422,6 +422,7 @@ namespace ImGui
 	{
 		std::lock_guard<std::mutex> lock(notificationsMutex);
 		notifications.insert(std::pair<uint64, ImGuiToast>(toast.get_id(), toast));
+		_Internal::hasToastNotifications = true;
 		return notifications[toast.get_id()];
 	}
 
