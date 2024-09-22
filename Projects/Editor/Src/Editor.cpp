@@ -24,8 +24,8 @@ void RSE::Editor::Init()
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // For Multiple windows. TODO: Need to implemented this in the ImGuiRenderer first!
 
-    m_ShowImGuiDemoWindow = m_PersistentData["Windows"].Fetch(m_sImGuiDemoWindowName, false);
-    m_ShowToastDemoWindow = m_PersistentData["Windows"].Fetch(m_sToastDemoWindowName, false);
+    m_ShowImGuiDemoWindow = m_PersistentData["Windows"][m_sImGuiDemoWindowName].Fetch("Active", false);
+    m_ShowToastDemoWindow = m_PersistentData["Windows"][m_sToastDemoWindowName].Fetch("Active", false);
 
     RS::Console* pConsole = RS::Console::Get();
     pConsole->AddFunction("Editor.CloseAllWindows", [this](RS::Console::FuncArgs args)
@@ -39,13 +39,13 @@ void RSE::Editor::Init()
                 if (closeCanvasWindow || dynamic_cast<Canvas*>(pWindow) == nullptr)
                 {
                     pWindow->GetEnable() = false;
-                    m_PersistentData["Windows"][pWindow->GetName()] = false;
+                    m_PersistentData["Windows"][pWindow->GetName()]["Active"] = false;
                 }
             }
             m_ShowImGuiDemoWindow = false;
             m_ShowToastDemoWindow = false;
-            m_PersistentData["Windows"][m_sImGuiDemoWindowName] = false;
-            m_PersistentData["Windows"][m_sToastDemoWindowName] = false;
+            m_PersistentData["Windows"][m_sImGuiDemoWindowName]["Active"] = false;
+            m_PersistentData["Windows"][m_sToastDemoWindowName]["Active"] = false;
         },
         RS::Console::Flag::NONE, "Closes all windows except the Canvas window.\nUse '-a' to also close the canvas window."
     );
@@ -170,15 +170,15 @@ void RSE::Editor::RenderMenuBar()
             for (EditorWindow* pWindow : m_EditorWindows)
             {
                 if (ImGui::MenuItem(pWindow->GetName().c_str(), "", &pWindow->GetEnable(), pWindow->GetEnableRequirements()))
-                    m_PersistentData["Windows"][pWindow->GetName()] = pWindow->GetEnable();
+                    m_PersistentData["Windows"][pWindow->GetName()]["Active"] = pWindow->GetEnable();
             }
             
             if (ImGui::BeginMenu("Other"))
             {
                 ImGui::MenuItem(m_sImGuiDemoWindowName.c_str(), "", &m_ShowImGuiDemoWindow);
-                m_PersistentData["Windows"][m_sImGuiDemoWindowName] = m_ShowImGuiDemoWindow;
+                m_PersistentData["Windows"][m_sImGuiDemoWindowName]["Active"] = m_ShowImGuiDemoWindow;
                 ImGui::MenuItem(m_sToastDemoWindowName.c_str(), "", &m_ShowToastDemoWindow);
-                m_PersistentData["Windows"][m_sToastDemoWindowName] = m_ShowToastDemoWindow;
+                m_PersistentData["Windows"][m_sToastDemoWindowName]["Active"] = m_ShowToastDemoWindow;
                 ImGui::EndMenu();
             }
 
@@ -205,9 +205,9 @@ void RSE::Editor::RegisterEditorWindows()
     EditorWindow* pLifetimeTracker = RegisterEditorWindow<LifetimeTracker>("Lifetime Tracker");
     EditorWindow* pCanvas = RegisterEditorWindow<Canvas>("Canvas", true);
 
-    pConsoleInspector->GetEnable() = m_PersistentData["Windows"].Fetch(pConsoleInspector->GetName(), pConsoleInspector->GetEnable());
-    pLifetimeTracker->GetEnable() = m_PersistentData["Windows"].Fetch(pLifetimeTracker->GetName(), pLifetimeTracker->GetEnable());
-    pCanvas->GetEnable() = m_PersistentData["Windows"].Fetch(pCanvas->GetName(), pCanvas->GetEnable());
+    pConsoleInspector->GetEnable() = m_PersistentData["Windows"][pConsoleInspector->GetName()].Fetch("Active", pConsoleInspector->GetEnable());
+    pLifetimeTracker->GetEnable() = m_PersistentData["Windows"][pLifetimeTracker->GetName()].Fetch("Active", pLifetimeTracker->GetEnable());
+    pCanvas->GetEnable() = m_PersistentData["Windows"][pCanvas->GetName()].Fetch("Active", pCanvas->GetEnable());
 }
 
 void RSE::Editor::RenderToastDemo()
@@ -280,5 +280,5 @@ void RSE::Editor::SavePersistentData()
 {
     std::string filePath = RS::CorePlatform::GetTemporaryDirectoryPath();
     filePath += m_sPersistentDataPath;
-    RS::VMap::WriteToDisk(m_PersistentData, filePath);
+    RS::VMap::WriteToDisk(m_PersistentData, filePath, true);
 }

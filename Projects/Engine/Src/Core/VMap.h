@@ -368,6 +368,7 @@ namespace RS
 			size_t p = key.find_first_of('/');
 			if (p == std::string::npos)
 			{
+				RS_ASSERT(m_Type == Type::TABLE, "Cannot only add elements to a TABLE!");
 				VMap& vmap = m_Data[key];
 				if (isElement) vmap.m_Type = Type::ELEMENT;
 				vmap.m_Key = key;
@@ -394,6 +395,7 @@ namespace RS
 			const VMap& vmap = m_Data.at(firstKey);
 			if (key.size() > (p+1))
 			{
+				RS_ASSERT(m_Type == Type::TABLE, "Cannot fetch children from a TABLE!");
 				std::string restOfTheKeys = key.substr(firstKey.size() + 1);
 				return vmap.At(restOfTheKeys);
 			}
