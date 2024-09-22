@@ -212,8 +212,12 @@ void RSE::Editor::RegisterEditorWindows()
 
 void RSE::Editor::RenderToastDemo()
 {
-    static uint32_t position = ImGui::GetDefaultNotificationPosition();
-    position = m_PersistentData["Windows"][m_sToastDemoWindowName].Fetch("NotificationsPosition", ImGui::GetDefaultNotificationPosition());
+    static uint32_t position = ImGuiToastPos_COUNT;
+    if (position == ImGuiToastPos_COUNT)
+    {
+        position = m_PersistentData["Windows"][m_sToastDemoWindowName].Fetch("NotificationsPosition", ImGui::GetDefaultNotificationPosition());
+        ImGui::SetNotificationPosition(position);
+    }
 
     ImGui::Begin("Notification Test", &m_ShowToastDemoWindow);
 

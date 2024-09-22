@@ -115,6 +115,30 @@ namespace RS::Utils
 		return newString;
 	}
 
+	/*
+	* Example: 
+	* size_t pos;
+	* std::string playerName = FindTag("Player <Loner>: How are you doing?", "<", ">", pos);
+	* 
+	* This will set playerName to "Loner" and pos to 7
+	* If not found pos will be std::string::npos
+	*/
+	inline std::string FindTag(const std::string& s, const std::string& start, const std::string& end, size_t& foundAt, size_t offset = 0)
+	{
+		std::string result;
+		foundAt = s.find_first_of(start, offset);
+		if (foundAt == std::string::npos) return result;
+		size_t startP = foundAt + start.size();
+		size_t endP = s.find_first_of(start, startP);
+		if (endP == std::string::npos)
+		{
+			foundAt = std::string::npos;
+			return result;
+		}
+
+		return s.substr(startP, endP - startP);
+	}
+
 	inline std::string ToLower(const std::string& s)
 	{
 		std::string res = s;

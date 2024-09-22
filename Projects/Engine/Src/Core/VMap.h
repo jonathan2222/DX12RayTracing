@@ -129,6 +129,18 @@ namespace RS
 	private:
 		enum class Type { TABLE, ELEMENT };
 
+		struct DebugStruct
+		{
+			std::optional<std::string>& errorMsg;
+			FileIOErrorCode& errorCode;
+			uint& lineNumber;
+			DebugStruct(std::optional<std::string>& errorMsg, FileIOErrorCode& errorCode, uint& lineNumber)
+				: errorMsg(errorMsg)
+				, errorCode(errorCode)
+				, lineNumber(lineNumber)
+			{}
+		};
+
 	public:
 		VMap() : m_Type(Type::TABLE) {}
 		VMap(const VElement& element) : m_Type(Type::ELEMENT) { m_ElementData = element; }
@@ -270,7 +282,9 @@ namespace RS
 			stream << m_sVersion << "\n";
 			stream << (compact ? "true" : "false") << "\n";
 			uint lineNumber = 2;
-			if (!WriteToStream(stream, vmap, 0, compact, errorMsg, errorCode, lineNumber))
+			DebugStruct debugStruct{ errorMsg, errorCode, lineNumber };
+			std::string tmpStr;
+			if (!WriteToStream(stream, vmap, 0, compact, debugStruct, tmpStr))
 				stream.clear();
 			stream.close();
 			return true;
@@ -281,7 +295,7 @@ namespace RS
 			std::optional<std::string> errorMessage;
 			bool result = WriteToDisk(vmap, path, compact, errorMessage, errorCode);
 			if (errorMessage.has_value())
-				LOG_ERROR("Failed to write {}! Error: {}", (const char*)path.c_str(), errorMessage->c_str());
+				LOG_ERROR("Failed to write {}! Error: {}", path.string().c_str(), errorMessage->c_str());
 			return result;
 		}
 
@@ -337,7 +351,9 @@ namespace RS
 				errorCode = FileIOErrorCode::OTHER;
 				return vmap;
 			}
-			if (!ReadFromStream(stream, vmap, compact, errorMsg, errorCode, lineNumber, ""))
+			std::string compactionStr;
+			DebugStruct debugStruct{ errorMsg, errorCode, lineNumber };
+			if (!ReadFromStream(stream, vmap, compact, debugStruct, "", compactionStr))
 			{
 				errorCode = FileIOErrorCode::OTHER;
 				return {};
@@ -351,7 +367,7 @@ namespace RS
 			std::optional<std::string> errorMessage;
 			VMap vmap = VMap::ReadFromDisk(path, errorMessage, errorCode);
 			if (errorMessage.has_value())
-				LOG_ERROR("Failed to load {}! Error: {}", (const char*)path.c_str(), errorMessage->c_str());
+				LOG_ERROR("Failed to load {}! Error: {}", path.string().c_str(), errorMessage->c_str());
 			return vmap;
 		}
 
@@ -454,15 +470,27 @@ namespace RS
 			line += ss.str();
 		}
 
-		static bool WriteToStream(std::ofstream& stream, const VMap& vmap, uint indentationIndex, bool compact, std::optional<std::string>& errorMsg, FileIOErrorCode& errorCode, uint& lineNumber)
+		static bool WriteToStream(std::ofstream& stream, const VMap& vmap, uint indentationIndex, bool compact,
+			DebugStruct& debugStruct, std::string& compactionStr)
 		{
-			auto PushLine = [&stream, &indentationIndex, compact, &lineNumber](uint indent, const auto& value) {
-				if (compact) stream << value << "\n";
+			auto PushLine = [&](uint indent, const auto& value) {
+				if (compact)
+				{
+					if (vmap.m_Type == Type::ELEMENT)
+						compactionStr += value;
+					else
+					{
+						uint indentation = indentationIndex + indent;
+						std::string indentStr(indentation > 2 ? indentation - 2 : 0, '\t');
+						stream << indentStr << value << "\n";
+					}
+				}
 				else
 				{
-					std::string indentStr(indentationIndex + indent, '\t');
+					uint indentation = indentationIndex + indent;
+					std::string indentStr(indentation > 2 ? indentation - 2 : 0, '\t');
 					stream << indentStr << value << "\n";
-					lineNumber++;
+					debugStruct.lineNumber++;
 				}
 			};
 
@@ -486,8 +514,8 @@ namespace RS
 					default:
 					{
 						AddToLine(line, '_');
-						errorMsg = std::format("Failed to write to disk at line {}. Type of key {} is not supported!", lineNumber, vmap.m_Key);
-						errorCode = FileIOErrorCode::OTHER;
+						debugStruct.errorMsg = std::format("Failed to write to disk at line {}. Type of key {} is not supported!", debugStruct.lineNumber, vmap.m_Key);
+						debugStruct.errorCode = FileIOErrorCode::OTHER;
 						return false;
 						break;
 					}
@@ -499,15 +527,34 @@ namespace RS
 					// Example:
 					//		T 4
 					line += " " + std::to_string(vmap.m_Data.size());
-					PushLine(1, line);
+					PushLine(1, compactionStr + line);
 					for (auto& [key, value] : vmap.m_Data)
 					{
 						// Example:
 						//		"Version":
-						PushLine(1, "\"" + key + "\":");
-						if (!WriteToStream(stream, value, indentationIndex + 1, compact, errorMsg, errorCode, lineNumber))
+						std::string compactionStr;
+						std::string finalLine = "\"" + key + "\":";
+						if (compact)
 						{
-							errorCode = FileIOErrorCode::OTHER;
+							if (value.m_Type == Type::ELEMENT)
+							{
+								if (!WriteToStream(stream, value, indentationIndex + 1, compact, debugStruct, compactionStr))
+								{
+									debugStruct.errorCode = FileIOErrorCode::OTHER;
+									return false;
+								}
+								finalLine += " " + compactionStr;
+								PushLine(2, finalLine);
+								continue;
+							}
+						}
+						if (!compact)
+							PushLine(1, finalLine);
+						else
+							compactionStr = finalLine + " ";
+						if (!WriteToStream(stream, value, indentationIndex + 1, compact, debugStruct, compactionStr))
+						{
+							debugStruct.errorCode = FileIOErrorCode::OTHER;
 							return false;
 						}
 					}
@@ -518,22 +565,30 @@ namespace RS
 			}
 			catch (std::exception e)
 			{
-				errorMsg = std::format("Failed to write to disk at line {}. {}", lineNumber, e.what());
-				errorCode = FileIOErrorCode::OTHER;
+				debugStruct.errorMsg = std::format("Failed to write to disk at line {}. {}", debugStruct.lineNumber, e.what());
+				debugStruct.errorCode = FileIOErrorCode::OTHER;
 				return false;
 			}
 		}
 
-		static bool ReadFromStream(std::ifstream& stream, VMap& vmap, bool compact, std::optional<std::string>& errorMsg, FileIOErrorCode& errorCode, uint& lineNumber, const std::string& key)
+		static bool ReadFromStream(std::ifstream& stream, VMap& vmap, bool compact,
+			DebugStruct& debugStruct, const std::string& key, std::string& compationStr)
 		{
 			try
 			{
 				std::string tmp;
-				auto FetchLine = [&tmp, &stream, &lineNumber]()
+				auto FetchLine = [&]()
 				{
+					if (!compationStr.empty())
+					{
+						tmp = compationStr;
+						compationStr = "";
+						return;
+					}
+
 					std::getline(stream, tmp);
 					Utils::Trim(tmp);
-					lineNumber++;
+					debugStruct.lineNumber++;
 				};
 
 				if (!compact)
@@ -546,8 +601,8 @@ namespace RS
 					vmap.m_Type = Type::ELEMENT;
 					if (tmp[1] != '_' || tmp.size() < 4)
 					{
-						errorMsg = std::format("Failed to read from disk at line {}. Data is missing for element with key {}!", lineNumber, key);
-						errorCode = FileIOErrorCode::OTHER;
+						debugStruct.errorMsg = std::format("Failed to read from disk at line {}. Data is missing for element with key {}!", debugStruct.lineNumber, key);
+						debugStruct.errorCode = FileIOErrorCode::OTHER;
 						return false;
 					}
 					VElement::Type eType = StringToEType(std::string(1, tmp[2]));
@@ -587,8 +642,8 @@ namespace RS
 						case RS::VMap::VElement::Type::UNKNOWN:
 						default:
 						{
-							errorMsg = std::format("Failed to read from disk at line {}. Type of key {} is not supported!", lineNumber, key);
-							errorCode = FileIOErrorCode::OTHER;
+							debugStruct.errorMsg = std::format("Failed to read from disk at line {}. Type of key {} is not supported!", debugStruct.lineNumber, key);
+							debugStruct.errorCode = FileIOErrorCode::OTHER;
 							return false;
 							break;
 						}
@@ -602,23 +657,30 @@ namespace RS
 					for (uint i = 0; i < dataCount; ++i)
 					{
 						FetchLine();
-						if (tmp.size() < 3)
+						size_t nameStartPos;
+						std::string name = Utils::FindTag(tmp, "\"", "\":", nameStartPos);
+
+						if (nameStartPos == std::string::npos)
 						{
-							errorMsg = std::format("Failed to read from disk at line {}. Not enough characters for the key! Need to be in the format: \"<some key name>\":", lineNumber);
-							errorCode = FileIOErrorCode::OTHER;
+							debugStruct.errorMsg = std::format("Failed to read from disk at line {}. Could not read key! Need to be in the format: \"<some key name>\":", debugStruct.lineNumber);
+							debugStruct.errorCode = FileIOErrorCode::OTHER;
 							return false;
 						}
-						tmp = tmp.substr(1, tmp.size()-3);
-						if (tmp.empty())
+
+						if (name.empty())
 						{
-							errorMsg = std::format("Failed to read from disk at line {}. Key is empty!", lineNumber);
-							errorCode = FileIOErrorCode::OTHER;
+							debugStruct.errorMsg = std::format("Failed to read from disk at line {}. Key is empty!", debugStruct.lineNumber);
+							debugStruct.errorCode = FileIOErrorCode::OTHER;
 							return false;
 						}
-						VMap& subMap = vmap.m_Data[tmp];
-						if (!ReadFromStream(stream, subMap, compact, errorMsg, errorCode, lineNumber, tmp))
+
+						tmp = tmp.substr(nameStartPos + 3 + name.size()); // Fetch rest of the line
+						Utils::Trim(tmp);
+
+						VMap& subMap = vmap.m_Data[name];
+						if (!ReadFromStream(stream, subMap, compact, debugStruct, name, tmp))
 						{
-							errorCode = FileIOErrorCode::OTHER;
+							debugStruct.errorCode = FileIOErrorCode::OTHER;
 							return false;
 						}
 					}
@@ -629,8 +691,8 @@ namespace RS
 			}
 			catch (std::exception e)
 			{
-				errorMsg = std::format("Failed to read from disk at line {}. {}", lineNumber, e.what());
-				errorCode = FileIOErrorCode::OTHER;
+				debugStruct.errorMsg = std::format("Failed to read from disk at line {}. {}", debugStruct.lineNumber, e.what());
+				debugStruct.errorCode = FileIOErrorCode::OTHER;
 				return false;
 			}
 		}

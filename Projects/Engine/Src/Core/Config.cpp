@@ -37,7 +37,7 @@ void Config::Save()
 {
 	RS::VMap::FileIOErrorCode errorCode;
 	std::optional<std::string> errorMessage;
-	VMap::WriteToDisk(Map, m_FilePath, false, errorMessage, errorCode);
+	VMap::WriteToDisk(Map, m_FilePath, true, errorMessage, errorCode);
 	if (errorMessage.has_value())
 		LOG_ERROR("Failed to save Config file! Msg: {}", errorMessage->c_str());
 }
