@@ -3,6 +3,7 @@
 #include "Misc/StringUtils.h"
 #include "Misc/BitUtils.h"
 #include "Misc/HashUtils.h"
+#include <limits>
 
 namespace RS::Utils
 {
@@ -12,18 +13,22 @@ namespace RS::Utils
 	{
 		uint32 count = 0;
 		FType num = std::abs(v);
-		num = num - IType(num);
+		IType inum = IType(num);
+		num = num - inum;
+		if (num >= std::numeric_limits<IType>::max())
+			return 0;
 		while (num != 0)
 		{
 			num = num * 10;
-			num = num - IType(num);
+			inum = IType(num);
+			num = num - inum;
 			count++;
 		}
 		return count;
 	}
 	inline uint32 GetNumDecimals(float v)
 	{
-		return GetNumDecimals<float, int32>(v);
+		return GetNumDecimals<float, int64>(v);
 	}
 	inline uint32 GetNumDecimals(double v)
 	{
