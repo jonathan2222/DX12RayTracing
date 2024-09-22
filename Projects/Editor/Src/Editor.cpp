@@ -28,10 +28,10 @@ void RSE::Editor::Init()
     m_ShowToastDemoWindow = m_PersistentData["Windows"][m_sToastDemoWindowName].Fetch("Active", false);
 
     RS::Console* pConsole = RS::Console::Get();
-    pConsole->AddFunction("Editor.CloseAllWindows", [this](RS::Console::FuncArgs args)
+    pConsole->AddFunction("Editor.CloseAllWindows", [this](RS::Console::FuncArgs args)->bool
         {
             if (!RS::Console::ValidateFuncArgs(args, { {"-a"} }, 0))
-                return;
+                return false;
 
             bool closeCanvasWindow = args.Get("-a").has_value();
             for (EditorWindow* pWindow : m_EditorWindows)
@@ -46,6 +46,8 @@ void RSE::Editor::Init()
             m_ShowToastDemoWindow = false;
             m_PersistentData["Windows"][m_sImGuiDemoWindowName]["Active"] = false;
             m_PersistentData["Windows"][m_sToastDemoWindowName]["Active"] = false;
+
+            return true;
         },
         RS::Console::Flag::NONE, "Closes all windows except the Canvas window.\nUse '-a' to also close the canvas window."
     );
@@ -176,9 +178,7 @@ void RSE::Editor::RenderMenuBar()
             if (ImGui::BeginMenu("Other"))
             {
                 ImGui::MenuItem(m_sImGuiDemoWindowName.c_str(), "", &m_ShowImGuiDemoWindow);
-                m_PersistentData["Windows"][m_sImGuiDemoWindowName]["Active"] = m_ShowImGuiDemoWindow;
                 ImGui::MenuItem(m_sToastDemoWindowName.c_str(), "", &m_ShowToastDemoWindow);
-                m_PersistentData["Windows"][m_sToastDemoWindowName]["Active"] = m_ShowToastDemoWindow;
                 ImGui::EndMenu();
             }
 
@@ -197,6 +197,9 @@ void RSE::Editor::RenderMenuBar()
 
         ImGui::EndMenuBar();
     }
+
+    m_PersistentData["Windows"][m_sImGuiDemoWindowName]["Active"] = m_ShowImGuiDemoWindow;
+    m_PersistentData["Windows"][m_sToastDemoWindowName]["Active"] = m_ShowToastDemoWindow;
 }
 
 void RSE::Editor::RegisterEditorWindows()

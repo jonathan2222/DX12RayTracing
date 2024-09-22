@@ -21,10 +21,10 @@ void RS::Console::Init()
 
 	AddVar("Console.Info.CurrentCmdHistoryIndexOffset", m_CurrentCmdHistoryIndexOffset, Flag::ReadOnly, "The index offset in the executed commands history list.");
 
-	AddFunction("Console.ListCommands", [this](FuncArgs args)->void
+	AddFunction("Console.ListCommands", [this](FuncArgs args)->bool
 		{
 			if (!ValidateFuncArgs(args, { {"-d"} }, false))
-				return;
+				return false;
 
 			{
 				Line line;
@@ -55,14 +55,16 @@ void RS::Console::Init()
 				line.color = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 				m_History.push_back(line);
 			}
+
+			return true;
 		},
 		Flag::NONE, "List all commands.\nUse '-d' to display the variable type."
 	);
 
-	AddFunction("Console.Clear", [this](FuncArgs args)->void
+	AddFunction("Console.Clear", [this](FuncArgs args)->bool
 		{
 			if (!ValidateFuncArgs(args, { {"-c"} }, false))
-				return;
+				return false;
 
 			m_History.clear();
 			if (args.Get("-c"))
@@ -70,14 +72,16 @@ void RS::Console::Init()
 				m_CommandHistory.clear();
 				m_CurrentCmdHistoryIndexOffset = -1;
 			}
+
+			return true;
 		},
 		Flag::NONE, "Clear the console.\nUse '-c' to also clear the executed command history."
 	);
 
-	AddFunction("Console.Help", [this](FuncArgs args)->void
+	AddFunction("Console.Help", [this](FuncArgs args)->bool
 		{
 			if (!ValidateFuncArgs(args, { {FuncArg::TypeFlag::Named} }, ValidateFuncArgsFlag::ArgCountMustMatch | ValidateFuncArgsFlag::TypeMatchOnly))
-				return;
+				return false;
 
 			auto arg = args.Get(0);
 			if (arg)
@@ -92,6 +96,8 @@ void RS::Console::Init()
 						Print(ImVec4(0.0f, 1.0f, 1.0f, 1.0f), "\t{}", docsLine);
 				}
 			}
+
+			return true;
 		},
 		{ FuncArg::TypeFlag::Int, FuncArg::TypeFlag::Float, FuncArg::TypeFlag::Function },
 		Flag::NONE, "Get the documentation from the passed command.\nExample:\n\tConsole.Help Console.Clear\n\tGives you the documentation of the Clear command."
@@ -271,7 +277,7 @@ void RS::Console::Print(const ImVec4& color, const char* txt)
 	m_History.push_back(line);
 }
 
-bool RS::Console::AddFunction(const std::string& name, std::function<void(FuncArgs)> func, Flags flags, const std::string& docs)
+bool RS::Console::AddFunction(const std::string& name, Func func, Flags flags, const std::string& docs)
 {
 	Variable var;
 	var.name = name;
@@ -583,7 +589,9 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 			StringToVarValue(type, value, (void*)&arg.value);
 			args.push_back(arg);
 		}
-		var.func(args);
+		bool result = var.func(args);
+		if (!result)
+			Print(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), var.documentation);
 		m_CommandHistory.push_back(cmdLine);
 		return;
 	}

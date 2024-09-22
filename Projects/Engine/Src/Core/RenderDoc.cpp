@@ -152,68 +152,74 @@ void RS::RenderDoc::EndFrameCapture()
 
 void RenderDoc::RegisterCommands()
 {
-    Console::Get()->AddFunction("RenderDoc.Capture", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.Capture", [this](Console::FuncArgs args)->bool
         {
             if (!RS::Console::ValidateFuncArgs(args, { {Console::FuncArg::TypeFlag::Int} }, Console::ValidateFuncArgsFlag::TypeMatchOnly))
-                return;
+                return false;
 
             bool specifiesNumberOfFrames = !args.empty();
             if (specifiesNumberOfFrames)
                 TakeMultiFrameCapture(args[0].value);
             else
                 TakeCapture();
+
+            return true;
         },
         Console::Flag::NONE, "Take a render doc capture.\nUse -n <num frames> to capture n frames."
     );
 
-    Console::Get()->AddFunction("RenderDoc.GetAPIVersion", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.GetAPIVersion", [this](Console::FuncArgs args)->bool
         {
             if (!FetchAPI())
-                return;
+                return false;
             int major = 0;
             int minor = 0;
             int patch = 0;
             m_pRenderDocAPI->GetAPIVersion(&major, &minor, &patch);
             Console::Get()->Print("{}.{}.{}", major, minor, patch);
+            return true;
         },
         Console::Flag::NONE, "Returns the RenderDoc API version."
     );
 
-    Console::Get()->AddFunction("RenderDoc.GetFilePathTemplate", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.GetFilePathTemplate", [this](Console::FuncArgs args)->bool
         {
             if (!FetchAPI())
-                return;
+                return false;
             const char* filePath = m_pRenderDocAPI->GetCaptureFilePathTemplate();
             Console::Get()->Print(filePath);
+            return true;
         },
         Console::Flag::NONE, "Returns the RenderDoc capture file path template."
     );
 
-    Console::Get()->AddFunction("RenderDoc.ShowReplayUI", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.ShowReplayUI", [this](Console::FuncArgs args)->bool
         {
             if (!FetchAPI())
-                return;
+                return false;
             m_pRenderDocAPI->ShowReplayUI();
+            return true;
         },
         Console::Flag::NONE, "Raise the RenderDocUI window to the top."
     );
 
-    Console::Get()->AddFunction("RenderDoc.GetNumCaptures", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.GetNumCaptures", [this](Console::FuncArgs args)->bool
         {
             if (!FetchAPI())
-                return;
+                return false;
             uint32 numCaptures = m_pRenderDocAPI->GetNumCaptures();
             Console::Get()->Print("{}", numCaptures);
+            return true;
         },
         Console::Flag::NONE, "Returns the number of captures."
     );
 
-    Console::Get()->AddFunction("RenderDoc.GetCapture", [this](Console::FuncArgs args)->void
+    Console::Get()->AddFunction("RenderDoc.GetCapture", [this](Console::FuncArgs args)->bool
         {
             if (!FetchAPI())
-                return;
+                return false;
             if (!RS::Console::ValidateFuncArgs(args, { {"-i"} }, false))
-                return;
+                return false;
 
             bool hasIndex = args.Get("-i").has_value();
             uint32 index = !hasIndex ? 0 : args.Get("-i").value().types.ui32;
@@ -223,6 +229,7 @@ void RenderDoc::RegisterCommands()
                 Console::Get()->Print(filePath.c_str());
             else
                 Console::Get()->Print("Invalid capture index!");
+            return true;
         },
         Console::Flag::NONE, "Get file path for a RenderDoc capture.\nUse -i <index> to get a specific capture, else takes index 0."
     );

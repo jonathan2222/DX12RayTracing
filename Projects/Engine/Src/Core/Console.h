@@ -89,7 +89,7 @@ namespace RS
 		};
 
 		using FuncArgs = const FuncArgsInternal&;
-		using Func = std::function<void(FuncArgs)>;
+		using Func = std::function<bool(FuncArgs)>;
 
 		enum class Type : uint32
 		{
