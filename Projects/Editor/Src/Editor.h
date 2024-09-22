@@ -32,22 +32,31 @@ namespace RSE
 		void RegisterEditorWindows();
 
 		template<class T>
-		void RegisterEditorWindow(const std::string& name, bool enabled = false);
+		EditorWindow* RegisterEditorWindow(const std::string& name, bool enabled = false);
 
 		void RenderToastDemo();
 
+		void LoadPersistentData();
+		void SavePersistentData();
 	private:
 		ImGuiDockNodeFlags m_DockspaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 		std::vector<EditorWindow*> m_EditorWindows;
 
-		bool m_ShowImGuiDemoWindow = false;
-		bool m_ShowToastDemoWindow = false;
+		bool m_ShowImGuiDemoWindow;
+		bool m_ShowToastDemoWindow;
+		inline static const std::string m_sToastDemoWindowName = "Toast Demo";
+		inline static const std::string m_sImGuiDemoWindowName = "ImGui Demo";
+
+		inline static const std::string m_sPersistentDataPath = RS_PROJECT_NAME "/PersistentData.cfg";
+		RS::VMap m_PersistentData;
 	};
 
 	template<class T>
-	inline void Editor::RegisterEditorWindow(const std::string& name, bool enabled)
+	inline EditorWindow* Editor::RegisterEditorWindow(const std::string& name, bool enabled)
 	{
-		m_EditorWindows.push_back(new T(name, enabled));
+		EditorWindow* pWindow = new T(name, enabled);
+		m_EditorWindows.push_back(pWindow);
+		return pWindow;
 	}
 }

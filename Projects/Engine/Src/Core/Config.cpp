@@ -26,16 +26,18 @@ void Config::Destroy()
 
 void Config::Load()
 {
+	RS::VMap::FileIOErrorCode errorCode;
 	std::optional<std::string> errorMessage;
-	Map = VMap::ReadFromDisk(m_FilePath, errorMessage);
+	Map = VMap::ReadFromDisk(m_FilePath, errorMessage, errorCode);
 	if (errorMessage.has_value())
 		LOG_ERROR("Failed to load Config file! Using defaults. Msg: {}", errorMessage->c_str());
 }
 
 void Config::Save()
 {
+	RS::VMap::FileIOErrorCode errorCode;
 	std::optional<std::string> errorMessage;
-	VMap::WriteToDisk(Map, m_FilePath, errorMessage);
+	VMap::WriteToDisk(Map, m_FilePath, false, errorMessage, errorCode);
 	if (errorMessage.has_value())
 		LOG_ERROR("Failed to save Config file! Msg: {}", errorMessage->c_str());
 }

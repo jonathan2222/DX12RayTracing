@@ -7,7 +7,9 @@ namespace RS
 	class CorePlatform
 	{
 	public:
-		RS_DEFAULT_ABSTRACT_CLASS(CorePlatform)
+		CorePlatform();
+		virtual ~CorePlatform() = default;
+		RS_NO_COPY_AND_MOVE(CorePlatform)
 
 		static std::shared_ptr<CorePlatform> Get();
 
@@ -15,6 +17,8 @@ namespace RS
 		std::string GetUserNameStr() const;
 
 		std::string GetConfigurationAsStr() const;
+
+		static const std::string& GetTemporaryDirectoryPath() { return m_sTemporaryDirectoryPath; }
 
 		RS_BEGIN_FLAGS_U32(ImageFlag)
 			RS_FLAG(FLIP_Y)
@@ -38,5 +42,11 @@ namespace RS
 		static BinaryFile LoadBinaryFile(const std::string& path, uint32 offset = 0);
 
 		static std::string GetLastErrorString();
+
+	private:
+		std::string CreateTemporaryPath();
+
+	private:
+		inline static std::string m_sTemporaryDirectoryPath;
 	};
 }

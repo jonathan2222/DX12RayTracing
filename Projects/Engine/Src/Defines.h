@@ -4,6 +4,10 @@
 #include <vector>
 #include <string>
 
+#ifndef RS_PROJECT_NAME
+#define RS_PROJECT_NAME "RSDefault"
+#endif
+
 #define RS_UNUSED(x) ((void*)x)
 
 #define LOG_DEBUG_ENABLED 1

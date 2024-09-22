@@ -11,20 +11,22 @@ int main(int argc, char* argv[])
     RS::LaunchArguments::Init(argc, argv);
     RS::Config::Get()->Init(RS_CONFIG_FILE_PATH);
 
-    RS::VMap vmap;
-    vmap["Version"] = 1;
-    vmap["Display"]["Width"] = 1920;
-    vmap["Array"] = { 1, 2, 3, 4 };
+    // Testing VMap
+    {
+        RS::VMap vmap;
+        vmap["Version"] = 1;
+        vmap["Display"]["Width"] = 1920;
+        vmap["Array"] = { 1, 2, 3, 4 };
 
-    std::optional<std::string> errorMsg;
-    RS::VMap::WriteToDisk(vmap, "./Assets/Config/PersistentData.cfg", errorMsg);
-    vmap.Clear();
-    vmap = RS::VMap::ReadFromDisk("./Assets/Config/PersistentData.cfg", errorMsg);
+        RS::VMap::WriteToDisk(vmap, "./Assets/Config/PersistentData.cfg");
+        vmap.Clear();
+        vmap = RS::VMap::ReadFromDisk("./Assets/Config/PersistentData.cfg");
 
-    int version = vmap["Version"];
-    int width = vmap["Display/Width"];
-    RS::VArray arr = vmap["Array"];
-    auto data = arr[1];
+        int version = vmap["Version"];
+        int width = vmap["Display/Width"];
+        RS::VArray arr = vmap["Array"];
+        auto data = arr[1];
+    }
 
     RS::DisplayDescription displayDesc = {};
     displayDesc.Title                   = RS::Config::Map.Fetch("Display/InitialState/Title", "Editor");

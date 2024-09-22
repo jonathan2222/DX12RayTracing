@@ -1,6 +1,7 @@
 #include "PreCompiled.h"
 #include "Editor.h"
 
+#include "Core/CorePlatform.h"
 #include "Core/Console.h"
 #include "Core/Display.h"
 #include "GUI/LogNotifier.h"
@@ -17,9 +18,14 @@ RSE::Editor* RSE::Editor::Get()
 
 void RSE::Editor::Init()
 {
+    LoadPersistentData();
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // For Multiple windows. TODO: Need to implemented this in the ImGuiRenderer first!
+
+    m_ShowImGuiDemoWindow = m_PersistentData["Windows"].Fetch(m_sImGuiDemoWindowName, false);
+    m_ShowToastDemoWindow = m_PersistentData["Windows"].Fetch(m_sToastDemoWindowName, false);
 
     RS::Console* pConsole = RS::Console::Get();
     pConsole->AddFunction("Editor.CloseAllWindows", [this](RS::Console::FuncArgs args)
@@ -29,10 +35,17 @@ void RSE::Editor::Init()
 
             bool closeCanvasWindow = args.Get("-a").has_value();
             for (EditorWindow* pWindow : m_EditorWindows)
+            {
                 if (closeCanvasWindow || dynamic_cast<Canvas*>(pWindow) == nullptr)
+                {
                     pWindow->GetEnable() = false;
+                    m_PersistentData["Windows"][pWindow->GetName()] = false;
+                }
+            }
             m_ShowImGuiDemoWindow = false;
             m_ShowToastDemoWindow = false;
+            m_PersistentData["Windows"][m_sImGuiDemoWindowName] = false;
+            m_PersistentData["Windows"][m_sToastDemoWindowName] = false;
         },
         RS::Console::Flag::NONE, "Closes all windows except the Canvas window.\nUse '-a' to also close the canvas window."
     );
@@ -45,6 +58,8 @@ void RSE::Editor::Init()
 
 void RSE::Editor::Release()
 {
+    SavePersistentData();
+
     for (EditorWindow* pWindow : m_EditorWindows)
     {
         pWindow->Release();
@@ -153,12 +168,17 @@ void RSE::Editor::RenderMenuBar()
             }
 
             for (EditorWindow* pWindow : m_EditorWindows)
-                ImGui::MenuItem(pWindow->GetName().c_str(), "", &pWindow->GetEnable(), pWindow->GetEnableRequirements());
+            {
+                if (ImGui::MenuItem(pWindow->GetName().c_str(), "", &pWindow->GetEnable(), pWindow->GetEnableRequirements()))
+                    m_PersistentData["Windows"][pWindow->GetName()] = pWindow->GetEnable();
+            }
             
             if (ImGui::BeginMenu("Other"))
             {
-                ImGui::MenuItem("ImGui Demo", "", &m_ShowImGuiDemoWindow);
-                ImGui::MenuItem("Toast Demo", "", &m_ShowToastDemoWindow);
+                ImGui::MenuItem(m_sImGuiDemoWindowName.c_str(), "", &m_ShowImGuiDemoWindow);
+                m_PersistentData["Windows"][m_sImGuiDemoWindowName] = m_ShowImGuiDemoWindow;
+                ImGui::MenuItem(m_sToastDemoWindowName.c_str(), "", &m_ShowToastDemoWindow);
+                m_PersistentData["Windows"][m_sToastDemoWindowName] = m_ShowToastDemoWindow;
                 ImGui::EndMenu();
             }
 
@@ -181,14 +201,19 @@ void RSE::Editor::RenderMenuBar()
 
 void RSE::Editor::RegisterEditorWindows()
 {
-    RegisterEditorWindow<ConsoleInspector>("Console Inspector");
-    RegisterEditorWindow<LifetimeTracker>("Lifetime Tracker");
-    RegisterEditorWindow<Canvas>("Canvas", true);
+    EditorWindow* pConsoleInspector = RegisterEditorWindow<ConsoleInspector>("Console Inspector");
+    EditorWindow* pLifetimeTracker = RegisterEditorWindow<LifetimeTracker>("Lifetime Tracker");
+    EditorWindow* pCanvas = RegisterEditorWindow<Canvas>("Canvas", true);
+
+    pConsoleInspector->GetEnable() = m_PersistentData["Windows"].Fetch(pConsoleInspector->GetName(), pConsoleInspector->GetEnable());
+    pLifetimeTracker->GetEnable() = m_PersistentData["Windows"].Fetch(pLifetimeTracker->GetName(), pLifetimeTracker->GetEnable());
+    pCanvas->GetEnable() = m_PersistentData["Windows"].Fetch(pCanvas->GetName(), pCanvas->GetEnable());
 }
 
 void RSE::Editor::RenderToastDemo()
 {
     static uint32_t position = ImGui::GetDefaultNotificationPosition();
+    position = m_PersistentData["Windows"][m_sToastDemoWindowName].Fetch("NotificationsPosition", ImGui::GetDefaultNotificationPosition());
 
     ImGui::Begin("Notification Test", &m_ShowToastDemoWindow);
 
@@ -236,8 +261,24 @@ void RSE::Editor::RenderToastDemo()
         if (ImGui::MenuItem("Bottom-left", NULL, position == ImGuiToastPos_BottomLeft)) { position = ImGuiToastPos_BottomLeft; ImGui::SetNotificationPosition(position); }
         if (ImGui::MenuItem("Bottom-Center", NULL, position == ImGuiToastPos_BottomCenter)) { position = ImGuiToastPos_BottomCenter; ImGui::SetNotificationPosition(position); }
         if (ImGui::MenuItem("Bottom-right", NULL, position == ImGuiToastPos_BottomRight)) { position = ImGuiToastPos_BottomRight; ImGui::SetNotificationPosition(position); }
+        m_PersistentData["Windows"][m_sToastDemoWindowName]["NotificationsPosition"] = position;
         ImGui::EndPopup();
     }
 
     ImGui::End();
+}
+
+void RSE::Editor::LoadPersistentData()
+{
+    std::string filePath = RS::CorePlatform::GetTemporaryDirectoryPath();
+    filePath += m_sPersistentDataPath;
+
+    m_PersistentData = RS::VMap::ReadFromDisk(filePath);
+}
+
+void RSE::Editor::SavePersistentData()
+{
+    std::string filePath = RS::CorePlatform::GetTemporaryDirectoryPath();
+    filePath += m_sPersistentDataPath;
+    RS::VMap::WriteToDisk(m_PersistentData, filePath);
 }

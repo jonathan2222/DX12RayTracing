@@ -7,6 +7,11 @@
 
 #include "GUI/LogNotifier.h"
 
+RS::CorePlatform::CorePlatform()
+{
+	m_sTemporaryDirectoryPath = CreateTemporaryPath();
+}
+
 std::shared_ptr<RS::CorePlatform> RS::CorePlatform::Get()
 {
 	static std::shared_ptr<CorePlatform> s_Platform = std::make_shared<CorePlatform>();
@@ -143,4 +148,22 @@ std::string RS::CorePlatform::GetLastErrorString()
 		return str;
 	}
 	return "?";
+}
+
+#include <shlobj.h> // Used for SHGetFolderPathW
+std::string RS::CorePlatform::CreateTemporaryPath()
+{
+	WCHAR documentsPath[MAX_PATH];
+	HRESULT result = SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, documentsPath);
+	if (result != S_OK)
+	{
+		std::string resultPath = RS_ASSETS_PATH "TemporaryData/";
+		LOG_WARNING("Could not find OS Documents folder! Defaulting to {}", resultPath.c_str());
+		return resultPath;
+	}
+
+	std::string resultPath = Utils::ToString(documentsPath);
+	if (resultPath[resultPath.size() - 1] != '/')
+		resultPath += "/";
+	return Utils::ReplaceAll(resultPath, "\\", "/");
 }
