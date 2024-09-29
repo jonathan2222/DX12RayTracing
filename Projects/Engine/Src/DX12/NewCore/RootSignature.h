@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DX12/Dx12Device.h"
+#include "Utils/Misc/xxhash.h"
 
 namespace RS
 {
@@ -106,6 +107,8 @@ namespace RS
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& GetRootSignatureDesc() const;
 
 		uint32 GetNumDescriptors(uint32 rootIndex) const;
+
+		void UpdateHash(xxh::hash3_state_t<64>& hashStream);
 
 	private:
 		bool Validate() const;

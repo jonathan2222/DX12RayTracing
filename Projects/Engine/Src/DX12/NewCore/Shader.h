@@ -42,6 +42,7 @@ namespace RS
 		*/
 		bool Combine(Shader& other);
 
+		D3D12_SHADER_BYTECODE GetShaderByteCode(TypeFlags type, bool supressWarnings = false) const;
 		IDxcBlob* GetShaderBlob(TypeFlags type, bool supressWarnings = false) const;
 		ID3D12ShaderReflection* GetReflection(TypeFlags type, bool supressWarnings = false) const;
 

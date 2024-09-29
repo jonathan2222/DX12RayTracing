@@ -104,6 +104,25 @@ uint32 RS::RootSignature::GetNumDescriptors(uint32 rootIndex) const
 	return descriptorCount;
 }
 
+void RS::RootSignature::UpdateHash(xxh::hash3_state_t<64>& hashStream)
+{
+	for (Entry& entry : m_Entries)
+	{
+		hashStream.update(&entry.m_RootParameter.ParameterType, sizeof(D3D12_ROOT_PARAMETER_TYPE));
+		hashStream.update(&entry.m_RootParameter.ShaderVisibility, sizeof(D3D12_SHADER_VISIBILITY));
+		if (entry.m_RootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+			hashStream.update(entry.m_RootParameter.DescriptorTable.pDescriptorRanges, entry.m_RootParameter.DescriptorTable.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE1));
+		else if (entry.m_RootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS)
+			hashStream.update(&entry.m_RootParameter.Constants, sizeof(D3D12_ROOT_CONSTANTS));
+		else // CBV, SRV or UAV
+			hashStream.update(&entry.m_RootParameter.Descriptor, sizeof(D3D12_ROOT_DESCRIPTOR1));
+	}
+
+	hashStream.update(&m_Version, sizeof(m_Version));
+	hashStream.update(&m_Flags, sizeof(m_Flags));
+	hashStream.update(m_StaticSamplers);
+}
+
 bool RS::RootSignature::Validate() const
 {
 	if (m_Entries.empty()) return false;

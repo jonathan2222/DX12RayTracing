@@ -183,6 +183,14 @@ bool RS::Shader::Combine(Shader& other)
 	return true;
 }
 
+D3D12_SHADER_BYTECODE RS::Shader::GetShaderByteCode(TypeFlags type, bool supressWarnings) const
+{
+	IDxcBlob* pShaderObject = GetShaderBlob(type, supressWarnings);
+	if (pShaderObject)
+		return CD3DX12_SHADER_BYTECODE(pShaderObject->GetBufferPointer(), pShaderObject->GetBufferSize());
+	return CD3DX12_SHADER_BYTECODE(nullptr, 0);
+}
+
 IDxcBlob* RS::Shader::GetShaderBlob(TypeFlags type, bool supressWarnings) const
 {
 	if (!Utils::IsPowerOfTwo(type))
