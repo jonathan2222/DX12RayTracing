@@ -270,7 +270,7 @@ void SandboxApp::Init()
 
     D3D12_CLEAR_VALUE clearValueDepth;
     clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
-    clearValueDepth.DepthStencil.Depth = 1.0f;
+    clearValueDepth.DepthStencil.Depth = 0.0f;
     clearValueDepth.DepthStencil.Stencil = 0;
     auto pDepthTexture = pCommandList->CreateTexture(
         RS::Display::Get()->GetWidth(),
@@ -287,7 +287,7 @@ void SandboxApp::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(aspect, 45.f, { 0.f, 2.f, 0.f }, { 0.f, 2.0f, 1.0f }, 1.0f, 10.f);
+    m_Camera.Init(aspect, 45.f, { 0.f, 1.f, -2.f }, { 0.f, 1.0f, 1.0f }, 1.0f, 10.f);
 }
 
 void SandboxApp::CreatePipelineState()
@@ -372,11 +372,11 @@ void SandboxApp::CreatePipelineState()
     psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Geometry, true));
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-    psoDesc.RasterizerState.FrontCounterClockwise = false;
+    psoDesc.RasterizerState.FrontCounterClockwise = true;
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psoDesc.DepthStencilState.DepthEnable = true;
     psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
     psoDesc.DepthStencilState.StencilEnable = false;
 
     //psoDesc.DSVFormat

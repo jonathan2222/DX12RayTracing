@@ -21,7 +21,7 @@ PSInput VertexMain(float4 position : POSITION, float4 normal : NORMAL, float2 uv
     PSInput result;
 
     result.position = mul(mul(vsData.camera, vsData.transform), float4(position.xyz, 1.0f)); // Clip space.
-    result.normal = normal;//mul(float4(, 0.0f), vsData.transform); // World space
+    result.normal = mul(vsData.transform, float4(normal.xyz, 0.0f)); // World space
     result.uv = uv;
 
     return result;
