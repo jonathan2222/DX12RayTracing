@@ -3,6 +3,7 @@
 #include <RSEngine.h>
 
 #include "Camera.h"
+#include "DX12/NewCore/GraphicsPSO.h"
 
 struct Entity
 {
@@ -25,7 +26,7 @@ private:
 
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
-	ID3D12PipelineState* m_pPipelineState = nullptr;
+	RS::GraphicsPSO m_GraphicsPSO;
 	std::shared_ptr<RS::VertexBuffer> m_pVertexBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
 	std::shared_ptr<RS::Texture> m_NullTexture;

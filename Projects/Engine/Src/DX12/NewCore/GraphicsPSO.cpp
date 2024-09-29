@@ -20,6 +20,11 @@ GraphicsPSO::~GraphicsPSO()
 	}
 }
 
+void RS::GraphicsPSO::SetDefaults()
+{
+    InitDefaults();
+}
+
 void GraphicsPSO::SetInputLayout(D3D12_INPUT_LAYOUT_DESC inputLayoutDesc)
 {
     m_PSODesc.InputLayout = inputLayoutDesc;
@@ -108,7 +113,7 @@ void RS::GraphicsPSO::SetSampleDesc(DXGI_SAMPLE_DESC sampleDesc)
 void RS::GraphicsPSO::SetRTVFormats(const std::vector<DXGI_FORMAT>& formats)
 {
     m_PSODesc.NumRenderTargets = (UINT)formats.size();
-    for (uint i = 0; i < 8; ++i)
+    for (uint i = 0; i < m_PSODesc.NumRenderTargets; ++i)
         m_PSODesc.RTVFormats[i] = formats[i];
 }
 
@@ -248,7 +253,7 @@ void RS::GraphicsPSO::UpdateHash(const DXGI_SAMPLE_DESC& sampleDesc)
 
 void RS::GraphicsPSO::UpdateHash(DXGI_FORMAT formats[8])
 {
-    m_HashStream.update(formats, 8 * sizeof(DXGI_FORMAT));
+    m_HashStream.update(formats, m_PSODesc.NumRenderTargets * sizeof(DXGI_FORMAT));
 }
 
 void RS::GraphicsPSO::UpdateHash(const DXGI_FORMAT& format)

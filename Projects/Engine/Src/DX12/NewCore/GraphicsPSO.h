@@ -20,6 +20,8 @@ namespace RS
 		GraphicsPSO();
 		~GraphicsPSO();
 
+		void SetDefaults();
+
 		// These are mandatory
 		void SetInputLayout(D3D12_INPUT_LAYOUT_DESC inputLayoutDesc);
 		void SetRootSignature(std::shared_ptr<RootSignature> pRootSignature);

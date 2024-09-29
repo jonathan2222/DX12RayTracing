@@ -20,11 +20,6 @@ SandboxApp::SandboxApp()
 
 SandboxApp::~SandboxApp()
 {
-    if (m_pPipelineState)
-    {
-        m_pPipelineState->Release();
-        m_pPipelineState = nullptr;
-    }
 }
 
 void SandboxApp::FixedTick()
@@ -38,7 +33,7 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
         auto pCommandList = pCommandQueue->GetCommandList();
 
         pCommandList->SetRootSignature(m_pRootSignature);
-        pCommandList->SetPipelineState(m_pPipelineState);
+        pCommandList->SetPipelineState(m_GraphicsPSO);
 
         D3D12_VIEWPORT viewport{};
         viewport.MaxDepth = 0;
@@ -337,12 +332,6 @@ void SandboxApp::CreatePipelineState()
     inputLayoutDesc.NumElements = inputElementDescs.size();
     inputLayoutDesc.pInputElementDescs = inputElementDescs.data();
 
-    auto GetShaderBytecode = [&](IDxcBlob* shaderObject)->CD3DX12_SHADER_BYTECODE {
-        if (shaderObject)
-            return CD3DX12_SHADER_BYTECODE(shaderObject->GetBufferPointer(), shaderObject->GetBufferSize());
-        return CD3DX12_SHADER_BYTECODE(nullptr, 0);
-    };
-
     // TODO: Change the pipelinestate to use subobject like below (this saves memory by only passing subobjects that we need):
     //struct
     //{
@@ -358,43 +347,14 @@ void SandboxApp::CreatePipelineState()
     //streamDesc.pPipelineStateSubobjectStream = &streams;
     //streamDesc.SizeInBytes = sizeof(streams);
     //DXCall(pDevice->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_PipelineState)));
-
-    // TODO: Make it easier to make these by having some default states.
-    // TODO: Also make keys for each PSO (shader, topology tyep, format, raster state, blend state, etc.)
-    //      such that the renderer can have a SetShader function (Which basically sets the PSO).
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-    psoDesc.InputLayout = inputLayoutDesc;
-    psoDesc.pRootSignature = m_pRootSignature->GetRootSignature().Get();
-    psoDesc.VS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Vertex, true));
-    psoDesc.PS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Pixel, true));
-    psoDesc.DS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Domain, true));
-    psoDesc.HS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Hull, true));
-    psoDesc.GS = GetShaderBytecode(shader.GetShaderBlob(RS::Shader::TypeFlag::Geometry, true));
-    psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-    psoDesc.RasterizerState.FrontCounterClockwise = true;
-    psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    psoDesc.DepthStencilState.DepthEnable = true;
-    psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-    psoDesc.DepthStencilState.StencilEnable = false;
-
-    //psoDesc.DSVFormat
-    psoDesc.SampleMask = UINT_MAX;
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    psoDesc.NumRenderTargets = 1;
-    psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // TODO: Get this format from the render target.
-    psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // TODO: Get this format from the render target.
-    psoDesc.SampleDesc.Count = 1;
-    //psoDesc.CachedPSO
-    psoDesc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-    psoDesc.NodeMask = 0; // Single GPU -> Set to 0.
-    //psoDesc.StreamOutput;
-    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-    //#ifdef RS_CONFIG_DEBUG
-    //    psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
-    //#endif
-    DXCall(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pPipelineState)));
+    
+    m_GraphicsPSO.SetDefaults();
+    m_GraphicsPSO.SetInputLayout(inputLayoutDesc);
+    m_GraphicsPSO.SetRootSignature(m_pRootSignature);
+    m_GraphicsPSO.SetShader(&shader);
+    m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
+    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    m_GraphicsPSO.Create();
 
     shader.Release();
 }
