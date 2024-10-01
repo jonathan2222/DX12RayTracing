@@ -64,6 +64,9 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 #define NameToStr(n) #n
 #define ValueToStr(v) NameToStr(v)
 
+#define _CONCAT(a,b) a##b
+#define CONCAT(a,b) _CONCAT(a,b)
+
 #include "ClassTemplates.h"
 
 #include "Types.h"
@@ -94,7 +97,10 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 *		END_BITFLAGS()
 * 
 *	This creates a struct called MyFlag which holds constant values of type uint32. The values are A = 1, B = 2 and C = 4.
-*	It also adds a flag for zero called NONE automatically and a flag called COUNT. NONE is always 0 and COUNT is the number of user defined flags. In this example it is 3.
+*	It also adds a flag for zero called NONE automatically and a flag called COUNT. NONE is always 0 and COUNT is the number of user defined flags.
+*	In this example it is 3.
+*	On top of thoes flags, it also adds indices for them. In this case they would be A_INDEX = 1, B_INDEX = 2, C_INDEX = 3
+*	And the names as strings: A_STR = "A", B_STR = "B", C_STR = "C"
 *	One can create a flags variable by doing:
 *		MyFlags tmp = MyFlag::B;
 *	Note the added 's' at the end of the type. This is done to clarify that many flags can be in the same variable.
@@ -124,8 +130,9 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 		inline static constexpr _Internal::BitFieldType NONE = 0; // Add a flag for zero, it is always named NONE
 #define RS_BEGIN_BITFLAGS_U32(field) RS_BEGIN_BITFLAGS(uint32, field)
 #define RS_BEGIN_BITFLAGS_U64(field) RS_BEGIN_BITFLAGS(uint64, field)
-#define RS_BITFLAG(name) inline static constexpr _Internal::BitFieldType name = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value;
-#define RS_BITFLAG_COMBO(name, flag) inline static constexpr _Internal::BitFieldType name = flag; // Use this after all calls to BITFLAG!!
+#define RS_BITFLAG(name) inline static constexpr _Internal::BitFieldType name = _Internal::FlagStruct<__LINE__ - _Internal::startLine>::value; inline static constexpr _Internal::BitFieldType CONCAT(name, _INDEX) = __LINE__ - _Internal::startLine; inline static constexpr const char* CONCAT(name, _STR) = ValueToStr(name);
+// Use this after all calls to BITFLAG!!
+#define RS_BITFLAG_COMBO(name, flag) inline static constexpr _Internal::BitFieldType name = flag; inline static constexpr _Internal::BitFieldType CONCAT(name, _INDEX) = __LINE__ - _Internal::startLine; inline static constexpr const char* CONCAT(name, _STR) = ValueToStr(name);
 #define RS_END_BITFLAGS() inline static constexpr _Internal::BitFieldType COUNT = __LINE__ - _Internal::startLine; \
 	inline static constexpr _Internal::BitFieldType MASK = (1 << COUNT) - 1; };
 
@@ -144,8 +151,8 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 		inline static constexpr _Internal::FlagType NONE = 0; // Add a flag for zero, it is always named NONE
 #define RS_BEGIN_FLAGS_U32(field) RS_BEGIN_FLAGS(uint32, field)
 #define RS_BEGIN_FLAGS_U64(field) RS_BEGIN_FLAGS(uint64, field)
-#define RS_FLAG(name) inline static constexpr _Internal::FlagType name = __LINE__ - _Internal::startLine;
-#define RS_FLAG_V(name, value) inline static constexpr _Internal::FlagType name = value;
+#define RS_FLAG(name) inline static constexpr _Internal::FlagType name = __LINE__ - _Internal::startLine; inline static constexpr const char* CONCAT(name, _STR) = ValueToStr(name);
+#define RS_FLAG_V(name, value) inline static constexpr _Internal::FlagType name = value; inline static constexpr const char* CONCAT(name, _STR) = ValueToStr(name);
 #define RS_END_FLAGS() inline static constexpr _Internal::FlagType COUNT = __LINE__ - _Internal::startLine; \
 	inline static constexpr _Internal::FlagType MASK = (1 << COUNT) - 1; };
 

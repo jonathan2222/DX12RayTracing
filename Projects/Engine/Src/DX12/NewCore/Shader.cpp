@@ -65,7 +65,8 @@ bool RS::Shader::Create(const Description& description)
 	if (!ValidateShaderTypes(description.typeFlags))
 		return false;
 
-	m_ShaderPath = RS_SHADER_PATH + description.path; // Mainly for debug purposes.
+	m_ShaderVirtualPath = description.path;
+	m_ShaderPath = RS_SHADER_PATH + m_ShaderVirtualPath; // Mainly for debug purposes.
 
 	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
 		LOG_INFO("Compiling shader with types: {}, Path: {}", TypesToString(description.typeFlags), m_ShaderPath);

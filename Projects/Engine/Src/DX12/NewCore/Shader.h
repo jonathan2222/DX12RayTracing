@@ -46,6 +46,9 @@ namespace RS
 		IDxcBlob* GetShaderBlob(TypeFlags type, bool supressWarnings = false) const;
 		ID3D12ShaderReflection* GetReflection(TypeFlags type, bool supressWarnings = false) const;
 
+		const std::string& GetPath() const { return m_ShaderPath; }
+		const std::string& GetVirtualPath() const { return m_ShaderVirtualPath; }
+
 	private:
 		struct File
 		{
@@ -94,6 +97,7 @@ namespace RS
 
 		TypeFlags				m_Types = TypeFlag::NONE;
 		std::string				m_ShaderPath;
+		std::string				m_ShaderVirtualPath;
 		std::vector<PartData>	m_ShaderParts;
 
 		// Temp data

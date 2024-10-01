@@ -2,6 +2,7 @@
 
 #include "DX12/NewCore/DX12Core3.h" // ID3D12PipelineState
 #include "DX12/NewCore/RootSignature.h"
+#include "DX12/NewCore/Shader.h"
 #include <dxcapi.h> // IDxcBlob
 
 #include "Utils/Misc/xxhash.h"
@@ -68,11 +69,22 @@ namespace RS
 		void UpdateHash(DXGI_FORMAT formats[8]);
 		void UpdateHash(const DXGI_FORMAT& format);
 
+		void ValidateInputLayoutMatchingShader();
+
 	private:
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_PSODesc;
 		std::shared_ptr<RootSignature> m_pRootSignature;
 		ID3D12PipelineState* m_pPipelineState = nullptr;
 		xxh::hash3_state_t<64> m_HashStream;
 		uint64 m_Key = 0;
+
+		// For validation
+		struct ShaderReflectionValidationInfo
+		{
+			ID3D12ShaderReflection* pReflection;
+			std::string				shaderPath;
+			std::string				shaderType;
+		};
+		std::array<ShaderReflectionValidationInfo, Shader::TypeFlag::COUNT> m_ShaderReflections;
 	};
 }

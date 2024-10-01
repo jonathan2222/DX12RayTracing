@@ -1,13 +1,15 @@
 #include "PreCompiled.h"
 #include "GraphicsPSO.h"
 
-#include "DX12/NewCore/Shader.h"
 #include "DX12/NewCore/RootSignature.h"
 
 using namespace RS;
 
 GraphicsPSO::GraphicsPSO()
 {
+    for (uint i = 0; i < Shader::TypeFlag::COUNT; ++i)
+        m_ShaderReflections[i] = { nullptr, "" };
+
 	InitDefaults();
 }
 
@@ -39,26 +41,46 @@ void GraphicsPSO::SetRootSignature(std::shared_ptr<RootSignature> pRootSignature
 void RS::GraphicsPSO::SetVS(Shader* pShader, bool supressWarnings)
 {
     m_PSODesc.VS = pShader->GetShaderByteCode(Shader::TypeFlag::Vertex, supressWarnings);
+    ShaderReflectionValidationInfo& info = m_ShaderReflections[Shader::TypeFlag::Vertex_INDEX];
+    info.pReflection = pShader->GetReflection(Shader::TypeFlag::Vertex, supressWarnings);
+    info.shaderPath = pShader->GetVirtualPath();
+    info.shaderType = Shader::TypeFlag::Vertex_STR;
 }
 
 void RS::GraphicsPSO::SetPS(Shader* pShader, bool supressWarnings)
 {
     m_PSODesc.PS = pShader->GetShaderByteCode(Shader::TypeFlag::Pixel, supressWarnings);
+    ShaderReflectionValidationInfo& info = m_ShaderReflections[Shader::TypeFlag::Pixel_INDEX];
+    info.pReflection = pShader->GetReflection(Shader::TypeFlag::Pixel, supressWarnings);
+    info.shaderPath = pShader->GetVirtualPath();
+    info.shaderType = Shader::TypeFlag::Pixel_STR;
 }
 
 void RS::GraphicsPSO::SetDS(Shader* pShader, bool supressWarnings)
 {
     m_PSODesc.DS = pShader->GetShaderByteCode(Shader::TypeFlag::Domain, supressWarnings);
+    ShaderReflectionValidationInfo& info = m_ShaderReflections[Shader::TypeFlag::Domain_INDEX];
+    info.pReflection = pShader->GetReflection(Shader::TypeFlag::Domain, supressWarnings);
+    info.shaderPath = pShader->GetVirtualPath();
+    info.shaderType = Shader::TypeFlag::Domain_STR;
 }
 
 void RS::GraphicsPSO::SetHS(Shader* pShader, bool supressWarnings)
 {
     m_PSODesc.HS = pShader->GetShaderByteCode(Shader::TypeFlag::Hull, supressWarnings);
+    ShaderReflectionValidationInfo& info = m_ShaderReflections[Shader::TypeFlag::Hull_INDEX];
+    info.pReflection = pShader->GetReflection(Shader::TypeFlag::Hull, supressWarnings);
+    info.shaderPath = pShader->GetVirtualPath();
+    info.shaderType = Shader::TypeFlag::Hull_STR;
 }
 
 void RS::GraphicsPSO::SetGS(Shader* pShader, bool supressWarnings)
 {
     m_PSODesc.GS = pShader->GetShaderByteCode(Shader::TypeFlag::Geometry, supressWarnings);
+    ShaderReflectionValidationInfo& info = m_ShaderReflections[Shader::TypeFlag::Geometry_INDEX];
+    m_ShaderReflections[Shader::TypeFlag::Geometry_INDEX].pReflection = pShader->GetReflection(Shader::TypeFlag::Geometry, supressWarnings);
+    m_ShaderReflections[Shader::TypeFlag::Geometry_INDEX].shaderPath = pShader->GetVirtualPath();
+    m_ShaderReflections[Shader::TypeFlag::Geometry_INDEX].shaderType = Shader::TypeFlag::Geometry_STR;
 }
 
 void RS::GraphicsPSO::SetShader(Shader* pShader)
@@ -132,6 +154,8 @@ uint64 RS::GraphicsPSO::Create()
 	}
 
     ComputeHash();
+
+    ValidateInputLayoutMatchingShader();
 
 	auto pDevice = RS::DX12Core3::Get()->GetD3D12Device();
 	DXCall(pDevice->CreateGraphicsPipelineState(&m_PSODesc, IID_PPV_ARGS(&m_pPipelineState)));
@@ -259,4 +283,40 @@ void RS::GraphicsPSO::UpdateHash(DXGI_FORMAT formats[8])
 void RS::GraphicsPSO::UpdateHash(const DXGI_FORMAT& format)
 {
     m_HashStream.update(&format, sizeof(format));
+}
+
+void RS::GraphicsPSO::ValidateInputLayoutMatchingShader()
+{
+    if (m_ShaderReflections[Shader::TypeFlag::Vertex].pReflection != nullptr)
+    {
+        ShaderReflectionValidationInfo& reflectionValidationInfo = m_ShaderReflections[Shader::TypeFlag::Vertex];
+        std::string errorStr = std::format("Input Layout validation error with shader \"{}\" [{}].",
+            reflectionValidationInfo.shaderPath.c_str(),
+            reflectionValidationInfo.shaderType.c_str());
+        ID3D12ShaderReflection* pReflection = reflectionValidationInfo.pReflection;
+        D3D12_SHADER_DESC d12ShaderDesc{};
+        DXCall(pReflection->GetDesc(&d12ShaderDesc));
+
+        RS_ASSERT(d12ShaderDesc.InputParameters == m_PSODesc.InputLayout.NumElements,
+            "{} Number of layout input parameters differ from what is defined in the shader!", errorStr.c_str());
+
+        D3D12_SIGNATURE_PARAMETER_DESC inputParameter = {};
+        for (uint i = 0; i < std::min(d12ShaderDesc.InputParameters, m_PSODesc.InputLayout.NumElements); ++i)
+        {
+            DXCall(pReflection->GetInputParameterDesc(i, &inputParameter));
+            const D3D12_INPUT_ELEMENT_DESC& layoutInputParameter = m_PSODesc.InputLayout.pInputElementDescs[i];
+            const char* layoutSemanticName = layoutInputParameter.SemanticName;
+            const std::string_view layoutSName(layoutSemanticName);
+            RS_ASSERT(!std::isdigit(layoutSName[layoutSName.size() - 1]),
+                "{} Cannot have the semantic index in the layout semantic name! Name was '{}'", errorStr.c_str(), layoutSName);
+
+            RS_ASSERT(layoutInputParameter.SemanticIndex == inputParameter.SemanticIndex,
+                "{} Semantic Index differ for semantic {}! Layout has index {} while shader has index {}",
+                errorStr.c_str(), layoutSName, layoutInputParameter.SemanticIndex, inputParameter.SemanticIndex);
+
+            const std::string_view shaderSName(inputParameter.SemanticName);
+            RS_ASSERT(layoutSName == shaderSName, "{} Semantic names differ! Layout has {}, while shader has {}.",
+                errorStr.c_str(), layoutSemanticName, inputParameter.SemanticName);
+        }
+    }
 }

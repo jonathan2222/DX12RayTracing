@@ -295,16 +295,26 @@ void SandboxApp::CreatePipelineState()
 
     // TODO: Remove this
     //{ // Test reflection
-    //    ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
+    //  ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
     //
-    //    D3D12_SHADER_DESC d12ShaderDesc{};
-    //    DXCall(reflection->GetDesc(&d12ShaderDesc));
+    //  D3D12_SHADER_DESC d12ShaderDesc{};
+    //  DXCall(reflection->GetDesc(&d12ShaderDesc));
     //
-    //    D3D12_SHADER_INPUT_BIND_DESC desc{};
-    //    DXCall(reflection->GetResourceBindingDesc(0, &desc));
+    //  D3D12_SHADER_INPUT_BIND_DESC desc{};
+    //  DXCall(reflection->GetResourceBindingDesc(0, &desc));
     //
-    //    D3D12_SHADER_INPUT_BIND_DESC desc2{};
-    //    DXCall(reflection->GetResourceBindingDesc(1, &desc2));
+    //  D3D12_SHADER_INPUT_BIND_DESC desc2{};
+    //  DXCall(reflection->GetResourceBindingDesc(1, &desc2));
+    //
+    //  std::vector<D3D12_SIGNATURE_PARAMETER_DESC> inputParameters;
+    //  inputParameters.resize(d12ShaderDesc.InputParameters);
+    //  for (uint i = 0; i < d12ShaderDesc.InputParameters; ++i)
+    //      DXCall(reflection->GetInputParameterDesc(i, &inputParameters[i]));
+    //
+    //  std::vector<D3D12_SIGNATURE_PARAMETER_DESC> outputParameters;
+    //  outputParameters.resize(d12ShaderDesc.OutputParameters);
+    //  for (uint i = 0; i < d12ShaderDesc.OutputParameters; ++i)
+    //      DXCall(reflection->GetOutputParameterDesc(i, &outputParameters[i]));
     //}
 
     CreateRootSignature();
@@ -315,7 +325,7 @@ void SandboxApp::CreatePipelineState()
     // TODO: Move this, and don't hardcode it!
     {
         D3D12_INPUT_ELEMENT_DESC inputElementDesc = {};
-        inputElementDesc.SemanticName = "POSITION";
+        inputElementDesc.SemanticName = "SV_POSITION";
         inputElementDesc.SemanticIndex = 0;
         inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
         inputElementDesc.InputSlot = 0;
