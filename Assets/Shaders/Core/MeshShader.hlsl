@@ -6,7 +6,7 @@ struct PSInput
 {
     float4 position : SV_POSITION;
     float4 normal : NORMAL;
-    float2 uv : UV;
+    float2 uv : UV0;
 };
 
 struct VSData
@@ -16,7 +16,7 @@ struct VSData
 };
 ConstantBuffer<VSData> vsData : register(b2, NORMAL_SPACE);
 
-PSInput VertexMain(float4 position : POSITION, float4 normal : NORMAL, float2 uv : UV)
+PSInput VertexMain(float4 position : POSITION, float4 normal : NORMAL, float2 uv : UV0)
 {
     PSInput result;
 

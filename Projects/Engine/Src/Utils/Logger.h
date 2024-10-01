@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils/Formatters.h"
+
 #pragma warning( push )
 #pragma warning( disable : 26451 )
 #pragma warning( disable : 26439 )
@@ -8,6 +10,7 @@
 #if defined(RS_CONFIG_DEVELOPMENT) && defined(LOG_DEBUG_ENABLED)
 	#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
 #endif
+#define SPDLOG_USE_STD_FORMAT
 #include <spdlog/spdlog.h>
 #pragma warning( pop )
 
@@ -57,6 +60,15 @@ namespace RS
 #define LOG_CRITICAL(...)	LOG_DETAILED(__FILE__, __LINE__, SPDLOG_FUNCTION, spdlog::level::critical, __VA_ARGS__)
 #define LOG_SUCCESS(...)	LOG_INFO(__VA_ARGS__)
 #define LOG_FLUSH(...)		RS::Logger::Flush()
+
+#define RS_LOG_DETAILED(file, line, func, level, ...) LOG_DETAILED(file, line, func, level, __VA_ARGS__)
+#define RS_LOG_DEBUG(...)		LOG_DEBUG(__VA_ARGS__)
+#define RS_LOG_INFO(...)		LOG_INFO(__VA_ARGS__)
+#define RS_LOG_WARNING(...)		LOG_WARNING(__VA_ARGS__)
+#define RS_LOG_ERROR(...)		LOG_ERROR(__VA_ARGS__)
+#define RS_LOG_CRITICAL(...)	LOG_CRITICAL(__VA_ARGS__)
+#define RS_LOG_SUCCESS(...)		LOG_INFO(__VA_ARGS__)
+#define RS_LOG_FLUSH(...)		LOG_FLUSH(__VA_ARGS__)
 #else
 #define LOG_DEBUG(...)
 #define LOG_INFO(...)
@@ -64,5 +76,13 @@ namespace RS
 #define LOG_ERROR(...)
 #define LOG_CRITICAL(...)
 #define LOG_SUCCESS(...)
-#define LOG_SUCCESS(...)
+#define LOG_FLUSH(...)
+
+#define RS_LOG_DEBUG(...)
+#define RS_LOG_INFO(...)
+#define RS_LOG_WARNING(...)
+#define RS_LOG_ERROR(...)
+#define RS_LOG_CRITICAL(...)
+#define RS_LOG_SUCCESS(...)
+#define RS_LOG_FLUSH(...)
 #endif

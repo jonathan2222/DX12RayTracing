@@ -363,7 +363,7 @@ namespace RS::DX12
     }
 
     template<typename... Args>
-    inline void ThrowIfFailed(HRESULT hr, fmt::format_string<Args...> fmt, Args &&...args)
+    inline void ThrowIfFailed(HRESULT hr, std::format_string<Args...> fmt, Args &&...args)
     {
         if (FAILED(hr))
         {

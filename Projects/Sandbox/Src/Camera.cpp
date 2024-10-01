@@ -24,8 +24,8 @@ void RS::Camera::Init(float aspect, float fov, const glm::vec3& position, const 
 	m_Fov = fov;
 	m_NearPlane = 0.1f;
 	m_FarPlane = 1000.f;
-	m_Yaw = 270;
-	m_Pitch = 0;
+	m_Yaw = std::atan2(m_Forward.z, m_Forward.x) * 180.f / 3.1415f;
+	m_Pitch = std::asin(-m_Forward.y) * 180.f / 3.1415f;
 	m_Roll = 0;
 	m_SpeedFactor = 1.f;
 
