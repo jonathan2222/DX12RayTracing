@@ -13,7 +13,7 @@ namespace RS
 	* Pipeline State Object
 	*  It has default values already set. It creates a unique key for each change, thus can be used as a key for fetching cache.
 	*/
-
+	// TODO: The PSO should be a Resource, because it depends on the frames it is used in. Thus cannot just remove it without waiting on it to have been used.
 	class Shader;
 	class GraphicsPSO
 	{

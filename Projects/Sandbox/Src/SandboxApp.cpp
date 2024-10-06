@@ -357,7 +357,7 @@ void SandboxApp::CreatePipelineState()
     //streamDesc.pPipelineStateSubobjectStream = &streams;
     //streamDesc.SizeInBytes = sizeof(streams);
     //DXCall(pDevice->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_PipelineState)));
-    
+
     m_GraphicsPSO.SetDefaults();
     m_GraphicsPSO.SetInputLayout(inputLayoutDesc);
     m_GraphicsPSO.SetRootSignature(m_pRootSignature);
@@ -390,8 +390,8 @@ void SandboxApp::CreateRootSignature()
     rootSignature[RootParameter::VertexData].CBV(currentShaderRegisterCBV++, registerSpace);
 
     // All bindless buffers, textures overlap using different spaces.
-    // TODO: DynamicDescriptorHeap does not like when we have empty descriptors (not set) and not bindless too.
-    rootSignature[RootParameter::Textures][0].SRV(2, 0, srvRegSpace);
+    // TODO: DynamicDescriptorHeap does not like when we have bindless too.
+    rootSignature[RootParameter::Textures][0].SRV(3, 0, srvRegSpace);
     //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
     //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
 

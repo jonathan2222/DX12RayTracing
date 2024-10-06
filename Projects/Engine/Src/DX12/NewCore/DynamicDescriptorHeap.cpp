@@ -48,11 +48,13 @@ void RS::DynamicDescriptorHeap::StageDescriptors(uint32 rootParameterIndex, uint
 		dstDescriptor[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(srcDescriptor, i, m_DescriptorHandleIncrementSize);
 	}
 
+	AddDescriptorRange(rootParameterIndex, offset, numDescriptors);
+
 	// Set the root parameter index bit to make sure the descriptor table at that index is bound to the command list.
 	m_StaleDescriptorTableBitMask |= (1 << rootParameterIndex);
 }
 
-void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList, std::function<void(ID3D12GraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc)
+void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList, std::function<void(ID3D12GraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc, bool onlyCopyStagedDescriptors)
 {
 	// Compute the number of descriptors that need to be copied 
 	uint32 numDescriptorsToCommit = ComputeStaleDescriptorCount();
@@ -84,17 +86,40 @@ void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList
 			uint32 numSrcDescriptors = m_DescriptorTableCache[rootIndex].numDescriptors;
 			D3D12_CPU_DESCRIPTOR_HANDLE* pSrcDescriptorHandles = m_DescriptorTableCache[rootIndex].baseDescriptor;
 
-			D3D12_CPU_DESCRIPTOR_HANDLE pDestDescriptorRangeStarts[] = { m_CurrentCPUDescriptorHandle };
-			uint32 pDestDescriptorRangeSizes[] = { numSrcDescriptors };
+			if (onlyCopyStagedDescriptors)
+			{
+				// Within this table, only copy the descriptors that was staged.
+				std::vector<DescriptorRange> ranges = m_DescriptorRangesPerTable[rootIndex];
+				for (uint32 i = 0; i < ranges.size(); ++i)
+				{
+					const DescriptorRange& range = ranges[i];
 
-			// Copy the staged CPU visible descriptors to the GPU visible descriptor heap.
-			// TODO: Only copy descriptor if it was staged! This will fix the sparse binding problem.
-			device->CopyDescriptors(1, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes, numSrcDescriptors, pSrcDescriptorHandles, nullptr, m_DescriptorHeapType);
+					D3D12_CPU_DESCRIPTOR_HANDLE* pSrcDescriptorHanldesForRange = pSrcDescriptorHandles + range.offset;
+
+					CD3DX12_CPU_DESCRIPTOR_HANDLE cpuDescriptorHandle(m_CurrentCPUDescriptorHandle);
+					cpuDescriptorHandle.Offset(range.offset, m_DescriptorHandleIncrementSize);
+
+					D3D12_CPU_DESCRIPTOR_HANDLE pDestDescriptorRangeStarts[] = { cpuDescriptorHandle };
+					uint32 pDestDescriptorRangeSizes[] = { range.numDescriptors };
+
+					device->CopyDescriptors(1, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes, range.numDescriptors, pSrcDescriptorHanldesForRange, nullptr, m_DescriptorHeapType);
+				}
+				ranges.clear();
+			}
+			else
+			{
+				D3D12_CPU_DESCRIPTOR_HANDLE pDestDescriptorRangeStarts[] = { m_CurrentCPUDescriptorHandle };
+				uint32 pDestDescriptorRangeSizes[] = { numSrcDescriptors };
+
+				// Copy the staged CPU visible descriptors to the GPU visible descriptor heap.
+				// TODO: Only copy descriptor if it was staged! This will fix the sparse binding problem.
+				device->CopyDescriptors(1, pDestDescriptorRangeStarts, pDestDescriptorRangeSizes, numSrcDescriptors, pSrcDescriptorHandles, nullptr, m_DescriptorHeapType);
+			}
 
 			// Set the descriptors on the command list using the passed-in setter function.
 			setFunc(d3d12GraphicsCommandList, rootIndex, m_CurrentGPUDescriptorHandle);
 
-			// Offset current CPU and GPU descriptor handles.
+			// Offset current CPU and GPU descriptor handles to the next table.
 			m_CurrentCPUDescriptorHandle.Offset(numSrcDescriptors, m_DescriptorHandleIncrementSize);
 			m_CurrentGPUDescriptorHandle.Offset(numSrcDescriptors, m_DescriptorHandleIncrementSize);
 			m_NumFreeHandles -= numSrcDescriptors;
@@ -107,12 +132,12 @@ void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList
 
 void RS::DynamicDescriptorHeap::CommitStagedDescriptorsForDraw(CommandList& commandList)
 {
-	CommitStagedDescriptors(commandList, &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable);
+	CommitStagedDescriptors(commandList, &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable, true);
 }
 
 void RS::DynamicDescriptorHeap::CommitStagedDescriptorsForDispatch(CommandList& commandList)
 {
-	CommitStagedDescriptors(commandList, &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable);
+	CommitStagedDescriptors(commandList, &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable, true);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE RS::DynamicDescriptorHeap::CopyDescriptor(CommandList& comandList, D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptor)
@@ -186,7 +211,10 @@ void RS::DynamicDescriptorHeap::Reset()
 
 	// Reset the table cache
 	for (int i = 0; i < MaxDescriptorTables; ++i)
+	{
 		m_DescriptorTableCache[i].Reset();
+		m_DescriptorRangesPerTable[i].clear();
+	}
 }
 
 Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RS::DynamicDescriptorHeap::RequestDescriptorHeap()
@@ -234,4 +262,76 @@ uint32 RS::DynamicDescriptorHeap::ComputeStaleDescriptorCount() const
 	}
 
 	return numStaleDescriptors;
+}
+
+void RS::DynamicDescriptorHeap::AddDescriptorRange(uint32 rootParameterIndex, uint32_t offset, uint32_t numDescriptors)
+{
+	bool addedRange = false;
+	uint32 afterIndex = UINT32_MAX;
+	std::vector<DescriptorRange>& ranges = m_DescriptorRangesPerTable[rootParameterIndex];
+	uint32 numRanges = ranges.size();
+	uint32 rangeIndex = 0;
+	while (rangeIndex < numRanges)
+	{
+		DescriptorRange* pPreRange = rangeIndex != 0 ? &ranges[rangeIndex - 1] : nullptr;
+
+		DescriptorRange& range = ranges[rangeIndex];
+		// Merge ranges if overlap. (Should most likely not occur, think it should actually result in an error)
+		uint32 startA = offset;								// !
+		uint32 endA = offset + numDescriptors;				// !
+		uint32 startB = range.offset;						// |
+		uint32 endB = range.offset + range.numDescriptors;	// |
+		// -----------|---!--|--!------------
+		// --------!--|---!--|---------------
+		// -----------|-!-!--|---------------
+		// ---------!-|------|-!-------------
+		if ((startA >= startB && startA < endB) || (endA > startB && endA < endB))
+		{
+			RS_ASSERT(false, "Cannot overlap descriptors!");
+			range.offset = std::min(range.offset, offset);
+			range.numDescriptors = std::max(endA, endB) - range.offset;
+			break;
+		}
+
+		// Merge if adjecent
+		// (1) -----------|------|!----!---------
+		if (endB + 1 == startA)
+		{
+			range.numDescriptors += numDescriptors;
+			addedRange = true;
+		}
+
+		// (2) -----!----!|------|---------------
+		if (endA + 1 == range.offset)
+		{
+			range.offset = offset;
+			range.numDescriptors += numDescriptors;
+			addedRange = true;
+		}
+
+		if (range.offset + range.numDescriptors < offset)
+			afterIndex = rangeIndex;
+
+		// Remove current range and merge if next to previous.
+		if (pPreRange)
+		{
+			if (pPreRange->offset + pPreRange->numDescriptors + 1 == range.offset)
+			{
+				pPreRange->numDescriptors += range.numDescriptors;
+				ranges.erase(ranges.begin() + rangeIndex);
+				rangeIndex--;
+			}
+		}
+
+		rangeIndex++;
+	}
+
+	// We add it if we did not merge the new range.
+	if (!addedRange)
+	{
+		if (afterIndex != UINT32_MAX)
+			ranges.insert(ranges.begin() + afterIndex, DescriptorRange(offset, numDescriptors));
+		else
+			ranges.emplace_back(offset, numDescriptors);
+	}
 }

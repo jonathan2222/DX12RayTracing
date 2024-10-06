@@ -30,7 +30,7 @@ namespace RS
 		*
 		* Since the DynamicDescriptorHeap can't know which function will be used, it must be passed as an argument to the function.
 		*/
-		void CommitStagedDescriptors(CommandList& commandList, std::function<void(ID3D12GraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc);
+		void CommitStagedDescriptors(CommandList& commandList, std::function<void(ID3D12GraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc, bool onlyCopyStagedDescriptors);
 		void CommitStagedDescriptorsForDraw(CommandList& commandList);
 		void CommitStagedDescriptorsForDispatch(CommandList& commandList);
 
@@ -68,6 +68,8 @@ namespace RS
 
 		// Compute the number of stale descriptors that need to be copied to GPU visible descriptor heap.
 		uint32 ComputeStaleDescriptorCount() const;
+
+		void AddDescriptorRange(uint32 rootParameterIndex, uint32_t offset, uint32_t numDescriptors);
 
 		/**
 		* The maximum number of descriptor tables per root signature.
@@ -132,5 +134,30 @@ namespace RS
 		CD3DX12_CPU_DESCRIPTOR_HANDLE m_CurrentCPUDescriptorHandle;
 
 		uint32 m_NumFreeHandles;
+
+		// WIP
+		struct DescriptorRange
+		{
+			DescriptorRange()
+				: numDescriptors(0)
+				, offset(UINT32_MAX)
+			{}
+
+			DescriptorRange(uint32 offset, uint32 numDescriptors)
+				: numDescriptors(numDescriptors)
+				, offset(offset)
+			{}
+
+			// Reset the table cache.
+			void Reset()
+			{
+				numDescriptors = 0;
+				offset = UINT32_MAX;
+			}
+
+			uint32 offset;
+			uint32 numDescriptors;
+		};
+		std::vector<DescriptorRange> m_DescriptorRangesPerTable[MaxDescriptorTables];
 	};
 }
