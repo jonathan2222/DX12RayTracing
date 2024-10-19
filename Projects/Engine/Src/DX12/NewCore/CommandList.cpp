@@ -413,11 +413,11 @@ void RS::CommandList::SetScissorRects(const std::vector<D3D12_RECT>& scissorRect
     m_d3d12CommandList->RSSetScissorRects(static_cast<UINT>(scissorRects.size()), scissorRects.data());
 }
 
-void RS::CommandList::SetPipelineState(ID3D12PipelineState* pPipelineState)
+void RS::CommandList::SetPipelineState(ID3D12PipelineState* pPipelineState, bool forceUpdate)
 {
     RS_ASSERT_NO_MSG(pPipelineState);
 
-    if (m_pPipelineState != pPipelineState)
+    if (m_pPipelineState != pPipelineState || forceUpdate)
     {
         m_pPipelineState = pPipelineState;
 

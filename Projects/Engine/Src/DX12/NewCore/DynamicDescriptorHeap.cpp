@@ -287,7 +287,10 @@ void RS::DynamicDescriptorHeap::AddDescriptorRange(uint32 rootParameterIndex, ui
 		// ---------!-|------|-!-------------
 		if ((startA >= startB && startA < endB) || (endA > startB && endA < endB))
 		{
-			RS_ASSERT(false, "Cannot overlap descriptors!");
+			// Descriptor ranges should be able to overlap if they are the exact same range position and size, and if they have the same type?
+			// Might actually only need to be the same type!
+			RS_ASSERT(startA == startB && endA == endB, "Cannot overlap decriptor ranges if not the exact same!");
+			//RS_ASSERT(false, "Cannot overlap descriptors!");
 			range.offset = std::min(range.offset, offset);
 			range.numDescriptors = std::max(endA, endB) - range.offset;
 			break;

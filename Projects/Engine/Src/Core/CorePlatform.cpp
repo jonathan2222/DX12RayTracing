@@ -150,6 +150,13 @@ std::string RS::CorePlatform::GetLastErrorString()
 	return "?";
 }
 
+void RS::CorePlatform::SetCurrentThreadName(const std::string& name)
+{
+	std::wstring wname = Utils::ToWString(name);
+	HRESULT hr = SetThreadDescription(GetCurrentThread(), wname.c_str());
+	RS_ASSERT(SUCCEEDED(hr), "Failed to set name of current thread!");
+}
+
 #include <shlobj.h> // Used for SHGetFolderPathW
 std::string RS::CorePlatform::CreateTemporaryPath()
 {

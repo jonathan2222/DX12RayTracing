@@ -6,10 +6,12 @@
 using namespace RS;
 
 GraphicsPSO::GraphicsPSO()
+    : m_Key(0ull)
 {
     for (uint i = 0; i < Shader::TypeFlag::COUNT; ++i)
         m_ShaderReflections[i] = { nullptr, "" };
 
+    m_ShaderFileWatcher.Init("ShaderFileWatcher");
 	InitDefaults();
 }
 
@@ -24,11 +26,32 @@ GraphicsPSO::~GraphicsPSO()
 
 void RS::GraphicsPSO::SetDefaults()
 {
+    m_Key = 0ull;
     InitDefaults();
 }
 
-void GraphicsPSO::SetInputLayout(D3D12_INPUT_LAYOUT_DESC inputLayoutDesc)
+void GraphicsPSO::SetInputLayout(const std::vector<InputElementDesc>& inputElements)
 {
+    // We are doing this so we can save the pointer to the semantic name.
+    m_InputElements = inputElements;
+
+    m_InputElementDescs.resize(inputElements.size());
+    for (uint i = 0; i < inputElements.size(); ++i)
+    {
+        InputElementDesc& ied = m_InputElements[i];
+        D3D12_INPUT_ELEMENT_DESC& desc = m_InputElementDescs[i];
+        desc.SemanticName = ied.SemanticName.c_str();
+        desc.SemanticIndex = ied.SemanticIndex;
+        desc.Format = ied.Format;
+        desc.InputSlot = ied.InputSlot;
+        desc.AlignedByteOffset = ied.AlignedByteOffset;
+        desc.InputSlotClass = ied.InputSlotClass;
+        desc.InstanceDataStepRate = ied.InstanceDataStepRate;
+    }
+
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
+    inputLayoutDesc.NumElements = m_InputElementDescs.size();
+    inputLayoutDesc.pInputElementDescs = m_InputElementDescs.data();
     m_PSODesc.InputLayout = inputLayoutDesc;
 }
 
@@ -85,6 +108,32 @@ void RS::GraphicsPSO::SetGS(Shader* pShader, bool supressWarnings)
 
 void RS::GraphicsPSO::SetShader(Shader* pShader)
 {
+    m_ShaderDescription = pShader->GetDescription();
+    if (!m_ShaderFileWatcher.HasExactListener(pShader->GetPath()))
+    {
+        m_ShaderFileWatcher.AddFileListener(pShader->GetPath(),
+            [&](const std::filesystem::path& path, FileWatcher::FileStatus status)
+            {
+                Shader shader;
+                bool updatedSuccessfully = shader.Create(m_ShaderDescription);
+                if (updatedSuccessfully)
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(m_Mutex);
+                        SetVS(&shader, true);
+                        SetPS(&shader, true);
+                        SetDS(&shader, true);
+                        SetHS(&shader, true);
+                        SetGS(&shader, true);
+                    }
+                    Create();
+
+                    shader.Release();
+                }
+            });
+    }
+
+    std::lock_guard<std::mutex> lock(m_Mutex);
     SetVS(pShader, true);
     SetPS(pShader, true);
     SetDS(pShader, true);
@@ -146,6 +195,7 @@ void RS::GraphicsPSO::SetDSVFormat(DXGI_FORMAT format)
 
 uint64 RS::GraphicsPSO::Create()
 {
+    std::lock_guard<std::mutex> lock(m_Mutex);
 	// TODO: If one uses this function in a frame and the previous pso is still being used on the GPU then this might not work. Fix that.
 	if (m_pPipelineState)
 	{
@@ -160,6 +210,12 @@ uint64 RS::GraphicsPSO::Create()
 	auto pDevice = RS::DX12Core3::Get()->GetD3D12Device();
 	DXCall(pDevice->CreateGraphicsPipelineState(&m_PSODesc, IID_PPV_ARGS(&m_pPipelineState)));
 
+    return m_Key;
+}
+
+uint64 RS::GraphicsPSO::GetKey() const
+{
+    RS_ASSERT(m_Key != 0, "Missing key!");
     return m_Key;
 }
 

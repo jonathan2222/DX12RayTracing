@@ -43,6 +43,8 @@ namespace RS
 
 		static std::string GetLastErrorString();
 
+		static void SetCurrentThreadName(const std::string& name);
+
 	private:
 		std::string CreateTemporaryPath();
 

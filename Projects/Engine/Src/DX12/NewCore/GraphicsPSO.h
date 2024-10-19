@@ -7,8 +7,21 @@
 
 #include "Utils/Misc/xxhash.h"
 
+#include "Core/FileWatcher.h"
+
 namespace RS
 {
+	struct InputElementDesc
+	{
+		std::string SemanticName;
+		UINT SemanticIndex;
+		DXGI_FORMAT Format;
+		UINT InputSlot;
+		UINT AlignedByteOffset;
+		D3D12_INPUT_CLASSIFICATION InputSlotClass;
+		UINT InstanceDataStepRate;
+	};
+
 	/*
 	* Pipeline State Object
 	*  It has default values already set. It creates a unique key for each change, thus can be used as a key for fetching cache.
@@ -24,7 +37,7 @@ namespace RS
 		void SetDefaults();
 
 		// These are mandatory
-		void SetInputLayout(D3D12_INPUT_LAYOUT_DESC inputLayoutDesc);
+		void SetInputLayout(const std::vector<InputElementDesc>& inputElements);
 		void SetRootSignature(std::shared_ptr<RootSignature> pRootSignature);
 		void SetRTVFormats(const std::vector<DXGI_FORMAT>& formats);
 		void SetDSVFormat(DXGI_FORMAT format);
@@ -51,6 +64,8 @@ namespace RS
 		// Implicit conversion to ID3D12PipelineState*
 		operator ID3D12PipelineState* () { return m_pPipelineState; }
 
+		uint64 GetKey() const;
+
 	private:
 		void InitDefaults();
 
@@ -72,6 +87,8 @@ namespace RS
 		void ValidateInputLayoutMatchingShader();
 
 	private:
+		std::vector<D3D12_INPUT_ELEMENT_DESC> m_InputElementDescs;
+		std::vector<InputElementDesc> m_InputElements;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_PSODesc;
 		std::shared_ptr<RootSignature> m_pRootSignature;
 		ID3D12PipelineState* m_pPipelineState = nullptr;
@@ -86,5 +103,10 @@ namespace RS
 			std::string				shaderType;
 		};
 		std::array<ShaderReflectionValidationInfo, Shader::TypeFlag::COUNT> m_ShaderReflections;
+
+		// Debug
+		std::mutex m_Mutex;
+		FileWatcher m_ShaderFileWatcher;
+		Shader::Description m_ShaderDescription;
 	};
 }

@@ -63,7 +63,7 @@ namespace RS
 		void SetScissorRect(const D3D12_RECT scissorRect);
 		void SetScissorRects(const std::vector<D3D12_RECT>& scissorRects);
 
-		void SetPipelineState(ID3D12PipelineState* pPipelineState);
+		void SetPipelineState(ID3D12PipelineState* pPipelineState, bool forceUpdate = false);
 		void SetRootSignature(const std::shared_ptr<RootSignature>& pRootSignature);
 		void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12DescriptorHeap* pHeap);
 		void BindDescriptorHeaps();

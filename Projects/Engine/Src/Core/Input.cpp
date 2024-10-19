@@ -8,6 +8,12 @@
 
 using namespace RS;
 
+/*
+ TODO:
+    Make a layer system for inputs. And use that to pass input to the next layer or to block it.
+    This should be used instead of the Input::Get()->ShouldAlwaysListenToKey(...) and !ImGuiRenderer::Get()->WantKeyInput()
+*/
+
 std::shared_ptr<Input> Input::Get()
 {
     static std::shared_ptr<Input> s_Input = std::make_shared<Input>();

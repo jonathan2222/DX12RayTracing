@@ -57,9 +57,9 @@ void RS::Camera::Update(float dt)
 	if (pInput->IsKeyPressed(RS::Key::S))
 		m_Position -= m_Forward * m_Speed * dt * m_SpeedFactor;
 
-	if (pInput->IsKeyPressed(RS::Key::SPACE))
+	if (pInput->IsKeyPressed(RS::Key::E))
 		m_Position += m_GlobalUp * m_Speed * dt * m_SpeedFactor;
-	if (pInput->IsKeyPressed(RS::Key::LEFT_CONTROL))
+	if (pInput->IsKeyPressed(RS::Key::Q))
 		m_Position -= m_GlobalUp * m_Speed * dt * m_SpeedFactor;
 
 	/*if (input.getKeyState(GLFW_KEY_F) == Input::KeyState::FIRST_RELEASED)

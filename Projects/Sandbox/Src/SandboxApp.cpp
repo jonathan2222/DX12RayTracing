@@ -321,10 +321,10 @@ void SandboxApp::CreatePipelineState()
 
     auto pDevice = RS::DX12Core3::Get()->GetD3D12Device();
 
-    std::vector<D3D12_INPUT_ELEMENT_DESC> inputElementDescs;
+    std::vector<RS::InputElementDesc> inputElementDescs;
     // TODO: Move this, and don't hardcode it!
     {
-        D3D12_INPUT_ELEMENT_DESC inputElementDesc = {};
+        RS::InputElementDesc inputElementDesc = {};
         inputElementDesc.SemanticName = "SV_POSITION";
         inputElementDesc.SemanticIndex = 0;
         inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
@@ -337,10 +337,6 @@ void SandboxApp::CreatePipelineState()
         inputElementDescs.push_back({ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
         inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     }
-
-    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
-    inputLayoutDesc.NumElements = inputElementDescs.size();
-    inputLayoutDesc.pInputElementDescs = inputElementDescs.data();
 
     // TODO: Change the pipelinestate to use subobject like below (this saves memory by only passing subobjects that we need):
     //struct
@@ -359,7 +355,7 @@ void SandboxApp::CreatePipelineState()
     //DXCall(pDevice->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_PipelineState)));
 
     m_GraphicsPSO.SetDefaults();
-    m_GraphicsPSO.SetInputLayout(inputLayoutDesc);
+    m_GraphicsPSO.SetInputLayout(inputElementDescs);
     m_GraphicsPSO.SetRootSignature(m_pRootSignature);
     m_GraphicsPSO.SetShader(&shader);
     m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
@@ -390,7 +386,7 @@ void SandboxApp::CreateRootSignature()
     rootSignature[RootParameter::VertexData].CBV(currentShaderRegisterCBV++, registerSpace);
 
     // All bindless buffers, textures overlap using different spaces.
-    // TODO: DynamicDescriptorHeap does not like when we have bindless too.
+    // TODO: Support bindless descriptors!
     rootSignature[RootParameter::Textures][0].SRV(3, 0, srvRegSpace);
     //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
     //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
