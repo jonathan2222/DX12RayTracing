@@ -13,6 +13,11 @@
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
 
+#include "Core/Console.h"
+
+RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Sandbox.debug1", g_Debug1, false, "A debug bool");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Sandbox.translation.x", g_TranslationX, 0.f, "Translation X");
+
 SandboxApp::SandboxApp()
 {
     Init();
@@ -174,6 +179,11 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
 
         pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
 
+        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, 0.0f, 0.0f }) * vertexViewData.transform * glm::rotate(-3.1415f * 0.5f, glm::vec3{1.f, 0.f, 0.0f}));
+        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
+        pCommandList->SetVertexBuffers(0, m_pVertexBufferResource2);
+        pCommandList->DrawInstanced(m_NumVertices2, 1, 0, 0);
+
         // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
         auto pTexture = m_RenderTarget->GetColorTextures()[0];
         pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
@@ -198,15 +208,24 @@ void SandboxApp::Init()
     CreatePipelineState();
 
     RS::Mesh* pMesh = RS::FBXLoader::Load("Sword2.fbx");
+    RS::Mesh* pMesh2 = RS::FBXLoader::Load("Suzanne.fbx");
 
-    const UINT vertexBufferSize = sizeof(RS::Vertex) * pMesh->vertices.size();
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
-    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
-    m_NumVertices = pMesh->vertices.size();
+    {
+        const UINT vertexBufferSize = sizeof(RS::Vertex) * pMesh->vertices.size();
+        m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
+        pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
+        m_NumVertices = pMesh->vertices.size();
+    }
 
+    {
+        const UINT vertexBufferSize2 = sizeof(RS::Vertex) * pMesh2->vertices.size();
+        m_pVertexBufferResource2 = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer 2");
+        pCommandList->UploadToBuffer(m_pVertexBufferResource2, vertexBufferSize2, (void*)&pMesh2->vertices[0]);
+        m_NumVertices2 = pMesh2->vertices.size();
+    }
     //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
 
     //float scale = 1.0f;
@@ -231,6 +250,12 @@ void SandboxApp::Init()
     {
         delete pMesh;
         pMesh = nullptr;
+    }
+
+    if (pMesh2)
+    {
+        delete pMesh2;
+        pMesh2 = nullptr;
     }
 
     // Texture

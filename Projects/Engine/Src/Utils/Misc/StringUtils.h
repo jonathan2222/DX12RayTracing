@@ -146,6 +146,13 @@ namespace RS::Utils
 		return res;
 	}
 
+	inline std::string ToUpper(const std::string& s)
+	{
+		std::string res = s;
+		std::transform(res.begin(), res.end(), res.begin(), [](unsigned char c) { return std::toupper(c); });
+		return res;
+	}
+
 	inline std::wstring ToWString(const std::string& s)
 	{
 		// s2ws code from: https://stackoverflow.com/questions/27220/how-to-convert-stdstring-to-lpcwstr-in-c-unicode

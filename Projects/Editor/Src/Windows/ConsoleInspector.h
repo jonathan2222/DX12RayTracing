@@ -18,6 +18,7 @@ namespace RSE
 
 		void RenderFloatVariable(RS::Console::Variable& var);
 		void RenderIntVariable(RS::Console::Variable& var);
+		void RenderBoolVariable(RS::Console::Variable& var);
 
 		void SortTable(std::vector<RS::Console::Variable>& refVariables);
 

@@ -16,6 +16,7 @@ namespace RS
 		struct FuncArg
 		{
 			RS_BEGIN_BITFLAGS_U32(TypeFlag)
+				RS_BITFLAG(Bool)
 				RS_BITFLAG(Int)
 				RS_BITFLAG(Float)
 				RS_BITFLAG(Named)
@@ -28,6 +29,7 @@ namespace RS
 			{
 				union
 				{
+					bool b;
 					int32 i32;
 					uint32 ui32;
 					int64 i64;
@@ -94,6 +96,7 @@ namespace RS
 		enum class Type : uint32
 		{
 			Unknown = 0,
+			Bool,
 			Int8,
 			Int16,
 			Int32,
@@ -106,7 +109,7 @@ namespace RS
 			Double,
 			Function
 		};
-		inline static std::vector<Type> s_VariableTypes = { Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::UInt8, Type::UInt16, Type::UInt32, Type::UInt64, Type::Float, Type::Double };
+		inline static std::vector<Type> s_VariableTypes = { Type::Bool, Type::Int8, Type::Int16, Type::Int32, Type::Int64, Type::UInt8, Type::UInt16, Type::UInt32, Type::UInt64, Type::Float, Type::Double };
 
 		struct Variable
 		{
@@ -190,19 +193,21 @@ namespace RS
 			NumUInts = (uint32)Type::UInt64 - (uint32)Type::UInt8 + 1,
 			NumFloats = (uint32)Type::Float - (uint32)Type::Double + 1,
 		};
+		inline static bool IsTypeBool(Type type) { return type == Type::Bool; }
 		inline static bool IsTypeInt(Type type) { return type >= Type::Int8 && type <= Type::Int64; }
 		inline static bool IsTypeUInt(Type type) { return type >= Type::UInt8 && type <= Type::UInt64; }
 		inline static bool IsTypeFloat(Type type) { return type >= Type::Float && type <= Type::Double; }
 		inline static bool IsTypeFunction(Type type) { return type == Type::Function; }
 		inline static bool IsOfSameType(Type a, Type b)
 		{
-			return a == b || (IsTypeInt(a) && IsTypeInt(b)) || (IsTypeUInt(a) && IsTypeUInt(b)) || (IsTypeFloat(a) && IsTypeFloat(b));
+			return a == b || (IsTypeBool(a) && IsTypeBool(b)) || (IsTypeInt(a) && IsTypeInt(b)) || (IsTypeUInt(a) && IsTypeUInt(b)) || (IsTypeFloat(a) && IsTypeFloat(b));
 		}
-		inline static bool IsTypeVariable(Type type) { return IsTypeInt(type) || IsTypeUInt(type) || IsTypeFloat(type); }
+		inline static bool IsTypeVariable(Type type) { return IsTypeBool(type) || IsTypeInt(type) || IsTypeUInt(type) || IsTypeFloat(type); }
 		static int GetByteCountFromType(Type type);
 		static FuncArg::TypeFlags TypeToFuncArgType(Type type)
 		{
 			FuncArg::TypeFlags types = FuncArg::TypeFlag::NONE;
+			if (IsTypeBool(type)) types |= FuncArg::TypeFlag::Bool;
 			if (IsTypeInt(type) || IsTypeUInt(type)) types |= FuncArg::TypeFlag::Int;
 			if (IsTypeFloat(type)) types |= FuncArg::TypeFlag::Float;
 			if (type == Type::Function) types |= FuncArg::TypeFlag::Function;
@@ -313,6 +318,7 @@ namespace RS
 		return AddVarInternal(name, varObj); \
 	};
 
+	RS_ADD_VAR(bool, Console::Type::Bool);
 	RS_ADD_VAR(int8, Console::Type::Int8);
 	RS_ADD_VAR(int16, Console::Type::Int16);
 	RS_ADD_VAR(int32, Console::Type::Int32);
@@ -327,3 +333,15 @@ namespace RS
 #undef RS_ADD_VAR(type, enumType) 
 
 }
+
+// Example usage: RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Canvas.debug1", g_Debug1, false, "A debug var");
+#define RS_ADD_GLOBAL_CONSOLE_VAR(type, name, var, defaultValue, docs) static inline type var = defaultValue; \
+	class _CONCAT(_RSGlobalConsoleVar,var) \
+	{ \
+	public: \
+		_CONCAT(_RSGlobalConsoleVar, var)() \
+		{ \
+			RS::Console::Get()->AddVar<type>(name, var, RS::Console::Flag::NONE, docs); \
+		}\
+	}; \
+	static inline _CONCAT(_RSGlobalConsoleVar, var) _CONCAT(g_RSGlobalConsoleVar, var) = _CONCAT(_RSGlobalConsoleVar, var)();

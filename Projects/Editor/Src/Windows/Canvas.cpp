@@ -10,6 +10,8 @@
 
 using namespace RS;
 
+RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Canvas.debug1", g_Debug1, false, "A debug var");
+
 void RSE::Canvas::Init()
 {
     CreatePipelineState();

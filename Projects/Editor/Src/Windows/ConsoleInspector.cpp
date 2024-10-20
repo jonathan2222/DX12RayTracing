@@ -96,6 +96,12 @@ void RSE::ConsoleInspector::RenderVariable(Console::Variable& var)
 			RenderFloatVariable(var);
 			ImGui::EndDisabled();
 		}
+		else if (Console::IsTypeBool(var.type))
+		{
+			ImGui::BeginDisabled(readOnly);
+			RenderBoolVariable(var);
+			ImGui::EndDisabled();
+		}
 		else
 		{
 			std::string value = Console::VarValueToString(var.type, var.pVar);
@@ -151,6 +157,12 @@ void RSE::ConsoleInspector::RenderIntVariable(RS::Console::Variable& var)
 	std::string floatLabel = std::format("##Integer-{}", var.name);
 	ImGui::InputScalar(floatLabel.c_str(), dataType, var.pVar, NULL, NULL, format, flags);
 	ImGui::PopItemWidth();
+}
+
+void RSE::ConsoleInspector::RenderBoolVariable(RS::Console::Variable& var)
+{
+	std::string boolLabel = std::format("##Bool-{}", var.name);
+	ImGui::Checkbox(boolLabel.c_str(), (bool*)var.pVar);
 }
 
 void RSE::ConsoleInspector::SortTable(std::vector<RS::Console::Variable>& refVariables)

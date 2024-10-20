@@ -62,7 +62,7 @@ namespace RS
 		uint64 Create();
 
 		// Implicit conversion to ID3D12PipelineState*
-		operator ID3D12PipelineState* () { return m_pPipelineState; }
+		operator ID3D12PipelineState* () { std::lock_guard<std::mutex> lock(m_Mutex); return m_pPipelineState; }
 
 		uint64 GetKey() const;
 

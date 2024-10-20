@@ -579,6 +579,11 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 				type = Type::Float;
 				arg.type = FuncArg::TypeFlag::Float;
 			}
+			else if (IsTypeBool(type))
+			{
+				type = Type::Bool;
+				arg.type = FuncArg::TypeFlag::Bool;
+			}
 			if (!arg.name.empty())
 			{
 				arg.type |= FuncArg::TypeFlag::Named;
@@ -638,7 +643,49 @@ void RS::Console::ExecuteCommand(const std::string& cmdLine)
 				}
 			}
 
-			if (IsOfSameType(type, var.type))
+			// Convert integer type to bool
+			if (IsTypeBool(var.type) && (IsTypeInt(type) || IsTypeUInt(type)))
+			{
+				RS_NOTIFY_SUCCESS("Executing: {}", cmd);
+				if (IsTypeInt(type))
+				{
+					int64 valueI = 0;
+					StringToVarValue(type, value, &valueI);
+					*(bool*)var.pVar = valueI != 0;
+				}
+				else
+				{
+					uint64 valueUI = 0;
+					StringToVarValue(type, value, &valueUI);
+					*(bool*)var.pVar = valueUI != 0;
+				}
+				std::string line = std::format("{} = {}", cmd, value);
+				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());
+				m_CommandHistory.push_back(cmdLine);
+				return;
+			}
+			// Convert integer type to float
+			if (IsTypeFloat(var.type) && (IsTypeInt(type) || IsTypeUInt(type)))
+			{
+				RS_NOTIFY_SUCCESS("Executing: {}", cmd);
+				if (IsTypeInt(type))
+				{
+					int64 valueI = 0;
+					StringToVarValue(type, value, &valueI);
+					*(float*)var.pVar = (float)valueI;
+				}
+				else
+				{
+					uint64 valueUI = 0;
+					StringToVarValue(type, value, &valueUI);
+					*(float*)var.pVar = (float)valueUI;
+				}
+				std::string line = std::format("{} = {}", cmd, value);
+				Print(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), line.c_str());
+				m_CommandHistory.push_back(cmdLine);
+				return;
+			}
+			else if (IsOfSameType(type, var.type))
 			{
 				RS_NOTIFY_SUCCESS("Executing: {}", cmd);
 				StringToVarValue(var.type, value, var.pVar);
@@ -736,6 +783,8 @@ void RS::Console::Search(const std::string& searchLine)
 int RS::Console::GetByteCountFromType(Type type)
 {
 	int byteCount = 0;
+	if (type == Type::Bool)
+		return 1;
 	if (IsTypeInt(type))
 		byteCount = 1 << ((int)type - (int)Type::Int8);
 	if (IsTypeUInt(type))
@@ -812,6 +861,7 @@ std::string RS::Console::VarTypeToString(Type type)
 	// TODO: Make a static array instead.
 	switch (type)
 	{
+	case RS::Console::Type::Bool:		return "Bool";
 	case RS::Console::Type::Int8:		return "Int8";
 	case RS::Console::Type::Int16:		return "Int16";
 	case RS::Console::Type::Int32:		return "Int32";
@@ -833,6 +883,7 @@ std::string RS::Console::VarValueToString(Type type, void* value)
 {
 	switch (type)
 	{
+	case RS::Console::Type::Bool:		return *(bool*)value ? "true" : "false";
 	case RS::Console::Type::Int8:		return std::to_string(*(int8*)value);
 	case RS::Console::Type::Int16:		return std::to_string(*(int16*)value);
 	case RS::Console::Type::Int32:		return std::to_string(*(int32*)value);
@@ -856,6 +907,7 @@ RS::Console::Type RS::Console::StringToVarValue(Type type, const std::string& st
 	{
 		switch (type)
 		{
+		case RS::Console::Type::Bool:		*(bool*)refValue = str != "false" && str != "0"; break;
 		case RS::Console::Type::Int8:		*(int8*)refValue = (int8)std::stoi(str.c_str()); break;
 		case RS::Console::Type::Int16:		*(int16*)refValue = (int16)std::stoi(str.c_str()); break;
 		case RS::Console::Type::Int32:		*(int32*)refValue = (int32)std::stoi(str.c_str()); break;
@@ -908,6 +960,9 @@ RS::Console::Type RS::Console::StringToVarType(const std::string& str)
 	Type initialType = Type::Int32;
 	if (str.find('.') != std::string::npos)
 		initialType = Type::Float;
+	if (Utils::ToLower(str) == "true" ||
+		Utils::ToLower(str) == "false")
+		initialType = Type::Bool;
 	uint64 temp = 0;
 	return StringToVarValue(initialType, str, (void*)&temp);
 }
