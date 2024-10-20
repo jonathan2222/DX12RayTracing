@@ -1,12 +1,5 @@
-[15:07:28.166] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
-[15:07:28.167] [LaunchArguments.cpp:15] [info] Launch arguments: 
-[15:07:28.168] [Config.h:103] [warning] Did not find "Display/InitialState/Title" in config map! Using default value: Game 1
-[15:07:28.168] [Config.h:69] [warning] Did not find "Display/InitialState/DefaultWidth" in config map! Using default value: 1920
-[15:07:28.168] [Config.h:69] [warning] Did not find "Display/InitialState/DefaultHeight" in config map! Using default value: 1080
-[15:07:28.168] [Config.h:120] [warning] Did not find "Display/InitialState/Fullscreen" in config map! Using default value: false
-[15:07:28.169] [Config.h:120] [warning] Did not find "Display/Settings/WindowedFullscreen" in config map! Using default value: false
-[15:07:28.169] [Config.h:120] [warning] Did not find "Display/Settings/VSync" in config map! Using default value: true
-[15:07:28.225] [RenderDoc.cpp:47] [warning] Could not get RenderDoc module!
-[15:07:28.858] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
-[15:07:29.072] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1
-[15:10:18.249] [Display.cpp:198] [warning] Lost focus!
+[22:48:55.169] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
+[22:48:55.171] [LaunchArguments.cpp:15] [info] Launch arguments: 
+[22:48:55.228] [RenderDoc.cpp:47] [warning] Could not get RenderDoc module!
+[22:48:55.862] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
+[22:48:56.069] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1

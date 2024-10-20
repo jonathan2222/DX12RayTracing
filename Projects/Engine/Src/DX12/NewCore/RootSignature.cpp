@@ -55,7 +55,7 @@ void RS::RootSignature::AddStaticSampler(CD3DX12_STATIC_SAMPLER_DESC sampler)
 	m_StaticSamplers.push_back(sampler);
 }
 
-void RS::RootSignature::Bake()
+void RS::RootSignature::Bake(const std::string& debugName)
 {
 	// TODO: Should not free a root signature if it is in use! Defer it!
 	if (m_RootSignature)
@@ -65,7 +65,7 @@ void RS::RootSignature::Bake()
 	if (m_Dirty)
 	{
 		ConstructDescriptorTableBitMasks();
-		CreateRootSignature();
+		CreateRootSignature(debugName);
 		m_Dirty = false;
 	}
 	else
@@ -141,7 +141,7 @@ void RS::RootSignature::Free()
 	m_RootSignature.Reset();
 }
 
-void RS::RootSignature::CreateRootSignature()
+void RS::RootSignature::CreateRootSignature(const std::string& debugName)
 {
 	std::vector<CD3DX12_ROOT_PARAMETER1> rootParameters;
 
@@ -177,6 +177,10 @@ void RS::RootSignature::CreateRootSignature()
 	auto pDevice = DX12Core3::Get()->GetD3D12Device();
 
 	DXCall(pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
+
+	// Set debug name
+	DXCallVerbose(m_RootSignature->SetName(Utils::ToWString(debugName).c_str()));
+	m_DebugName = debugName;
 }
 
 void RS::RootSignature::ConstructDescriptorTableBitMasks()

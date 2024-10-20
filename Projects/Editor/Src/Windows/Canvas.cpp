@@ -308,5 +308,5 @@ void RSE::Canvas::CreateRootSignature()
         rootSignature.AddStaticSampler(samplerDesc);
     }
 
-    rootSignature.Bake();
+    rootSignature.Bake("Canvas_RootSignature");
 }

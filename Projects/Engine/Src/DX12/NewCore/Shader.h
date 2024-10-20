@@ -22,6 +22,7 @@ namespace RS
 
 		struct Description
 		{
+			bool isInternalPath = false;
 			std::string path;
 			TypeFlags	typeFlags = TypeFlag::Auto;
 			// If typeFlags is AUTO, it will load all shader types it sees and put them into the same shader.

@@ -308,13 +308,14 @@ void RS::ImGuiRenderer::ImplDX12CreateRootSignature(ImplDX12BackendRendererData*
 		rootSignature.AddStaticSampler(staticSampler);
 	}
 
-	rootSignature.Bake();
+	rootSignature.Bake("ImGuiRenderer_RootSignature");
 }
 
 void RS::ImGuiRenderer::ImplDX12CreatePipelineState(ImplDX12BackendRendererData* br)
 {
 	Shader shader;
 	Shader::Description shaderDesc{};
+	shaderDesc.isInternalPath = true;
 	shaderDesc.path = "ImGui/ImGuiShader.hlsl";
 	shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex;
 	shaderDesc.customEntryPoints = { {Shader::TypeFlag::Pixel, "PixelMain"}, {Shader::TypeFlag::Vertex, "VertexMain"} };

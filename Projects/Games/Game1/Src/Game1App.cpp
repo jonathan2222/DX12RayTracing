@@ -15,8 +15,8 @@
 
 #include "Core/Console.h"
 
-RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Sandbox.debug1", g_Debug1, false, "A debug bool");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Sandbox.translation.x", g_TranslationX, 0.f, "Translation X");
+RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Game1App.debug1", g_Debug1, false, "A debug bool");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.x", g_TranslationX, 0.f, "Translation X");
 
 Game1App::Game1App()
 {
@@ -59,7 +59,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
 
         auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
-        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH,  pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
+        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
 
         pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
@@ -94,7 +94,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         }
         if (sCameraIsActive)
             m_Camera.Update(frameStats.frame.currentDT);
-
+        
         float scale = 0.5f;
         vertexViewData.camera = glm::transpose(m_Camera.GetMatrix());
         vertexViewData.transform =
@@ -113,7 +113,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
         pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
 
-        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, 0.0f, 0.0f }) * vertexViewData.transform * glm::rotate(-3.1415f * 0.5f, glm::vec3{1.f, 0.f, 0.0f}));
+        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, 0.0f, 0.0f }) * vertexViewData.transform * glm::rotate(-3.1415f * 0.5f, glm::vec3{ 1.f, 0.f, 0.0f }));
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
         pCommandList->SetVertexBuffers(0, m_pVertexBufferResource2);
         pCommandList->DrawInstanced(m_NumVertices2, 1, 0, 0);
@@ -164,8 +164,6 @@ void Game1App::Init()
 
     // Texture
     {
-        std::filesystem::path wdir = std::filesystem::current_path();
-
         std::string texturePath = std::string("flyToYourDream.jpg");
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NormalTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "FlyToYTourDeam Texture Resource");
@@ -278,7 +276,7 @@ void Game1App::CreateRootSignature()
 
     // All bindless buffers, textures overlap using different spaces.
     // TODO: Support bindless descriptors!
-    rootSignature[RootParameter::Textures][0].SRV(3, 0, srvRegSpace);
+    rootSignature[RootParameter::Textures][0].SRV(2, 0, srvRegSpace);
     //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
     //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
 
@@ -300,5 +298,5 @@ void Game1App::CreateRootSignature()
         rootSignature.AddStaticSampler(samplerDesc);
     }
 
-    rootSignature.Bake();
+    rootSignature.Bake("Game1_RootSignature");
 }

@@ -288,7 +288,7 @@ void RS::DX12Core3::ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint
             rootSignature.AddStaticSampler(staticSampler);
         }
 
-        rootSignature.Bake();
+        rootSignature.Bake("Resize_Texture_RootSignature");
 
         auto pDevice = DX12Core3::Get()->GetD3D12Device();
 

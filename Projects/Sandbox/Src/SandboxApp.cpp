@@ -434,5 +434,5 @@ void SandboxApp::CreateRootSignature()
         rootSignature.AddStaticSampler(samplerDesc);
     }
 
-    rootSignature.Bake();
+    rootSignature.Bake("Sandbox_RootSignature");
 }

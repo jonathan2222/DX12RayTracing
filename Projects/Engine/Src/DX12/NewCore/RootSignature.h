@@ -99,7 +99,7 @@ namespace RS
 		/**
 		* Used to create the final root signature.
 		*/
-		void Bake();
+		void Bake(const std::string& debugName);
 
 		uint32 GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const;
 
@@ -114,7 +114,7 @@ namespace RS
 		bool Validate() const;
 
 		void Free();
-		void CreateRootSignature();
+		void CreateRootSignature(const std::string& debugName);
 		void ConstructDescriptorTableBitMasks();
 
 	private:
@@ -127,5 +127,7 @@ namespace RS
 		D3D12_ROOT_SIGNATURE_FLAGS m_Flags;
 		D3D_ROOT_SIGNATURE_VERSION m_Version;
 		D3D12_VERSIONED_ROOT_SIGNATURE_DESC m_VersionedRootSignatureDesc;
+
+		std::string m_DebugName;
 	};
 }
