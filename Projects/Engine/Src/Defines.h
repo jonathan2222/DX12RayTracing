@@ -51,13 +51,11 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 #define RS_ASSERT_NO_MSG(exp, ...) RS_INTERNAL_ASSERT_NO_MSG(exp, __VA_ARGS__)
 #define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
 
-#define RS_LOG_FILE_PATH "../../Debug/Tmp/"
-#define RS_ASSETS_PATH "../../Assets/"
-#define RS_CONFIG_FILE_PATH RS_ASSETS_PATH "Config/EngineConfig.cfg"
-#define RS_SHADER_PATH RS_ASSETS_PATH "Shaders/"
-#define RS_TEXTURE_PATH RS_ASSETS_PATH "Textures/"
-#define RS_MODEL_PATH RS_ASSETS_PATH "Models/"
-#define RS_FONT_PATH RS_ASSETS_PATH "Fonts/"
+#define RS_CONFIG_FILE_PATH "Config/EngineConfig.cfg"
+#define RS_SHADER_PATH "Shaders/"
+#define RS_TEXTURE_PATH "Textures/"
+#define RS_MODEL_PATH "Models/"
+#define RS_FONT_PATH "Fonts/"
 
 #define RS_UNREFERENCED_VARIABLE(v) (void)v
 #define FLAG(x) (1 << x)

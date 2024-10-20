@@ -1,4 +1,4 @@
-#include "SandboxApp.h"
+#include "Game1App.h"
 
 #include "Core/CorePlatform.h"
 #include "DX12/NewCore/Shader.h"
@@ -18,20 +18,20 @@
 RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Sandbox.debug1", g_Debug1, false, "A debug bool");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Sandbox.translation.x", g_TranslationX, 0.f, "Translation X");
 
-SandboxApp::SandboxApp()
+Game1App::Game1App()
 {
     Init();
 }
 
-SandboxApp::~SandboxApp()
+Game1App::~Game1App()
 {
 }
 
-void SandboxApp::FixedTick()
+void Game1App::FixedTick()
 {
 }
 
-void SandboxApp::Tick(const RS::FrameStats& frameStats)
+void Game1App::Tick(const RS::FrameStats& frameStats)
 {
     {
         auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
@@ -85,60 +85,6 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
             glm::mat4 camera;
         } vertexViewData;
 
-        // Initial camera orientation and position.
-        //static glm::vec3 direction(0.0f, 0.0f, 1.0f); // LH coordinate system => z is forward
-        //static glm::vec3 up(0.0f, 1.0f, 0.0f);
-        //static glm::vec3 position(0.0f, 0.0f, -3.0f);
-        //
-        //// TODO: Change to quaternions.
-        //glm::vec3 right = glm::cross(direction, up);
-        //up = glm::cross(right, direction);
-        //
-        //// -1 if a, 1 if b, else 0 (a and b is also 0).
-        //auto KeysPressed = [](RS::Key a, RS::Key b)
-        //{
-        //    return (RS::Input::Get()->IsKeyPressed(b) ? 1.f : 0.f) - (RS::Input::Get()->IsKeyPressed(a) ? 1.f : 0.f);
-        //};
-        //float hAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::RIGHT, RS::Key::LEFT);
-        //float vAngle = frameStats.frame.currentDT * KeysPressed(RS::Key::DOWN, RS::Key::UP);
-        //direction = glm::rotate(hAngle, glm::vec3{0.f, 1.0f, 0.f}) * glm::vec4(direction, 1.0f);
-        //direction = glm::normalize(direction);
-        //right = glm::cross(up, direction); // Ajdust right vector to match with the rotation of direction.
-        //direction = glm::rotate(vAngle, right) * glm::vec4(direction, 1.0f);
-        //direction = glm::normalize(direction);
-        //up = glm::cross(right, direction); // Ajdust up vector to match with the rotation of direction.
-        //up = glm::normalize(up);
-        //
-        //float speed = 10.0f;
-        //float speedRight = KeysPressed(RS::Key::A, RS::Key::D) * speed;
-        //float speedForward = KeysPressed(RS::Key::S, RS::Key::W) * speed;
-        //float speedUp = KeysPressed(RS::Key::LEFT_SHIFT, RS::Key::SPACE) * speed;
-        //position += right * frameStats.frame.currentDT * speedRight + direction * frameStats.frame.currentDT * speedForward;
-        //position.y += frameStats.frame.currentDT * speedUp;
-        //// TODO: Fix direction!
-        ////LOG_WARNING("Dir: {}, Pos: {}", direction.ToString(), position.ToString());
-        //
-        //RS_New::VecNew<2u, float> newVecNoInit(RS_New::NoInit);
-        //RS_New::VecNew<2u, float> newVecOnes(1.0f);
-        //RS_New::VecNew<2u, float> newVecZeros;
-        //RS_New::VecNew<2u, float> newVec1(1.0f, 2.0f);
-        //RS_New::VecNew<2u, int32> newVec2U(-1, 2);
-        //RS_New::VecNew<2u, float> newVec2F(newVec2U);
-        //uint32 values[3] = { 0, 1, 2 };
-        //RS_New::VecNew<3u, uint32> newVec3U(3, values);
-        //
-        //RS_New::VecNew<2u, float> newVec11 = RS_New::VecNew<2u, float>::Ones;
-        //RS_New::VecNew<2u, float> newVec00 = RS_New::VecNew<2u, float>::Zeros;
-        //
-        ////RS::Mat4 view = RS::CreateCameraMat4(direction, {0.f, 1.0f, 0.0f}, position);
-        ////LOG_WARNING("view: {}", view.ToString());
-        ////RS::Mat4 proj = RS::CreatePerspectiveProjectionMat4(45.0f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
-        ////LOG_WARNING("proj: {}", proj.ToString());
-        //
-        //// TODO: Try with glm and see if that fixes it!
-        //glm::mat4 viewG = glm::lookAtLH((glm::vec3)direction, (glm::vec3)(direction + position), { 0.f, 1.0f, 0.0f });
-        //glm::mat4 projG = glm::perspectiveLH_ZO(45.f * 3.1415f / 180.f, RS::Display::Get()->GetAspectRatio(), 0.01f, 100.0f);
-
         static bool sCameraIsActive = false;
         if (RS::Input::Get()->IsKeyClicked(RS::Key::C))
         {
@@ -148,18 +94,6 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
         }
         if (sCameraIsActive)
             m_Camera.Update(frameStats.frame.currentDT);
-        //static float time = 0.f;
-        //time += frameStats.frame.currentDT;
-        //if (time > 1.f)
-        //{
-        //    LOG_WARNING("Camera:");
-        //    LOG_WARNING("\tPos: ({}, {}, {})", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
-        //    LOG_WARNING("\tRight: ({}, {}, {})", m_Camera.GetRight().x, m_Camera.GetRight().y, m_Camera.GetRight().z);
-        //    LOG_WARNING("\tUp: ({}, {}, {})", m_Camera.GetUp().x, m_Camera.GetUp().y, m_Camera.GetUp().z);
-        //    LOG_WARNING("\tForward: ({}, {}, {})", m_Camera.GetDirection().x, m_Camera.GetDirection().y, m_Camera.GetDirection().z);
-        //    LOG_WARNING("----------------------------------------");
-        //    time = 0.f;
-        //}
 
         float scale = 0.5f;
         vertexViewData.camera = glm::transpose(m_Camera.GetMatrix());
@@ -190,20 +124,9 @@ void SandboxApp::Tick(const RS::FrameStats& frameStats)
 
         pCommandQueue->ExecuteCommandList(pCommandList);
     }
-
-    // Copy rendertarget to swapchain.
-    //{
-    //    auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
-    //    auto pCommandList = pCommandQueue->GetCommandList();
-    //
-    //    auto pTexture = m_RenderTarget->GetColorTextures()[0];
-    //    pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
-    //
-    //    pCommandQueue->ExecuteCommandList(pCommandList);
-    //}
 }
 
-void SandboxApp::Init()
+void Game1App::Init()
 {
     CreatePipelineState();
 
@@ -226,25 +149,6 @@ void SandboxApp::Init()
         pCommandList->UploadToBuffer(m_pVertexBufferResource2, vertexBufferSize2, (void*)&pMesh2->vertices[0]);
         m_NumVertices2 = pMesh2->vertices.size();
     }
-    //m_ConstantBufferResource = pCommandList->CopyBuffer(sizeof(textIndex), (void*)&textIndex, D3D12_RESOURCE_FLAG_NONE);
-
-    //float scale = 1.0f;
-    //float aspectRatio = 1.0f;
-    //RS::Vertex triangleVertices[] =
-    //{
-    //    { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
-    //    { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-    //    { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
-    //
-    //    { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-    //    { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
-    //    { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
-    //};
-    //m_NumVertices = 6;
-    //
-    //const UINT vertexBufferSize2 = sizeof(triangleVertices);
-    //m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
-    //pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
 
     if (pMesh)
     {
@@ -260,6 +164,8 @@ void SandboxApp::Init()
 
     // Texture
     {
+        std::filesystem::path wdir = std::filesystem::current_path();
+
         std::string texturePath = std::string("flyToYourDream.jpg");
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NormalTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "FlyToYTourDeam Texture Resource");
@@ -310,37 +216,13 @@ void SandboxApp::Init()
     m_Camera.Init(aspect, 45.f, { 0.f, 1.f, -2.f }, { 0.f, 1.0f, 1.0f }, 1.0f, 10.f);
 }
 
-void SandboxApp::CreatePipelineState()
+void Game1App::CreatePipelineState()
 {
     RS::Shader shader;
     RS::Shader::Description shaderDesc{};
     shaderDesc.path = "Core/MeshShader.hlsl";
     shaderDesc.typeFlags = RS::Shader::TypeFlag::Pixel | RS::Shader::TypeFlag::Vertex;
     shader.Create(shaderDesc);
-
-    // TODO: Remove this
-    //{ // Test reflection
-    //  ID3D12ShaderReflection* reflection = shader.GetReflection(RS::Shader::TypeFlag::Pixel);
-    //
-    //  D3D12_SHADER_DESC d12ShaderDesc{};
-    //  DXCall(reflection->GetDesc(&d12ShaderDesc));
-    //
-    //  D3D12_SHADER_INPUT_BIND_DESC desc{};
-    //  DXCall(reflection->GetResourceBindingDesc(0, &desc));
-    //
-    //  D3D12_SHADER_INPUT_BIND_DESC desc2{};
-    //  DXCall(reflection->GetResourceBindingDesc(1, &desc2));
-    //
-    //  std::vector<D3D12_SIGNATURE_PARAMETER_DESC> inputParameters;
-    //  inputParameters.resize(d12ShaderDesc.InputParameters);
-    //  for (uint i = 0; i < d12ShaderDesc.InputParameters; ++i)
-    //      DXCall(reflection->GetInputParameterDesc(i, &inputParameters[i]));
-    //
-    //  std::vector<D3D12_SIGNATURE_PARAMETER_DESC> outputParameters;
-    //  outputParameters.resize(d12ShaderDesc.OutputParameters);
-    //  for (uint i = 0; i < d12ShaderDesc.OutputParameters; ++i)
-    //      DXCall(reflection->GetOutputParameterDesc(i, &outputParameters[i]));
-    //}
 
     CreateRootSignature();
 
@@ -363,22 +245,6 @@ void SandboxApp::CreatePipelineState()
         inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     }
 
-    // TODO: Change the pipelinestate to use subobject like below (this saves memory by only passing subobjects that we need):
-    //struct
-    //{
-    //	struct alignas(void*)
-    //	{
-    //		D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type{ D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE };
-    //		ID3D12RootSignature* rootSigBlob;
-    //	} rootSig;
-    //} streams;
-    //streams.rootSig.rootSigBlob = m_RootSignature;
-    //
-    //D3D12_PIPELINE_STATE_STREAM_DESC streamDesc{};
-    //streamDesc.pPipelineStateSubobjectStream = &streams;
-    //streamDesc.SizeInBytes = sizeof(streams);
-    //DXCall(pDevice->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_PipelineState)));
-
     m_GraphicsPSO.SetDefaults();
     m_GraphicsPSO.SetInputLayout(inputElementDescs);
     m_GraphicsPSO.SetRootSignature(m_pRootSignature);
@@ -390,7 +256,7 @@ void SandboxApp::CreatePipelineState()
     shader.Release();
 }
 
-void SandboxApp::CreateRootSignature()
+void Game1App::CreateRootSignature()
 {
     // TODO: Have a main root signature for all shader to share?
     m_pRootSignature = std::make_shared<RS::RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);

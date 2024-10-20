@@ -59,7 +59,7 @@ std::string RS::CorePlatform::GetConfigurationAsStr() const
 
 std::unique_ptr<RS::CorePlatform::Image> RS::CorePlatform::LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags)
 {
-	std::string texturePath = RS_TEXTURE_PATH + path;
+	std::string texturePath = Engine::GetDataFilePath() + RS_TEXTURE_PATH + path;
 	FormatInfo requestedFormatInfo = GetFormatInfo(requestedFormat);
 
 	std::unique_ptr<RS::CorePlatform::Image> pImage = std::make_unique<RS::CorePlatform::Image>();
@@ -164,7 +164,8 @@ std::string RS::CorePlatform::CreateTemporaryPath()
 	HRESULT result = SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, documentsPath);
 	if (result != S_OK)
 	{
-		std::string resultPath = RS_ASSETS_PATH "TemporaryData/";
+		std::string resultPath = "TemporaryData/";
+		resultPath = Engine::GetTempFilePath() + resultPath;
 		LOG_WARNING("Could not find OS Documents folder! Defaulting to {}", resultPath.c_str());
 		return resultPath;
 	}

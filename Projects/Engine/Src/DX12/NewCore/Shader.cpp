@@ -67,7 +67,7 @@ bool RS::Shader::Create(const Description& description)
 		return false;
 
 	std::string shaderVirtualPath = description.path;
-	std::string shaderPath = RS_SHADER_PATH + shaderVirtualPath;
+	std::string shaderPath = Engine::GetDataFilePath() + RS_SHADER_PATH + shaderVirtualPath;
 
 	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
 		LOG_INFO("Compiling shader with types: {}, Path: {}", TypesToString(description.typeFlags), shaderPath);

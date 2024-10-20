@@ -84,7 +84,7 @@ void Logger::Init()
 
     const std::string computerName = CorePlatform::Get()->GetComputerNameStr();
     const std::string configuration = CorePlatform::Get()->GetConfigurationAsStr();
-    const std::string logFilePath = RS_LOG_FILE_PATH + computerName + "_" + configuration + ".txt";
+    const std::string logFilePath = Engine::GetDebugFilePath() + "Logs/" + computerName + "_" + configuration + ".txt";
 
     auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath, true);
     fileSink->set_level(spdlog::level::trace);

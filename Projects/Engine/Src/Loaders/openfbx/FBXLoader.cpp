@@ -9,7 +9,7 @@ using namespace RS;
 
 Mesh* RS::FBXLoader::Load(const std::string& path)
 {
-	std::string modelPath = RS_MODEL_PATH + path;
+	std::string modelPath = Engine::GetDataFilePath() + RS_MODEL_PATH + path;
 
 	Mesh* pMesh = new Mesh();
 

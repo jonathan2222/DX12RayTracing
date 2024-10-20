@@ -1,0 +1,28 @@
+[15:05:49.692] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Sandbox\Sandbox.exe
+[15:05:49.694] [LaunchArguments.cpp:15] [info] Launch arguments: -logResources -logDXCalls -logDXNamedObjects -injectRenderDoc
+[15:05:49.965] [Dx12Device.cpp:49] [debug] DXCall(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory)))
+[15:05:49.965] [Dx12Device.cpp:94] [debug] DXCall(m_Factory->QueryInterface(IID_PPV_ARGS(&factory6)))
+[15:05:49.965] [Dx12Device.cpp:100] [debug] DXCall(adapter->GetDesc1(&desc))
+[15:05:50.626] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
+[15:05:50.814] [Dx12Device.cpp:140] [debug] DXCall(D3D12CreateDevice(m_Adapter, m_D3DMinFeatureLevel, IID_PPV_ARGS(&m_Device)))
+[15:05:50.815] [Dx12Device.cpp:141] [debug] Named Resource: D3D12 Device
+[15:05:50.992] [CommandQueue.cpp:20] [debug] DXCall(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)), "Failed to create the command queue!")
+[15:05:50.993] [CommandQueue.cpp:21] [debug] DXCall(pDevice->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)))
+[15:05:50.993] [CommandQueue.cpp:29] [debug] Named Resource: Direct Command Queue
+[15:05:51.003] [SwapChain.cpp:150] [debug] DXCall(pFactory->CreateSwapChainForHwnd(pCommandQueue->GetD3D12CommandQueue().Get(), window, &swapChainDesc, &fullscreenSwapChainDesc, nullptr, &swapChain))
+[15:05:51.004] [DescriptorAllocatorPage.cpp:16] [debug] DXCall(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_d3d12DescriptorHeap)))
+[15:05:51.005] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1.4760417
+[15:05:51.089] [Shader.cpp:547] [debug] DXCall(pCompiler->Compile(&sourceBuffer, arguments.data(), (uint32)arguments.size(), includeHandler.Get(), IID_PPV_ARGS(pCompileResult.GetAddressOf())))
+[15:05:51.103] [Shader.cpp:547] [debug] DXCall(pCompiler->Compile(&sourceBuffer, arguments.data(), (uint32)arguments.size(), includeHandler.Get(), IID_PPV_ARGS(pCompileResult.GetAddressOf())))
+[15:05:51.104] [RootSignature.cpp:179] [debug] DXCall(pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)))
+[15:05:51.104] [GraphicsPSO.cpp:354] [debug] DXCall(pReflection->GetDesc(&d12ShaderDesc))
+[15:05:51.104] [GraphicsPSO.cpp:362] [debug] DXCall(pReflection->GetInputParameterDesc(i, &inputParameter))
+[15:05:51.105] [GraphicsPSO.cpp:362] [debug] DXCall(pReflection->GetInputParameterDesc(i, &inputParameter))
+[15:05:51.105] [GraphicsPSO.cpp:362] [debug] DXCall(pReflection->GetInputParameterDesc(i, &inputParameter))
+[15:05:51.108] [GraphicsPSO.cpp:211] [debug] DXCall(pDevice->CreateGraphicsPipelineState(&m_PSODesc, IID_PPV_ARGS(&m_pPipelineState)))
+[15:05:51.116] [Resource.cpp:40] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, resourceState, m_pD3D12ClearValue, IID_PPV_ARGS(&m_pD3D12Resource)))
+[15:05:51.116] [CommandList.cpp:375] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pUploadResource)))
+[15:05:51.117] [Resource.cpp:40] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, resourceState, m_pD3D12ClearValue, IID_PPV_ARGS(&m_pD3D12Resource)))
+[15:05:51.118] [CommandList.cpp:375] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pUploadResource)))
+[15:05:51.136] [CommandList.cpp:333] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS(&pResource)))
+[15:05:51.137] [CommandList.cpp:250] [debug] DXCall(pDevice->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&pIntermediateResrouce)))

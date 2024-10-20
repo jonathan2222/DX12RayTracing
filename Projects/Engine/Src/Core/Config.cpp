@@ -15,7 +15,7 @@ Config* Config::Get()
 
 void Config::Init(const std::string& fileName)
 {
-	m_FilePath = fileName;
+	m_FilePath = RS::Engine::GetTempFilePath() + fileName;
 	Load();
 }
 

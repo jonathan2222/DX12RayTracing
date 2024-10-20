@@ -174,6 +174,7 @@ void RS::ImGuiRenderer::InternalInit()
 	config.PixelSnapH = true;
 	config.GlyphMinAdvanceX = pixelSize;
 	std::string faSolid900 = RS_FONT_PATH FONT_ICON_FILE_NAME_FAS;
+	faSolid900 = Engine::GetInternalDataFilePath() + faSolid900;
 	io.Fonts->AddFontFromFileTTF(faSolid900.c_str(), pixelSize, &config, icons_ranges);
 	io.Fonts->Build();
 }

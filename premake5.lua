@@ -115,3 +115,5 @@ include "Projects/Engine"
 include "Projects/Editor"
 include "Projects/Sandbox"
 include "Projects/UnitTests"
+
+include "Projects/Games/Game1"

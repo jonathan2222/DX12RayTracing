@@ -1,12 +1,12 @@
-[16:27:13.767] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Sandbox\Sandbox.exe
-[16:27:13.769] [LaunchArguments.cpp:15] [info] Launch arguments: 
-[16:27:13.769] [Config.cpp:37] [warning] Failed to load engine config!
-[16:27:13.769] [Config.h:77] [warning] Did not find "Display/InitialState/Title" in config map! Using default value: Sandbox DX12
-[16:27:13.769] [Config.h:77] [warning] Did not find "Display/InitialState/DefaultWidth" in config map! Using default value: 1920
-[16:27:13.770] [Config.h:77] [warning] Did not find "Display/InitialState/DefaultHeight" in config map! Using default value: 1080
-[16:27:13.770] [Config.h:77] [warning] Did not find "Display/InitialState/Fullscreen" in config map! Using default value: false
-[16:27:13.770] [Config.h:77] [warning] Did not find "Display/Settings/WindowedFullscreen" in config map! Using default value: false
-[16:27:13.770] [Config.h:77] [warning] Did not find "Display/Settings/VSync" in config map! Using default value: true
-[16:27:14.481] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
-[16:27:14.808] [ImGuiRenderer.cpp:218] [info] ImGui Scale: 1
-[16:27:14.829] [Display.cpp:198] [warning] Lost focus!
+[14:17:36.826] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
+[14:17:36.827] [LaunchArguments.cpp:15] [info] Launch arguments: 
+[14:17:36.828] [Config.h:103] [warning] Did not find "Display/InitialState/Title" in config map! Using default value: Game 1
+[14:17:36.828] [Config.h:69] [warning] Did not find "Display/InitialState/DefaultWidth" in config map! Using default value: 1920
+[14:17:36.828] [Config.h:69] [warning] Did not find "Display/InitialState/DefaultHeight" in config map! Using default value: 1080
+[14:17:36.829] [Config.h:120] [warning] Did not find "Display/InitialState/Fullscreen" in config map! Using default value: false
+[14:17:36.829] [Config.h:120] [warning] Did not find "Display/Settings/WindowedFullscreen" in config map! Using default value: false
+[14:17:36.829] [Config.h:120] [warning] Did not find "Display/Settings/VSync" in config map! Using default value: true
+[14:17:36.885] [RenderDoc.cpp:47] [warning] Could not get RenderDoc module!
+[14:17:37.527] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
+[14:17:37.785] [ImGuiRenderer.cpp:218] [info] ImGui Scale: 1
+[14:17:37.805] [Display.cpp:198] [warning] Lost focus!

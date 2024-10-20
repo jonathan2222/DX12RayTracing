@@ -51,14 +51,14 @@ void RSE::Canvas::Init()
 
     // Texture
     {
-        std::string texturePath = RS_TEXTURE_PATH + std::string("flyToYourDream.jpg");
+        std::string texturePath = Engine::GetDataFilePath() + RS_TEXTURE_PATH + std::string("flyToYourDream.jpg");
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NormalTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "FlyToYTourDeam Texture Resource");
     }
 
     // Null Texture
     {
-        std::string texturePath = RS_TEXTURE_PATH + std::string("NullTexture.png");
+        std::string texturePath = Engine::GetDataFilePath() + RS_TEXTURE_PATH + std::string("NullTexture.png");
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NullTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "Null Texture Resource");
     }
