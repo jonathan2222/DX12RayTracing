@@ -12,7 +12,7 @@
 
 void RS::DebugWindowsManager::Init()
 {
-    RegisterDebugWindow<DebugConsoleInspectorWindow>("Debug Console Inspector Window");
+    RegisterDebugWindow<DebugConsoleInspectorWindow>("Debug Console Inspector Window", Key::TAB, Input::ModFlag::CONTROL);
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -98,7 +98,7 @@ void RS::DebugWindowsManager::Render()
                 for (DebugWindow* pWindow : m_Windows)
                 {
                     bool oldState = pWindow->m_Active;
-                    if (ImGui::MenuItem(pWindow->m_Name.c_str(), "", &pWindow->m_Active, pWindow->GetEnableRequirements()))
+                    if (ImGui::MenuItem(pWindow->m_Name.c_str(), pWindow->m_Shortcut.c_str(), &pWindow->m_Active, pWindow->GetEnableRequirements()))
                     {
                         if (!oldState && pWindow->m_Active)
                             pWindow->SuperActivate();
@@ -119,7 +119,12 @@ void RS::DebugWindowsManager::Render()
     ImGui::End();
 
     for (DebugWindow* pWindow : m_Windows)
+    {
+        if (pWindow->m_ShortcutKey != Key::UNKNOWN &&
+            Input::Get()->IsKeyClicked(pWindow->m_ShortcutKey, Input::ActiveState::RISING_EDGE, pWindow->m_ShortcutMods))
+            pWindow->m_Active = !pWindow->m_Active;
         pWindow->SuperRender();
+    }
 }
 
 void RS::DebugWindowsManager::Destory()

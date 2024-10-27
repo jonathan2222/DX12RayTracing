@@ -66,7 +66,7 @@ glm::mat4 RS::Camera2D::GetMatrix() const
 
 glm::mat4 RS::Camera2D::GetProjection() const
 {
-	glm::mat4 proj = glm::orthoRH(m_Left, m_Right, m_Bottom, m_Top, m_NearPlane, m_FarPlane);
+	glm::mat4 proj = glm::orthoLH(m_Left, m_Right, m_Bottom, m_Top, m_NearPlane, m_FarPlane);
 	return proj;
 }
 

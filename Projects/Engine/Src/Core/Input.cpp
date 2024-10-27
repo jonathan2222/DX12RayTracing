@@ -14,6 +14,22 @@ using namespace RS;
     This should be used instead of the Input::Get()->ShouldAlwaysListenToKey(...) and !ImGuiRenderer::Get()->WantKeyInput()
 */
 
+std::string RS::Input::ModFlagsToString(Input::ModFlags mods)
+{
+    std::string result;
+
+    uint32 index = 0;
+    while (Utils::ForwardBitScan(mods, index))
+    {
+        RS_ASSERT(index < 7, "Index out of bounds");
+
+        Utils::ClearBit(mods, index);
+        result += s_ModFlagStrings[index] + std::string(mods > 0 ? " + " : "");
+    }
+
+    return result;
+}
+
 std::shared_ptr<Input> Input::Get()
 {
     static std::shared_ptr<Input> s_Input = std::make_shared<Input>();

@@ -30,6 +30,10 @@ namespace RS
 			IGNORED = UINT32_MAX
 		};
 
+		inline static constexpr const char* s_ModFlagStrings[7] = { "None", "Shift", "Ctrl", "Alt", "Super", "CapsLock", "NumLock" };
+
+		static std::string ModFlagsToString(ModFlags mods);
+
 	public:
 		Input() = default;
 		~Input() = default;

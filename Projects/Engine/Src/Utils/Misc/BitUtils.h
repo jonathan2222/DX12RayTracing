@@ -57,4 +57,59 @@ namespace RS::Utils
 	{
 		return v & (1 << bit);
 	}
+
+	template<typename T>
+	inline void SetBit(T& mask, T bit)
+	{
+		mask = mask | (1 << bit);
+	}
+
+	template<typename T>
+	inline void ClearBit(T& mask, T bit)
+	{
+		mask = mask & (~(1 << bit));
+	}
+
+	// index is the index of the first set bit from LSB to MSB.
+	// If no bit is set, it will have the value UINT32_MAX.
+	// The function returns true if the mask is non-zero else false.
+	inline bool ForwardBitScan(uint32 mask, uint32& index)
+	{
+		unsigned long i;
+		char isNonZero = _BitScanForward(&i, mask);
+		index = isNonZero ? (uint32)i : UINT32_MAX;
+		return isNonZero != 0;
+	}
+
+	// index is the index of the first set bit from LSB to MSB.
+	// If no bit is set, it will have the value UINT32_MAX.
+	// The function returns true if the mask is non-zero else false.
+	inline bool ForwardBitScan(uint64 mask, uint32& index)
+	{
+		unsigned long i;
+		char isNonZero = _BitScanForward64(&i, mask);
+		index = isNonZero ? (uint32)i : UINT32_MAX;
+		return isNonZero != 0;
+	}
+
+	// index is the index of the first set bit from MSB to LSB.
+	// If no bit is set, it will have the value UINT32_MAX.
+	// The function returns true if the mask is non-zero else false.
+	inline bool ReverseBitScan(uint32 mask, uint32& index)
+	{
+		unsigned long i;
+		char isNonZero = _BitScanReverse(&i, mask);
+		index = isNonZero ? (uint32)i : UINT32_MAX;
+		return isNonZero != 0;
+	}
+
+	// Returns the index of the first set bit from MSB to LSB.
+	// If no bit is set, it will return UINT32_MAX.
+	inline bool ReverseBitScan(uint64 mask, uint32& index)
+	{
+		unsigned long i;
+		char isNonZero = _BitScanReverse64(&i, mask);
+		index = isNonZero ? (uint32)i : UINT32_MAX;
+		return isNonZero != 0;
+	}
 }

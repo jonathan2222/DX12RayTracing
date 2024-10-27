@@ -60,8 +60,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
         pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
 
-        auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
-        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
+        //auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
+        //pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
 
         pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
@@ -195,18 +195,18 @@ void Game1App::Init()
         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, &clearValue);
     m_RenderTarget->SetAttachment(RS::AttachmentPoint::Color0, pRenderTexture);
 
-    D3D12_CLEAR_VALUE clearValueDepth;
-    clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
-    clearValueDepth.DepthStencil.Depth = 0.0f;
-    clearValueDepth.DepthStencil.Stencil = 0;
-    auto pDepthTexture = pCommandList->CreateTexture(
-        RS::Display::Get()->GetWidth(),
-        RS::Display::Get()->GetHeight(),
-        nullptr,
-        clearValueDepth.Format,
-        "Canvas Depth Texture",
-        D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
-    m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
+    //D3D12_CLEAR_VALUE clearValueDepth;
+    //clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
+    //clearValueDepth.DepthStencil.Depth = 0.0f;
+    //clearValueDepth.DepthStencil.Stencil = 0;
+    //auto pDepthTexture = pCommandList->CreateTexture(
+    //    RS::Display::Get()->GetWidth(),
+    //    RS::Display::Get()->GetHeight(),
+    //    nullptr,
+    //    clearValueDepth.Format,
+    //    "Canvas Depth Texture",
+    //    D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
+    //m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
 
     RS::Display::Get()->AddOnSizeChangeCallback("Game1 RenderTarget", m_RenderTarget.get());
 
@@ -216,7 +216,7 @@ void Game1App::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(10, -10, -10, 10, {0.f, 0.f, 1.f});
+    m_Camera.Init(-10, 10, -10, 10, {0.f, 0.f, 1.f});
 }
 
 void Game1App::CreatePipelineState()

@@ -14,3 +14,11 @@ void RS::DebugWindow::SuperRender()
 		}
 	}
 }
+
+void RS::DebugWindow::UpdateShortcut()
+{
+	if (m_ShortcutKey != Key::UNKNOWN && m_ShortcutMods == Input::IGNORED)
+		m_Shortcut = ToString(m_ShortcutKey);
+	else if (m_ShortcutKey != Key::UNKNOWN)
+		m_Shortcut = ToString(m_ShortcutKey) + std::string(" + ") + Input::ModFlagsToString(m_ShortcutMods);
+}

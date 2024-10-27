@@ -17,6 +17,8 @@ namespace RS
 		MIDDLE = 2
 	};
 
+	inline static constexpr const char* MB_Strings[3] = { "LEFT", "RIGHT", "MIDDLE" };
+
 	enum class Key
 	{
 		UNKNOWN = -1,
@@ -135,4 +137,120 @@ namespace RS
 		FIRST = SPACE,
 		LAST = MENU
 	};
+
+	inline static const char* ToString(Key key, bool asChars = true)
+	{
+		switch (key)
+		{
+		case RS::Key::UNKNOWN: return "UNKNOWN";
+		case RS::Key::SPACE: return asChars ? " " : "Space";
+		case RS::Key::COMMA: return asChars ? "," : "Comma";
+		case RS::Key::MINUS: return asChars ? "-" : "Muinus";
+		case RS::Key::PERIOD: return asChars ? "." : "Period";
+		case RS::Key::NUMBER0: return asChars ? "0" : "NUMBER0";
+		case RS::Key::NUMBER1: return asChars ? "1" : "NUMBER1";
+		case RS::Key::NUMBER2: return asChars ? "2" : "NUMBER2";
+		case RS::Key::NUMBER3: return asChars ? "3" : "NUMBER3";
+		case RS::Key::NUMBER4: return asChars ? "4" : "NUMBER4";
+		case RS::Key::NUMBER5: return asChars ? "5" : "NUMBER5";
+		case RS::Key::NUMBER6: return asChars ? "6" : "NUMBER6";
+		case RS::Key::NUMBER7: return asChars ? "7" : "NUMBER7";
+		case RS::Key::NUMBER8: return asChars ? "8" : "NUMBER8";
+		case RS::Key::NUMBER9: return asChars ? "9" : "NUMBER9";
+		case RS::Key::A: return "A";
+		case RS::Key::B: return "B";
+		case RS::Key::C: return "C";
+		case RS::Key::D: return "D";
+		case RS::Key::E: return "E";
+		case RS::Key::F: return "F";
+		case RS::Key::G: return "G";
+		case RS::Key::H: return "H";
+		case RS::Key::I: return "I";
+		case RS::Key::J: return "J";
+		case RS::Key::K: return "K";
+		case RS::Key::L: return "L";
+		case RS::Key::M: return "M";
+		case RS::Key::N: return "N";
+		case RS::Key::O: return "O";
+		case RS::Key::P: return "P";
+		case RS::Key::Q: return "Q";
+		case RS::Key::R: return "R";
+		case RS::Key::S: return "S";
+		case RS::Key::T: return "T";
+		case RS::Key::U: return "U";
+		case RS::Key::V: return "V";
+		case RS::Key::W: return "W";
+		case RS::Key::X: return "X";
+		case RS::Key::Y: return "Y";
+		case RS::Key::Z: return "Z";
+		case RS::Key::MICRO: return asChars ? "§" : "Micro";
+		case RS::Key::ESCAPE: return "Escape";
+		case RS::Key::ENTER: return "Enter";
+		case RS::Key::TAB: return "Tab";
+		case RS::Key::BACKSPACE: return "Backspace";
+		case RS::Key::INSERT: return "Insert";
+		case RS::Key::DELETE_KEY: return "Delete";
+		case RS::Key::RIGHT: return "Right";
+		case RS::Key::LEFT: return "Left";
+		case RS::Key::DOWN: return "Down";
+		case RS::Key::UP: return "Up";
+		case RS::Key::PAGE_UP: return "PageUp";
+		case RS::Key::PAGE_DOWN: return "PageDown";
+		case RS::Key::HOME: return "Home";
+		case RS::Key::END: return "End";
+		case RS::Key::CAPS_LOCK: return "CapsLock";
+		case RS::Key::SCROLL_LOCK: return "ScrollLock";
+		case RS::Key::NUM_LOCK: return "NumLock";
+		case RS::Key::PRINT_SCREEN: return "PrintScreen";
+		case RS::Key::PAUSE: return "Pause";
+		case RS::Key::F1: return "F1";
+		case RS::Key::F2: return "F2";
+		case RS::Key::F3: return "F3";
+		case RS::Key::F4: return "F4";
+		case RS::Key::F5: return "F5";
+		case RS::Key::F6: return "F6";
+		case RS::Key::F7: return "F7";
+		case RS::Key::F8: return "F8";
+		case RS::Key::F9: return "F9";
+		case RS::Key::F10: return "F10";
+		case RS::Key::F11: return "F11";
+		case RS::Key::F12: return "F12";
+		case RS::Key::F13: return "F13";
+		case RS::Key::F14: return "F14";
+		case RS::Key::F15: return "F15";
+		case RS::Key::F16: return "F16";
+		case RS::Key::F17: return "F17";
+		case RS::Key::F18: return "F18";
+		case RS::Key::F19: return "F19";
+		case RS::Key::F20: return "F20";
+		case RS::Key::F21: return "F21";
+		case RS::Key::F22: return "F22";
+		case RS::Key::F23: return "F23";
+		case RS::Key::F24: return "F24";
+		case RS::Key::KP_0: return "0";
+		case RS::Key::KP_1: return "1";
+		case RS::Key::KP_2: return "2";
+		case RS::Key::KP_3: return "3";
+		case RS::Key::KP_4: return "4";
+		case RS::Key::KP_5: return "5";
+		case RS::Key::KP_6: return "6";
+		case RS::Key::KP_7: return "7";
+		case RS::Key::KP_8: return "8";
+		case RS::Key::KP_9: return "9";
+		case RS::Key::KP_DECIMAL: return asChars ? "," : "Decimal";
+		case RS::Key::KP_DIVIDE: return asChars ? "/" : "Divide";
+		case RS::Key::KP_MULTIPLY: return asChars ? "*" : "Multiply";
+		case RS::Key::KP_SUBTRACT: return asChars ? "-" : "Subtract";
+		case RS::Key::KP_ADD: return asChars ? "+" : "Add";
+		case RS::Key::LEFT_SHIFT: return "LeftShift";
+		case RS::Key::LEFT_CONTROL: return "LeftControl";
+		case RS::Key::LEFT_ALT: return "LeftAlt";
+		case RS::Key::RIGHT_SHIFT: return "RightShift";
+		case RS::Key::RIGHT_CONTROL: return "RightControl";
+		case RS::Key::RIGHT_ALT: return "RightAlt";
+		case RS::Key::MENU: return "Menu";
+		default:
+			return "NoStringForKey";
+		}
+	}
 }

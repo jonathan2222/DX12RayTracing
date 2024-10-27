@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "Core/Input.h"
 
 namespace RS
 {
@@ -24,10 +25,15 @@ namespace RS
 		void SuperFixedTick() { return FixedTick(); }
 		void SuperRender();
 
+		void UpdateShortcut();
 	private:
 		friend class DebugWindowsManager;
 
 		std::string m_Name;
 		bool m_Active;
+
+		Key m_ShortcutKey = Key::UNKNOWN;
+		Input::ModFlags m_ShortcutMods = Input::IGNORED;
+		std::string m_Shortcut;
 	};
 }
