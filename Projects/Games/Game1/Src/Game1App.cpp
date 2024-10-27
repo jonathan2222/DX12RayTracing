@@ -97,8 +97,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         if (sCameraIsActive)
             m_Camera.Update(frameStats.frame.currentDT);
         
-        float scale = 0.5f;
-        vertexViewData.camera = glm::transpose(m_Camera.GetMatrix());
+        float scale = 1.0f;
+        vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() : glm::transpose(m_Camera.GetProjection());
         vertexViewData.transform =
         {
             scale, 0.f, 0.f, 0.f,
@@ -216,7 +216,7 @@ void Game1App::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(10, -10, -10, 10, {0.f, 0.f, -1.f});
+    m_Camera.Init(10, -10, -10, 10, {0.f, 0.f, 1.f});
 }
 
 void Game1App::CreatePipelineState()
@@ -254,6 +254,10 @@ void Game1App::CreatePipelineState()
     m_GraphicsPSO.SetShader(&shader);
     m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
     m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    rasterizerDesc.FrontCounterClockwise = false;
+    m_GraphicsPSO.SetRasterizerState(rasterizerDesc);
     m_GraphicsPSO.Create();
 
     shader.Release();

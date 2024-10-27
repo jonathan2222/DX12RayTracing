@@ -20,6 +20,9 @@ namespace RS
 
 	private:
 		std::vector<DebugWindow*> m_Windows;
+
+		bool m_RenderMenuBar = false;
+		bool m_InMenus = false;
 	};
 
 	template<class WindowType>

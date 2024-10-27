@@ -20,7 +20,7 @@ void RS::Camera2D::Init(float left, float right, float bottom, float top, const 
 	m_UpV = m_GlobalUp;
 	m_RightV = glm::cross(m_ForwardV, m_UpV);
 
-	m_NearPlane = 0.1f;
+	m_NearPlane = 0.0001f;
 	m_FarPlane = 1000.f;
 	m_Roll = 0;
 
@@ -72,7 +72,7 @@ glm::mat4 RS::Camera2D::GetProjection() const
 
 glm::mat4 RS::Camera2D::GetView() const
 {
-	return glm::translate(m_Position) * glm::rotate(-m_Roll, glm::vec3{0.f, 0.f, 1.0f});
+	return glm::translate(-m_Position) * glm::rotate(-m_Roll, glm::vec3{0.f, 0.f, 1.0f});
 }
 
 const glm::vec3& RS::Camera2D::GetPosition() const

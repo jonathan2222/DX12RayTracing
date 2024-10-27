@@ -8,6 +8,8 @@
 
 #include "Tools/ConsoleInspectorTool.h"
 
+#include "Core/Input.h"
+
 void RS::DebugWindowsManager::Init()
 {
     RegisterDebugWindow<DebugConsoleInspectorWindow>("Debug Console Inspector Window");
@@ -24,9 +26,14 @@ void RS::DebugWindowsManager::FixedTick()
 
 void RS::DebugWindowsManager::Render()
 {
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+    glm::vec2 mousePos = Input::Get()->GetMousePos();
+
+    bool renderMenuBar = m_InMenus || mousePos.y < (viewport->WorkSize.y * 0.05f);
+
+    ImGuiWindowFlags window_flags = renderMenuBar ? ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking : ImGuiWindowFlags_NoDocking;
+
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
@@ -56,47 +63,57 @@ void RS::DebugWindowsManager::Render()
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspaceFlags);
     }
 
-    if (ImGui::BeginMenuBar())
+    if (renderMenuBar)
     {
-        if (ImGui::BeginMenu("File"))
+        bool inMenus = false;
+        if (ImGui::BeginMenuBar())
         {
-            if (ImGui::MenuItem("New", NULL))
-                RS_NOTIFY_ERROR("New is not implemented!");
-            if (ImGui::MenuItem("Open", NULL))
-                RS_NOTIFY_ERROR("Open is not implemented!");
-            ImGui::Separator();
-
-            if (ImGui::MenuItem("Close", NULL, false))
-                RS::Display::Get()->Close();
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::BeginMenu("Windows"))
-        {
-            RS::Console* pConsole = RS::Console::Get();
-            bool selected = pConsole ? pConsole->IsEnabled() : false;
-            if (ImGui::MenuItem("Console", (const char*)u8"\uE447", selected, pConsole))
+            if (ImGui::BeginMenu("File"))
             {
-                if (selected) pConsole->Disable();
-                else pConsole->Enable();
+                inMenus = true;
+
+                if (ImGui::MenuItem("New", NULL))
+                    RS_NOTIFY_ERROR("New is not implemented!");
+                if (ImGui::MenuItem("Open", NULL))
+                    RS_NOTIFY_ERROR("Open is not implemented!");
+                ImGui::Separator();
+    
+                if (ImGui::MenuItem("Close", NULL, false))
+                    RS::Display::Get()->Close();
+                ImGui::EndMenu();
             }
-
-            for (DebugWindow* pWindow : m_Windows)
+    
+            if (ImGui::BeginMenu("Windows"))
             {
-                bool oldState = pWindow->m_Active;
-                if (ImGui::MenuItem(pWindow->m_Name.c_str(), "", &pWindow->m_Active, pWindow->GetEnableRequirements()))
+                inMenus = true;
+
+                RS::Console* pConsole = RS::Console::Get();
+                bool selected = pConsole ? pConsole->IsEnabled() : false;
+                if (ImGui::MenuItem("Console", (const char*)u8"\uE447", selected, pConsole))
                 {
-                    if (!oldState && pWindow->m_Active)
-                        pWindow->SuperActivate();
-                    else if (oldState && !pWindow->m_Active)
-                        pWindow->SuperDeactivate();
+                    if (selected) pConsole->Disable();
+                    else pConsole->Enable();
                 }
+    
+                for (DebugWindow* pWindow : m_Windows)
+                {
+                    bool oldState = pWindow->m_Active;
+                    if (ImGui::MenuItem(pWindow->m_Name.c_str(), "", &pWindow->m_Active, pWindow->GetEnableRequirements()))
+                    {
+                        if (!oldState && pWindow->m_Active)
+                            pWindow->SuperActivate();
+                        else if (oldState && !pWindow->m_Active)
+                            pWindow->SuperDeactivate();
+                    }
+                }
+    
+                ImGui::EndMenu();
             }
-
-            ImGui::EndMenu();
+    
+            ImGui::EndMenuBar();
         }
 
-        ImGui::EndMenuBar();
+        m_InMenus = inMenus;
     }
 
     ImGui::End();

@@ -11,7 +11,7 @@ GraphicsPSO::GraphicsPSO()
     for (uint i = 0; i < Shader::TypeFlag::COUNT; ++i)
         m_ShaderReflections[i] = { nullptr, "" };
 
-    m_ShaderFileWatcher.Init("ShaderFileWatcher");
+    m_ShaderFileWatcher.Init("ShaderFileWatcherThread");
 	InitDefaults();
 }
 
