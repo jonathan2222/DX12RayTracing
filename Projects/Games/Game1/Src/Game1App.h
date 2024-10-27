@@ -2,7 +2,7 @@
 
 #include <RSEngine.h>
 
-#include "Camera.h"
+#include "Camera2D.h"
 #include "DX12/NewCore/GraphicsPSO.h"
 
 struct Entity
@@ -28,7 +28,6 @@ private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
 	RS::GraphicsPSO m_GraphicsPSO;
 	std::shared_ptr<RS::VertexBuffer> m_pVertexBufferResource;
-	std::shared_ptr<RS::VertexBuffer> m_pVertexBufferResource2;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
 	std::shared_ptr<RS::Texture> m_NullTexture;
 	std::shared_ptr<RS::Texture> m_NormalTexture;
@@ -53,7 +52,6 @@ private:
 	};
 
 	uint32 m_NumVertices;
-	uint32 m_NumVertices2;
 
-	RS::Camera m_Camera;
+	RS::Camera2D m_Camera;
 };

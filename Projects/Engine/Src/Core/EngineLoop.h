@@ -6,6 +6,9 @@
 #include "DX12/NewCore/DX12Core3.h"
 #include "DX12/RaytracingHlslCompat.h"
 
+// TODO: Deactive this on release builds!
+#include "Tools/DebugWindowsManager.h"
+
 namespace RS
 {
     namespace GlobalRootSignatureParams {
@@ -124,5 +127,6 @@ namespace RS
 
         // Debugging
         RenderDoc m_RenderDoc;
+        DebugWindowsManager m_DebugWindowsManager;
 	};
 }

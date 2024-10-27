@@ -39,9 +39,9 @@ int main(int argc, char* argv[])
     RS::Input::Get()->Init();
 
     RS::ImGuiRenderer::Get()->additionalResizeFunction = [](uint32 width, uint32 height) { RSE::Editor::Get()->Resize(width, height); };
-    auto pEngineLook = RS::EngineLoop::Get();
-    pEngineLook->additionalFixedTickFunction = []() { RSE::Editor::Get()->FixedUpdate(); };
-    pEngineLook->additionalTickFunction = [](const RS::FrameStats& frameStats)
+    auto pEngineLoop = RS::EngineLoop::Get();
+    pEngineLoop->additionalFixedTickFunction = []() { RSE::Editor::Get()->FixedUpdate(); };
+    pEngineLoop->additionalTickFunction = [](const RS::FrameStats& frameStats)
         {
             RSE::Editor::Get()->Update();
             RS::ImGuiRenderer::Get()->Draw([&]()
@@ -65,13 +65,13 @@ int main(int argc, char* argv[])
                 ImGui::InsertNotification({ ImGuiToastType_Critical, msg.c_str() });
         });
 
-    pEngineLook->Init();
+    pEngineLoop->Init();
     RSE::Editor::Get()->Init();
-    RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
-    pEngineLook->Run();
+    RS::Display::Get()->AddOnSizeChangeCallback("EngineLoop SizeChangeCallback", dynamic_cast<RS::IDisplaySizeChange*>(pEngineLoop.get()));
+    pEngineLoop->Run();
 
     RSE::Editor::Get()->Release();
-    pEngineLook->Release();
+    pEngineLoop->Release();
 
     displayDesc = RS::Display::Get()->GetDescription();
     RS::Config::Map["Display/InitialState/Title"] = displayDesc.Title;

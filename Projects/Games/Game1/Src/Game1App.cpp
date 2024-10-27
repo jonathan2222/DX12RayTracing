@@ -16,7 +16,7 @@
 #include "Core/Console.h"
 
 RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Game1App.debug1", g_Debug1, false, "A debug bool");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.x", g_TranslationX, 0.f, "Translation X");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.z", g_TranslationZ, 0.f, "Translation z");
 
 Game1App::Game1App()
 {
@@ -34,6 +34,8 @@ void Game1App::FixedTick()
 void Game1App::Tick(const RS::FrameStats& frameStats)
 {
     {
+        m_RenderTarget->UpdateSize();
+
         auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
         auto pCommandList = pCommandQueue->GetCommandList();
 
@@ -106,6 +108,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         };
         vertexViewData.camera = vertexViewData.camera;
         vertexViewData.transform = vertexViewData.transform;
+        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ 0.f, 0.0f, g_TranslationZ }) * vertexViewData.transform);
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
         pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
@@ -113,10 +116,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
         pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
 
-        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, 0.0f, 0.0f }) * vertexViewData.transform * glm::rotate(-3.1415f * 0.5f, glm::vec3{ 1.f, 0.f, 0.0f }));
-        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
-        pCommandList->SetVertexBuffers(0, m_pVertexBufferResource2);
-        pCommandList->DrawInstanced(m_NumVertices2, 1, 0, 0);
+        //pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
         // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
         auto pTexture = m_RenderTarget->GetColorTextures()[0];
@@ -130,37 +130,40 @@ void Game1App::Init()
 {
     CreatePipelineState();
 
-    RS::Mesh* pMesh = RS::FBXLoader::Load("Sword2.fbx");
-    RS::Mesh* pMesh2 = RS::FBXLoader::Load("Suzanne.fbx");
-
+    //RS::Mesh* pMesh = RS::FBXLoader::Load("Sword2.fbx");
+    //RS::Mesh* pMesh2 = RS::FBXLoader::Load("Suzanne.fbx");
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-    {
-        const UINT vertexBufferSize = sizeof(RS::Vertex) * pMesh->vertices.size();
-        m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize, sizeof(RS::Vertex), "Vertex Buffer");
-        pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize, (void*)&pMesh->vertices[0]);
-        m_NumVertices = pMesh->vertices.size();
-    }
 
-    {
-        const UINT vertexBufferSize2 = sizeof(RS::Vertex) * pMesh2->vertices.size();
-        m_pVertexBufferResource2 = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer 2");
-        pCommandList->UploadToBuffer(m_pVertexBufferResource2, vertexBufferSize2, (void*)&pMesh2->vertices[0]);
-        m_NumVertices2 = pMesh2->vertices.size();
-    }
+    //if (pMesh)
+    //{
+    //    delete pMesh;
+    //    pMesh = nullptr;
+    //}
+    //
+    //if (pMesh2)
+    //{
+    //    delete pMesh2;
+    //    pMesh2 = nullptr;
+    //}
 
-    if (pMesh)
+    float scale = 1.0f;
+    float aspectRatio = 1.0f;
+    RS::Vertex triangleVertices[] =
     {
-        delete pMesh;
-        pMesh = nullptr;
-    }
-
-    if (pMesh2)
-    {
-        delete pMesh2;
-        pMesh2 = nullptr;
-    }
+        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
+        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
+    
+        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
+        { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
+    };
+    m_NumVertices = 6;
+    const UINT vertexBufferSize2 = sizeof(triangleVertices);
+    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
+    pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
 
     // Texture
     {
@@ -205,13 +208,15 @@ void Game1App::Init()
         D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
     m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
 
+    RS::Display::Get()->AddOnSizeChangeCallback("Game1 RenderTarget", m_RenderTarget.get());
+
     uint64 fenceValue = pCommandQueue->ExecuteCommandList(pCommandList);
 
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
 
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(aspect, 45.f, { 0.f, 1.f, -2.f }, { 0.f, 1.0f, 1.0f }, 1.0f, 10.f);
+    m_Camera.Init(10, -10, -10, 10, {0.f, 0.f, -1.f});
 }
 
 void Game1App::CreatePipelineState()

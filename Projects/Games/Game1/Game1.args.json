@@ -1,0 +1,10 @@
+{
+  "FileVersion": 2,
+  "Id": "90d93a0d-fced-62be-c56f-061e31435fef",
+  "Items": [
+    {
+      "Id": "b60ea807-3dd2-46e2-a1fa-3a079036d552",
+      "Command": "-injectrenderdoc"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DX12/NewCore/Resources.h"
+#include "Core/Display.h"
 
 namespace RS
 {
@@ -18,7 +19,7 @@ namespace RS
 		NumAttachments
 	};
 
-	class RenderTarget
+	class RenderTarget : public IDisplaySizeChange
 	{
 	public:
 		RenderTarget();
@@ -31,11 +32,20 @@ namespace RS
 		std::shared_ptr<Texture> GetDepthTexture() const { return m_pDepthTexture; }
 
 		void Reset();
+		
+		// Updates the size only if it is dirty
+		void UpdateSize();
+
+	private:
+		void OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed) override;
 
 	private:
 		friend class SwapChain;
 
 		std::vector<std::shared_ptr<Texture>> m_ColorTextures;
 		std::shared_ptr<Texture> m_pDepthTexture;
+
+		bool m_SizeDirty = false;
+		glm::uvec2 m_NewSize;
 	};
 }

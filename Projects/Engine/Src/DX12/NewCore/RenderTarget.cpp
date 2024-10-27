@@ -1,6 +1,8 @@
 #include "PreCompiled.h"
 #include "RenderTarget.h"
 
+#include "DX12/NewCore/DX12Core3.h"
+
 RS::RenderTarget::RenderTarget()
 	: m_pDepthTexture(nullptr)
 {
@@ -33,4 +35,25 @@ void RS::RenderTarget::Reset()
 
 	m_pDepthTexture.reset();
 	m_pDepthTexture = nullptr;
+}
+
+void RS::RenderTarget::UpdateSize()
+{
+	if (m_SizeDirty)
+	{
+		for (auto& pTexture : m_ColorTextures)
+		{
+			if (pTexture)
+				pTexture->Resize(m_NewSize.x, m_NewSize.y);
+		}
+		if (m_pDepthTexture)
+			m_pDepthTexture->Resize(m_NewSize.x, m_NewSize.y);
+		m_SizeDirty = false;
+	}
+}
+
+void RS::RenderTarget::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
+{
+	m_NewSize = glm::uvec2(width, height);
+	m_SizeDirty = true;
 }

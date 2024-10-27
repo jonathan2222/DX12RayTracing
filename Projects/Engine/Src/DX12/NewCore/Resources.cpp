@@ -250,6 +250,12 @@ void RS::Texture::Resize(uint32 width, uint32 height, uint32 depthOrArraySize)
     }
 }
 
+void RS::Texture::Resize(uint32 width, uint32 height)
+{
+    auto textureDesc = GetD3D12ResourceDesc();
+    Resize(width, height, textureDesc.DepthOrArraySize);
+}
+
 void RS::Texture::CreateViews()
 {
     if (m_pD3D12Resource)

@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         Game1App app; // Need to be here such that it calls descructor before we release the engine loop.
         pEngineLoop->additionalFixedTickFunction = [&]() { app.FixedTick(); };
         pEngineLoop->additionalTickFunction = [&](const RS::FrameStats& frameStats) { app.Tick(frameStats); };
-        RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLoop.get()));
+        RS::Display::Get()->AddOnSizeChangeCallback("EngineLoop SizeChangeCallback", dynamic_cast<RS::IDisplaySizeChange*>(pEngineLoop.get()));
         pEngineLoop->Run();
     }
     pEngineLoop->Release();

@@ -34,6 +34,8 @@ void SandboxApp::FixedTick()
 void SandboxApp::Tick(const RS::FrameStats& frameStats)
 {
     {
+        m_RenderTarget->UpdateSize();
+
         auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
         auto pCommandList = pCommandQueue->GetCommandList();
 
@@ -300,6 +302,8 @@ void SandboxApp::Init()
         "Canvas Depth Texture",
         D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
     m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
+
+    RS::Display::Get()->AddOnSizeChangeCallback("Sandbox RenderTarget", m_RenderTarget.get());
 
     uint64 fenceValue = pCommandQueue->ExecuteCommandList(pCommandList);
 

@@ -52,7 +52,8 @@ namespace RS
 		float	GetAspectRatio() const;
 		bool	HasFocus() const;
 
-		void SetOnSizeChangeCallback(IDisplaySizeChange* pCallback);
+		void AddOnSizeChangeCallback(const std::string& key, IDisplaySizeChange* pCallback);
+		void RemoveOnSizeChangeCallback(const std::string& key);
 
 	private:
 		static void ErrorCallback(int error, const char* description);
@@ -71,6 +72,6 @@ namespace RS
 
 		bool					m_HasFocus		= false;
 
-		IDisplaySizeChange*		m_pCallback		= nullptr;
+		std::unordered_map<std::string, IDisplaySizeChange*> m_pCallbacks;
 	};
 }

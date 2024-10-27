@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
         SandboxApp app; // Need to be here such that it calls descructor before we release the engine loop.
         pEngineLook->additionalFixedTickFunction = [&]() { app.FixedTick(); };
         pEngineLook->additionalTickFunction = [&](const RS::FrameStats& frameStats) { app.Tick(frameStats); };
-        RS::Display::Get()->SetOnSizeChangeCallback(dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
+        RS::Display::Get()->AddOnSizeChangeCallback("EngineLoop SizeCahngeCallback", dynamic_cast<RS::IDisplaySizeChange*>(pEngineLook.get()));
         pEngineLook->Run();
     }
     pEngineLook->Release();

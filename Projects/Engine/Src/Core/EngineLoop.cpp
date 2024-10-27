@@ -11,6 +11,9 @@
 
 #include "Core/Console.h"
 
+// TODO: Remove this when in relase build!
+#include "Render/ImGuiRenderer.h"
+
 using namespace RS;
 
 const wchar_t* EngineLoop::c_hitGroupName = L"MyHitGroup";
@@ -33,10 +36,14 @@ void EngineLoop::Init()
 
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+
+    m_DebugWindowsManager.Init();
 }
 
 void EngineLoop::Release()
 {
+    m_DebugWindowsManager.Destory();
+
     DX12Core3::Get()->Release();
 
     Console::Get()->Release();
@@ -80,8 +87,19 @@ void EngineLoop::Run()
             }
         }
 
-        m_FrameTimer.FixedTick([&]() { FixedTick(); });
+        m_FrameTimer.FixedTick( [&]()
+            {
+                FixedTick();
+                // TODO: Remove this when in Relase build!
+                m_DebugWindowsManager.FixedTick();
+            });
         Tick(m_FrameStats);
+
+        // TODO: Remove this when in Relase build!
+        RS::ImGuiRenderer::Get()->Draw([&]()
+            {
+                m_DebugWindowsManager.Render();
+            });
 
         RS::Input::Get()->PostUpdate(m_FrameStats.frame.currentDT);
 

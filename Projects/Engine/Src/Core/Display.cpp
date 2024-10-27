@@ -156,9 +156,15 @@ bool RS::Display::HasFocus() const
 	return m_HasFocus;
 }
 
-void RS::Display::SetOnSizeChangeCallback(IDisplaySizeChange* pCallback)
+void RS::Display::AddOnSizeChangeCallback(const std::string& key, IDisplaySizeChange* pCallback)
 {
-	m_pCallback = pCallback;
+	m_pCallbacks[key] = pCallback;
+}
+
+void RS::Display::RemoveOnSizeChangeCallback(const std::string& key)
+{
+	if (m_pCallbacks.contains(key))
+		m_pCallbacks.erase(key);
 }
 
 void RS::Display::ErrorCallback(int error, const char* description)
@@ -178,9 +184,10 @@ void RS::Display::FrameBufferResizeCallback(GLFWwindow* window, int width, int h
 
 	LOG_WARNING("Resize to: ({}, {})", width, height);
 
-	if (m_pSelf->m_pCallback)
+	if (!m_pSelf->m_pCallbacks.empty())
 	{
-		m_pSelf->m_pCallback->OnSizeChange((uint32)width, (uint32)height, description.Fullscreen, description.UseWindowedFullscreen);
+		for (auto& [key, pCallback] : m_pSelf->m_pCallbacks)
+			pCallback->OnSizeChange((uint32)width, (uint32)height, description.Fullscreen, description.UseWindowedFullscreen);
 	}
 }
 

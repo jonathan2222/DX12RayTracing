@@ -108,7 +108,10 @@ namespace RS
 		Texture(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, const std::string& name);
 		virtual ~Texture() {}
 
+		// Will remove the old resource and create a new with the updated size.
 		void Resize(uint32 width, uint32 height, uint32 depthOrArraySize);
+		// Will remove the old resource and create a new with the updated size.
+		void Resize(uint32 width, uint32 height);
 
 		/**
 		* Create SRV and UAVs for the resource.
