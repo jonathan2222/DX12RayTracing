@@ -35,4 +35,9 @@ namespace RS::Utils
 		return GetNumDecimals<double, int64>(v);
 	}
 
+	inline bool AreValuesClose(float a, float b)
+	{
+		return std::abs(a - b) < FLT_EPSILON;
+	}
+
 }

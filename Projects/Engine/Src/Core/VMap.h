@@ -68,6 +68,7 @@ namespace RS
 			~VElement() {}
 
 			void Clear() { m_Type = Type::UNKNOWN; m_Int32 = 0; m_String.clear(); }
+			bool IsEmpty() { return m_Type == Type::UNKNOWN; }
 
 			// Implicit convertions:
 			operator bool&()					{ RS_ASSERT_NO_MSG(m_Type == Type::BOOL); return m_Bool; }
@@ -183,6 +184,11 @@ namespace RS
 			m_Type = Type::TABLE;
 		}
 
+		bool IsEmpty()
+		{
+			return m_Data.empty() && m_ElementData.IsEmpty() && m_Type == Type::TABLE;
+		}
+
 		VMap* GetIfExists(const std::string& key)
 		{
 			size_t p = key.find_first_of('/');
@@ -262,6 +268,17 @@ namespace RS
 			if (m_Type == Type::TABLE)
 				return false;
 			return m_ElementData.IsOfType<T>();
+		}
+
+		template<typename T>
+		bool IsOfType(const std::string& key)
+		{
+			VMap* vmap = GetIfExists(key);
+			if (vmap == nullptr)
+				return false;
+			if (vmap->m_Type == Type::TABLE)
+				return false;
+			return vmap->m_ElementData.IsOfType<T>();
 		}
 
 		static bool WriteToDisk(const VMap& vmap, const std::filesystem::path path, bool compact, std::optional<std::string>& errorMsg, FileIOErrorCode& errorCode)
@@ -630,7 +647,7 @@ namespace RS
 						case RS::VMap::VElement::Type::FLOAT:
 						{
 							vmap.m_ElementData.m_Type = RS::VMap::VElement::Type::FLOAT;
-							vmap.m_ElementData.m_Int32 = std::stof(tmp);
+							vmap.m_ElementData.m_Float = std::stof(tmp);
 							break;
 						}
 						case RS::VMap::VElement::Type::STRING:

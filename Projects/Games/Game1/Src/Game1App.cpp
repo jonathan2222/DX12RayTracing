@@ -94,7 +94,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
             if (sCameraIsActive) RS::Input::Get()->LockMouse();
             else                 RS::Input::Get()->UnlockMouse();
         }
-        if (sCameraIsActive)
+        //if (sCameraIsActive)
             m_Camera.Update(frameStats.frame.currentDT);
         
         float scale = 1.0f;

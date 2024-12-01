@@ -7,6 +7,77 @@
 
 #define FRUSTUM_SHRINK_FACTOR -5.f
 
+#include "Core/Console.h"
+#include "Core/VMap.h"
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Left", g_Left, -10.f, "");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Right", g_Right, 10.f, "");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Bottom", g_Bottom, -10.f, "");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Top", g_Top, 10.f, "");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Near", g_Near, FLT_EPSILON, "");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.Camera2D.Far", g_Far, 1000.f, "");
+
+namespace Camera2D_Local
+{
+	RS::VMap g_DiskMap;
+	const uint g_DiskVersion = 1;
+	const std::string g_CameraSettingsPath = "Debug/GlobalCamera.cfg";
+	void LoadFromDisk()
+	{
+		const std::string path = RS::Engine::GetTempFilePath() + g_CameraSettingsPath;
+		RS::VMap map = RS::VMap::ReadFromDisk(path);
+
+		if (!map.HasKey("version") || !map.IsOfType<uint>("version")) return;
+		if (g_DiskVersion != (uint)map["version"]) return;
+
+		g_DiskMap = std::move(map);
+
+		g_Left = g_DiskMap["left"];
+		g_Right = g_DiskMap["right"];
+		g_Bottom = g_DiskMap["bottom"];
+		g_Top = g_DiskMap["top"];
+		g_Near = g_DiskMap["near"];
+		g_Far = g_DiskMap["far"];
+	}
+
+	void SaveToDisk()
+	{
+		g_DiskMap["version"] = g_DiskVersion;
+		g_DiskMap["left"] = g_Left;
+		g_DiskMap["right"] = g_Right;
+		g_DiskMap["bottom"] = g_Bottom;
+		g_DiskMap["top"] = g_Top;
+		g_DiskMap["near"] = g_Near;
+		g_DiskMap["far"] = g_Far;
+		const std::string path = RS::Engine::GetTempFilePath() + g_CameraSettingsPath;
+		RS::VMap::WriteToDisk(g_DiskMap, path);
+	}
+
+	void Update()
+	{
+		if (g_DiskMap.IsEmpty())
+		{
+			g_DiskMap["version"] = g_DiskVersion;
+			g_DiskMap["left"] = g_Left;
+			g_DiskMap["right"] = g_Right;
+			g_DiskMap["bottom"] = g_Bottom;
+			g_DiskMap["top"] = g_Top;
+			g_DiskMap["near"] = g_Near;
+			g_DiskMap["far"] = g_Far;
+			SaveToDisk();
+		}
+
+		if (!RS::Utils::AreValuesClose((float)g_DiskMap["left"], g_Left) ||
+			!RS::Utils::AreValuesClose((float)g_DiskMap["right"], g_Right) ||
+			!RS::Utils::AreValuesClose((float)g_DiskMap["bottom"], g_Bottom) ||
+			!RS::Utils::AreValuesClose((float)g_DiskMap["top"], g_Top) ||
+			!RS::Utils::AreValuesClose((float)g_DiskMap["near"], g_Near) ||
+			!RS::Utils::AreValuesClose((float)g_DiskMap["far"], g_Far))
+		{
+			SaveToDisk();
+		}
+	}
+}
+
 void RS::Camera2D::Init(float left, float right, float bottom, float top, const glm::vec3& position)
 {
 	m_Position = position;
@@ -24,6 +95,8 @@ void RS::Camera2D::Init(float left, float right, float bottom, float top, const 
 	m_FarPlane = 1000.f;
 	m_Roll = 0;
 
+	Camera2D_Local::LoadFromDisk();
+
 	m_Planes.resize(6);
 	UpdatePlanes();
 }
@@ -34,6 +107,14 @@ void RS::Camera2D::Destroy()
 
 void RS::Camera2D::Update(float dt)
 {
+	m_Left = g_Left;
+	m_Right = g_Right;
+	m_Bottom = g_Bottom;
+	m_Top = g_Top;
+	m_NearPlane = g_Near;
+	m_FarPlane = g_Far;
+	Camera2D_Local::Update();
+
 	//auto pInput = RS::Input::Get();
 	//
 	//if (pInput->IsKeyPressed(RS::Key::A))
@@ -66,7 +147,7 @@ glm::mat4 RS::Camera2D::GetMatrix() const
 
 glm::mat4 RS::Camera2D::GetProjection() const
 {
-	glm::mat4 proj = glm::orthoLH(m_Left, m_Right, m_Bottom, m_Top, m_NearPlane, m_FarPlane);
+	glm::mat4 proj = glm::orthoRH(m_Left, m_Right, m_Bottom, m_Top, m_NearPlane, m_FarPlane);
 	return proj;
 }
 
