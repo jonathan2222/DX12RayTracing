@@ -1,6 +1,6 @@
 #pragma once
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include "Maths/GLMDefines.h"
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 

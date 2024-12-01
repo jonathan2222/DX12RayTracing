@@ -8,6 +8,7 @@
 #include "Loaders/openfbx/FBXLoader.h"
 
 //#define GLM_FORCE_LEFT_HANDED 
+#include "Maths/GLMDefines.h"
 #include "glm/vec4.hpp"
 #include "glm/mat4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
@@ -16,6 +17,8 @@
 #include "Core/Console.h"
 
 RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Game1App.debug1", g_Debug1, false, "A debug bool");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.x", g_TranslationX, 0.f, "Translation x");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.y", g_TranslationY, 0.f, "Translation y");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.z", g_TranslationZ, 0.f, "Translation z");
 
 Game1App::Game1App()
@@ -108,7 +111,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         };
         vertexViewData.camera = vertexViewData.camera;
         vertexViewData.transform = vertexViewData.transform;
-        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ 0.f, 0.0f, g_TranslationZ }) * vertexViewData.transform);
+        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, g_TranslationY, g_TranslationZ }) * vertexViewData.transform);
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
         pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
@@ -216,7 +219,7 @@ void Game1App::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(-10, 10, -10, 10, {0.f, 0.f, 1.f});
+    m_Camera.Init(-10 * aspect, 10 * aspect, -10, 10, -10.f, 10.f, {0.f, 0.f, 1.f});
 }
 
 void Game1App::CreatePipelineState()

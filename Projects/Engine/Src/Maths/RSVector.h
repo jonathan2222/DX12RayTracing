@@ -9,6 +9,7 @@
 
 #define RS_CONVERT_BETWEEN_GLM 1
 #if RS_CONVERT_BETWEEN_GLM
+#include "Maths/GLMDefines.h"
 #include <glm/detail/type_vec3.hpp>
 #endif
 

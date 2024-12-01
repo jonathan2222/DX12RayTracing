@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Maths/GLMDefines.h"
 #include <glm/glm.hpp>
 
 #include <vector>

@@ -2,6 +2,7 @@
 
 #include <RSEngine.h>
 
+#include "Maths/GLMDefines.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/norm.hpp"
 
@@ -78,7 +79,7 @@ namespace Camera2D_Local
 	}
 }
 
-void RS::Camera2D::Init(float left, float right, float bottom, float top, const glm::vec3& position)
+void RS::Camera2D::Init(float left, float right, float bottom, float top, float nearPlane, float farPlane, const glm::vec3& position)
 {
 	m_Position = position;
 	m_Left = left;
@@ -91,11 +92,17 @@ void RS::Camera2D::Init(float left, float right, float bottom, float top, const 
 	m_UpV = m_GlobalUp;
 	m_RightV = glm::cross(m_ForwardV, m_UpV);
 
-	m_NearPlane = 0.0001f;
-	m_FarPlane = 1000.f;
+	m_NearPlane = nearPlane;
+	m_FarPlane = farPlane;
 	m_Roll = 0;
 
-	Camera2D_Local::LoadFromDisk();
+	//Camera2D_Local::LoadFromDisk();
+	g_Left = m_Left;
+	g_Right = m_Right;
+	g_Bottom = m_Bottom;
+	g_Top = m_Top;
+	g_Near = m_NearPlane;
+	g_Far = m_FarPlane;
 
 	m_Planes.resize(6);
 	UpdatePlanes();

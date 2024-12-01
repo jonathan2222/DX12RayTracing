@@ -8,6 +8,7 @@
 #include "Loaders/openfbx/FBXLoader.h"
 
 //#define GLM_FORCE_LEFT_HANDED 
+#include "Maths/GLMDefines.h"
 #include "glm/vec4.hpp"
 #include "glm/mat4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"

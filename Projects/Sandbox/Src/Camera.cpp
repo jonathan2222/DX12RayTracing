@@ -2,6 +2,7 @@
 
 #include <RSEngine.h>
 
+#include "Maths/GLMDefines.h"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/norm.hpp"
 

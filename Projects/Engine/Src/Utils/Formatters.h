@@ -1,6 +1,7 @@
 #pragma once
 
 #include <format>
+#include "Maths/GLMDefines.h"
 #include "glm/glm.hpp"
 
 template<>

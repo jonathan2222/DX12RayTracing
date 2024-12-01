@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Maths/GLMDefines.h"
 #include <glm/glm.hpp>
 
 #include <vector>
@@ -16,7 +17,7 @@ namespace RS
 		};
 	public:
 
-		void Init(float left, float right, float bottom, float top, const glm::vec3& position);
+		void Init(float left, float right, float bottom, float top, float nearPlane, float farPlane, const glm::vec3& position);
 		void Destroy();
 
 		void Update(float dt);

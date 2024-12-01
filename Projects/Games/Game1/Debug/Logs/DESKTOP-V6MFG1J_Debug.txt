@@ -1,8 +1,4 @@
-[16:05:45.170] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
-[16:05:45.172] [LaunchArguments.cpp:15] [info] Launch arguments: -injectrenderdoc
-[16:05:46.081] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
-[16:05:46.391] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1.3296875
-[16:06:33.794] [Display.cpp:205] [warning] Lost focus!
-[16:07:54.207] [Display.cpp:199] [warning] Acquired focus!
-[16:09:29.695] [Display.cpp:205] [warning] Lost focus!
-[16:12:40.581] [Display.cpp:199] [warning] Acquired focus!
+[16:38:29.511] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
+[16:38:29.513] [LaunchArguments.cpp:15] [info] Launch arguments: -injectrenderdoc
+[16:38:30.444] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
+[16:38:30.833] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1.3296875
