@@ -277,10 +277,10 @@ void RS::DynamicDescriptorHeap::AddDescriptorRange(uint32 rootParameterIndex, ui
 
 		DescriptorRange& range = ranges[rangeIndex];
 		// Merge ranges if overlap. (Should most likely not occur, think it should actually result in an error)
-		uint32 startA = offset;								// !
-		uint32 endA = offset + numDescriptors;				// !
-		uint32 startB = range.offset;						// |
-		uint32 endB = range.offset + range.numDescriptors;	// |
+		uint32 startA = offset;									// !
+		uint32 endA = offset + numDescriptors - 1;				// !
+		uint32 startB = range.offset;							// |
+		uint32 endB = range.offset + range.numDescriptors - 1;	// |
 		// -----------|---!--|--!------------
 		// --------!--|---!--|---------------
 		// -----------|-!-!--|---------------
@@ -318,7 +318,7 @@ void RS::DynamicDescriptorHeap::AddDescriptorRange(uint32 rootParameterIndex, ui
 		// Remove current range and merge if next to previous.
 		if (pPreRange)
 		{
-			if (pPreRange->offset + pPreRange->numDescriptors + 1 == range.offset)
+			if (pPreRange->offset + pPreRange->numDescriptors - 1 == range.offset)
 			{
 				pPreRange->numDescriptors += range.numDescriptors;
 				ranges.erase(ranges.begin() + rangeIndex);
