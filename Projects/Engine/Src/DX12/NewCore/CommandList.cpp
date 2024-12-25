@@ -557,29 +557,32 @@ void RS::CommandList::BindUnorderedAccessView(uint32 rootParameterIndex, uint32 
     TrackResource(pResource);
 }
 
-void RS::CommandList::BindBuffer(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Buffer>& pBuffer, D3D12_RESOURCE_STATES stateAfter)
+void RS::CommandList::BindBuffer(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Buffer>& pBuffer,
+    D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
     RS_ASSERT_NO_MSG(pBuffer);
 
     TransitionBarrier(pBuffer, stateAfter);
 
-    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pBuffer->GetShaderResourceView());
+    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pBuffer->GetShaderResourceView(pSRVDesc));
 
     TrackResource(pBuffer);
 }
 
-void RS::CommandList::BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture, D3D12_RESOURCE_STATES stateAfter)
+void RS::CommandList::BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture,
+    D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
     RS_ASSERT_NO_MSG(pTexture);
 
     TransitionBarrier(pTexture, stateAfter);
 
-    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView());
+    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView(pSRVDesc));
 
     TrackResource(pTexture);
 }
 
-void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture, D3D12_RESOURCE_STATES stateAfter)
+void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture,
+    D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
     RS_ASSERT_NO_MSG(pTexture);
 
@@ -587,7 +590,7 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_p
 
     uint32& descriptorOffset = m_pDynamicDescriptorOffsets[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
 
-    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView());
+    m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView(pSRVDesc));
 
     descriptorOffset++;
 

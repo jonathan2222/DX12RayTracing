@@ -108,20 +108,23 @@ namespace RS
 			uint32 rootParameterIndex,
 			uint32 descriptorOffset,
 			const std::shared_ptr<Resource>& pResource,
-			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE,
 			UINT firstSubresource = 0,
 			UINT numSubresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 			const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav = nullptr);
 
 		void BindBuffer(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Buffer>& pTexture,
-			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc = nullptr,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 		void BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture,
-			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc = nullptr,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 		// Same ass the above except that it will increment the offset for each invocation before the reset.
 		void BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture,
-			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc = nullptr,
+			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
 		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget);
 
