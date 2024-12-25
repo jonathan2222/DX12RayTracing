@@ -281,6 +281,11 @@ void RS::DynamicDescriptorHeap::AddDescriptorRange(uint32 rootParameterIndex, ui
 		uint32 endA = offset + numDescriptors - 1;				// !
 		uint32 startB = range.offset;							// |
 		uint32 endB = range.offset + range.numDescriptors - 1;	// |
+
+		// If same range, return
+		if (startA == startB && endA == endB)
+			return;
+
 		// -----------|---!--|--!------------
 		// --------!--|---!--|---------------
 		// -----------|-!-!--|---------------
