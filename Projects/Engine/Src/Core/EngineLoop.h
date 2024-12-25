@@ -74,6 +74,8 @@ namespace RS
         void CalculateFrameStats();
         UINT AllocateDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE* cpuDescriptor, UINT descriptorIndexToUse = UINT_MAX);
 
+        void InitConsoleCommands();
+
 	private:
 		FrameStats m_FrameStats = {};
 		FrameTimer m_FrameTimer;

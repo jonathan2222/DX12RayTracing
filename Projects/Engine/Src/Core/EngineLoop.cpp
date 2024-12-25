@@ -38,6 +38,8 @@ void EngineLoop::Init()
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
     m_DebugWindowsManager.Init();
+
+    InitConsoleCommands();
 }
 
 void EngineLoop::Release()
@@ -680,4 +682,15 @@ UINT RS::EngineLoop::AllocateDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE* cpuDescript
     }
     *cpuDescriptor = CD3DX12_CPU_DESCRIPTOR_HANDLE(descriptorHeapCpuBase, descriptorIndexToUse, m_descriptorSize);
     return descriptorIndexToUse;
+}
+
+void RS::EngineLoop::InitConsoleCommands()
+{
+    Console::Get()->AddFunction("Engine.Quit", [this](Console::FuncArgs args)->bool
+        {
+            Display::Get()->Close();
+            return true;
+        },
+        Console::Flag::NONE, "Quit the application."
+    );
 }
