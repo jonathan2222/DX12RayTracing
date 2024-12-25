@@ -417,7 +417,7 @@ void SandboxApp::CreateRootSignature()
 
     // All bindless buffers, textures overlap using different spaces.
     // TODO: Support bindless descriptors!
-    rootSignature[RootParameter::Textures][0].SRV(3, 0, srvRegSpace);
+    rootSignature[RootParameter::Textures][0].SRV(2, 0, srvRegSpace);
     //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
     //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
 
