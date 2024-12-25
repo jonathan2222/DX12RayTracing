@@ -26,7 +26,12 @@ cppcheck_report*
 *.blend1
 
 # Ignore debug temporary files
-Debug/Tmp/
+/Debug/Tmp/
+**/Debug/Tmp/
 
 # Ignore Direct3D12 documentations
 Docs/DX12/
+
+# Ignore all log files
+Debug/Logs/
+**/Debug/Logs/
