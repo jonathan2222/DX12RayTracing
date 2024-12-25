@@ -33,6 +33,12 @@ namespace RS
 
 		const std::vector<Plane>& GetPlanes() const;
 
+		// ---- 2D functions ----
+		// Bottom-Left corner
+		glm::vec2 GetOrigin() const;
+		glm::vec2 GetSize() const;
+		glm::vec2 GetCenterOffset() const;
+
 	private:
 		enum Side { NEAR_P = 0, FAR_P, LEFT_P, RIGHT_P, TOP_P, BOTTOM_P };
 

@@ -24,6 +24,8 @@ private:
 	void CreatePipelineState();
 	void CreateRootSignature();
 
+	void UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList, uint instanceCount);
+
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
 	RS::GraphicsPSO m_GraphicsPSO;

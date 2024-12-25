@@ -20,6 +20,7 @@ RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Game1App.debug1", g_Debug1, false, "A debug boo
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.x", g_TranslationX, 0.f, "Translation x");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.y", g_TranslationY, 0.f, "Translation y");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.z", g_TranslationZ, 0.f, "Translation z");
+RS_ADD_GLOBAL_CONSOLE_VAR(uint, "Game1App.instanceCount", g_InstanceCount, 10, "Instance Count");
 
 Game1App::Game1App()
 {
@@ -42,6 +43,12 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
         auto pCommandList = pCommandQueue->GetCommandList();
 
+        // Update Instance data
+        if (g_InstanceCount != (uint)m_InstanceData.size())
+        {
+            UpdateInstanceData(pCommandList, g_InstanceCount);
+        }
+
         pCommandList->SetRootSignature(m_pRootSignature);
         pCommandList->SetPipelineState(m_GraphicsPSO);
 
@@ -63,8 +70,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
         pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
 
-        //auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
-        //pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
+        auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
+        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
 
         pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
@@ -118,7 +125,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         pCommandList->BindTexture(RootParameter::SRVs, 1, m_NullTexture);
         pCommandList->BindBuffer(RootParameter::SRVs, 2, m_InstanceBuffer, &m_InstanceDataSRVDesc);
 
-        pCommandList->DrawInstanced(m_NumVertices, (uint)m_InstanceData.size(), 0, 0);
+        pCommandList->DrawInstanced(m_NumVertices, g_InstanceCount, 0, 0);
 
         //pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
@@ -132,25 +139,13 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
 void Game1App::Init()
 {
-    CreatePipelineState();
+    float aspect = RS::Display::Get()->GetAspectRatio();
+    m_Camera.Init(-10 * aspect, 10 * aspect, -10, 10, -10.f, 10.f, { 0.f, 0.f, 1.f });
 
-    //RS::Mesh* pMesh = RS::FBXLoader::Load("Sword2.fbx");
-    //RS::Mesh* pMesh2 = RS::FBXLoader::Load("Suzanne.fbx");
+    CreatePipelineState();
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
-
-    //if (pMesh)
-    //{
-    //    delete pMesh;
-    //    pMesh = nullptr;
-    //}
-    //
-    //if (pMesh2)
-    //{
-    //    delete pMesh2;
-    //    pMesh2 = nullptr;
-    //}
 
     float scale = 1.0f;
     float aspectRatio = 1.0f;
@@ -184,24 +179,7 @@ void Game1App::Init()
     }
 
     // Instance data
-    {
-        m_InstanceData.clear();
-        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{-1.f,0.f,0.f})) });
-        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{ 1.f,0.f,0.f})) });
-
-        uint size = (uint)(m_InstanceData.size() * sizeof(InstanceData));
-        m_InstanceBuffer = pCommandList->CreateBufferResource(size, "Instance Data Buffer");
-        pCommandList->UploadToBuffer(m_InstanceBuffer, size, (void*)&m_InstanceData[0]);
-
-        m_InstanceDataSRVDesc = {};
-        m_InstanceDataSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-        m_InstanceDataSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-        m_InstanceDataSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        m_InstanceDataSRVDesc.Buffer.FirstElement = 0;
-        m_InstanceDataSRVDesc.Buffer.NumElements = (uint)m_InstanceData.size();
-        m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
-        m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-    }
+    UpdateInstanceData(pCommandList, g_InstanceCount);
 
     D3D12_CLEAR_VALUE clearValue;
     clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -219,18 +197,18 @@ void Game1App::Init()
         D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, &clearValue);
     m_RenderTarget->SetAttachment(RS::AttachmentPoint::Color0, pRenderTexture);
 
-    //D3D12_CLEAR_VALUE clearValueDepth;
-    //clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
-    //clearValueDepth.DepthStencil.Depth = 0.0f;
-    //clearValueDepth.DepthStencil.Stencil = 0;
-    //auto pDepthTexture = pCommandList->CreateTexture(
-    //    RS::Display::Get()->GetWidth(),
-    //    RS::Display::Get()->GetHeight(),
-    //    nullptr,
-    //    clearValueDepth.Format,
-    //    "Canvas Depth Texture",
-    //    D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
-    //m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
+    D3D12_CLEAR_VALUE clearValueDepth;
+    clearValueDepth.Format = DXGI_FORMAT_D32_FLOAT; // Only depth
+    clearValueDepth.DepthStencil.Depth = 0.0f;
+    clearValueDepth.DepthStencil.Stencil = 0;
+    auto pDepthTexture = pCommandList->CreateTexture(
+        RS::Display::Get()->GetWidth(),
+        RS::Display::Get()->GetHeight(),
+        nullptr,
+        clearValueDepth.Format,
+        "Canvas Depth Texture",
+        D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &clearValueDepth);
+    m_RenderTarget->SetAttachment(RS::AttachmentPoint::DepthStencil, pDepthTexture);
 
     RS::Display::Get()->AddOnSizeChangeCallback("Game1 RenderTarget", m_RenderTarget.get());
 
@@ -238,9 +216,6 @@ void Game1App::Init()
 
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
-
-    float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(-10 * aspect, 10 * aspect, -10, 10, -10.f, 10.f, {0.f, 0.f, 1.f});
 }
 
 void Game1App::CreatePipelineState()
@@ -277,8 +252,8 @@ void Game1App::CreatePipelineState()
     m_GraphicsPSO.SetRootSignature(m_pRootSignature);
     m_GraphicsPSO.SetShader(&shader);
     m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
-    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
-    //m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    //m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
+    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
     D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
     rasterizerDesc.FrontCounterClockwise = false;
@@ -333,4 +308,36 @@ void Game1App::CreateRootSignature()
     }
 
     rootSignature.Bake("Game1_RootSignature");
+}
+
+void Game1App::UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList, uint instanceCount)
+{
+    RS_ASSERT_NO_MSG(instanceCount != 0);
+
+    glm::vec2 camOrigin = m_Camera.GetOrigin();
+    glm::vec2 camSize = m_Camera.GetSize();
+    glm::vec2 camCenterOffset = m_Camera.GetCenterOffset();
+
+    m_InstanceData.clear();
+    for (uint i = 0; i < instanceCount; ++i)
+    {
+        glm::vec2 pos = camOrigin;
+        pos.x += RS::Utils::Rand01() * camSize.x;
+        pos.y += RS::Utils::Rand01() * camSize.y;
+
+        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{pos.x, pos.y,0.f})) });
+    }
+
+    uint size = (uint)(m_InstanceData.size() * sizeof(InstanceData));
+    m_InstanceBuffer = pCommandList->CreateBufferResource(size, RS::Utils::Format("Instance Data Buffer {}", instanceCount));
+    pCommandList->UploadToBuffer(m_InstanceBuffer, size, (void*)&m_InstanceData[0]);
+
+    m_InstanceDataSRVDesc = {};
+    m_InstanceDataSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    m_InstanceDataSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+    m_InstanceDataSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    m_InstanceDataSRVDesc.Buffer.FirstElement = 0;
+    m_InstanceDataSRVDesc.Buffer.NumElements = (uint)m_InstanceData.size();
+    m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
+    m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 }

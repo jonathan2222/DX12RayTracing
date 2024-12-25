@@ -183,6 +183,21 @@ const std::vector<RS::Camera2D::Plane>& RS::Camera2D::GetPlanes() const
 	return m_Planes;
 }
 
+glm::vec2 RS::Camera2D::GetOrigin() const
+{
+	return {m_Left, m_Bottom};
+}
+
+glm::vec2 RS::Camera2D::GetSize() const
+{
+	return {m_Right - m_Left, m_Top - m_Bottom};
+}
+
+glm::vec2 RS::Camera2D::GetCenterOffset() const
+{
+	return {std::abs(m_Left), std::abs(m_Top)};
+}
+
 void RS::Camera2D::UpdatePlanes()
 {
 	glm::vec3 point;
