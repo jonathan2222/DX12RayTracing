@@ -3,6 +3,7 @@
 #include "Misc/StringUtils.h"
 #include "Misc/BitUtils.h"
 #include "Misc/HashUtils.h"
+#include "Misc/RandomUtils.h"
 #include <limits>
 
 namespace RS::Utils
