@@ -1,4 +1,0 @@
-[16:38:29.511] [LaunchArguments.cpp:14] [info] Launching D:\Dev\Projects\C++\DirectX\DX12Projects\RayTracingProject\Build\bin\Debug-windows-x86_64-x64\Game1\Game1.exe
-[16:38:29.513] [LaunchArguments.cpp:15] [info] Launch arguments: -injectrenderdoc
-[16:38:30.444] [Dx12Device.cpp:113] [info] Direct3D Adapter(0) : VID: 10DE, PID : 1E84 - NVIDIA GeForce RTX 2070 SUPER
-[16:38:30.833] [ImGuiRenderer.cpp:219] [info] ImGui Scale: 1.3296875
