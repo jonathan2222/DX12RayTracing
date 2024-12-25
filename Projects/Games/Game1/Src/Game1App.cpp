@@ -114,10 +114,11 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, g_TranslationY, g_TranslationZ }) * vertexViewData.transform);
         pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
-        pCommandList->BindTexture(RootParameter::Textures, 0, m_NormalTexture);
-        pCommandList->BindTexture(RootParameter::Textures, 1, m_NullTexture);
+        pCommandList->BindTexture(RootParameter::SRVs, 0, m_NormalTexture);
+        pCommandList->BindTexture(RootParameter::SRVs, 1, m_NullTexture);
+        pCommandList->BindBuffer(RootParameter::SRVs, 2, m_InstanceBuffer, &m_InstanceDataSRVDesc);
 
-        pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
+        pCommandList->DrawInstanced(m_NumVertices, (uint)m_InstanceData.size(), 0, 0);
 
         //pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
 
@@ -180,6 +181,26 @@ void Game1App::Init()
         std::string texturePath = std::string("NullTexture.png");
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NullTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "Null Texture Resource");
+    }
+
+    // Instance data
+    {
+        m_InstanceData.clear();
+        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{-1.f,0.f,0.f})) });
+        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{ 1.f,0.f,0.f})) });
+
+        uint size = (uint)(m_InstanceData.size() * sizeof(InstanceData));
+        m_InstanceBuffer = pCommandList->CreateBufferResource(size, "Instance Data Buffer");
+        pCommandList->UploadToBuffer(m_InstanceBuffer, size, (void*)&m_InstanceData[0]);
+
+        m_InstanceDataSRVDesc = {};
+        m_InstanceDataSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        m_InstanceDataSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+        m_InstanceDataSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        m_InstanceDataSRVDesc.Buffer.FirstElement = 0;
+        m_InstanceDataSRVDesc.Buffer.NumElements = (uint)m_InstanceData.size();
+        m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
+        m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     }
 
     D3D12_CLEAR_VALUE clearValue;
@@ -256,7 +277,8 @@ void Game1App::CreatePipelineState()
     m_GraphicsPSO.SetRootSignature(m_pRootSignature);
     m_GraphicsPSO.SetShader(&shader);
     m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
-    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
+    //m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
     D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
     rasterizerDesc.FrontCounterClockwise = false;
@@ -288,7 +310,7 @@ void Game1App::CreateRootSignature()
 
     // All bindless buffers, textures overlap using different spaces.
     // TODO: Support bindless descriptors!
-    rootSignature[RootParameter::Textures][0].SRV(2, 0, srvRegSpace);
+    rootSignature[RootParameter::SRVs][0].SRV(3, 0, srvRegSpace);
     //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
     //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
 

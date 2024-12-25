@@ -40,7 +40,7 @@ private:
 		static const uint32 VertexData = 2;
 
 		// TODO: Same Table
-		static const uint32 Textures = 3;
+		static const uint32 SRVs = 3;
 		static const uint32 ConstantBufferViews = 4;
 		static const uint32 UnordedAccessViews = 5;
 
@@ -54,4 +54,13 @@ private:
 	uint32 m_NumVertices;
 
 	RS::Camera2D m_Camera;
+
+	// Instande data
+	struct InstanceData
+	{
+		glm::mat4 transform;
+	};
+	std::shared_ptr<RS::Buffer> m_InstanceBuffer;
+	std::vector<InstanceData> m_InstanceData;
+	D3D12_SHADER_RESOURCE_VIEW_DESC m_InstanceDataSRVDesc;
 };

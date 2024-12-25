@@ -16,12 +16,19 @@ struct VSData
 };
 ConstantBuffer<VSData> vsData : register(b2, NORMAL_SPACE);
 
-PSInput VertexMain(float4 position : SV_POSITION, float4 normal : NORMAL, float2 uv : UV0)
+struct InstanceData
+{
+    float4x4 transform;
+};
+StructuredBuffer<InstanceData> vsInstanceData : register(t2, BINDLESS_TEXTURE_SPACE);
+
+PSInput VertexMain(float4 position : SV_POSITION, float4 normal : NORMAL, float2 uv : UV0, uint instanceIndex : SV_InstanceID)
 {
     PSInput result;
 
-    result.position = mul(mul(vsData.camera, vsData.transform), float4(position.xyz, 1.0f)); // Clip space.
-    result.normal = mul(vsData.transform, float4(normal.xyz, 0.0f)); // World space
+    float4x4 transform = mul(vsData.transform, vsInstanceData[instanceIndex].transform);
+    result.position = mul(mul(vsData.camera, transform), float4(position.xyz, 1.0f)); // Clip space.
+    result.normal = mul(transform, float4(normal.xyz, 0.0f)); // World space
     result.uv = uv;
 
     return result;
