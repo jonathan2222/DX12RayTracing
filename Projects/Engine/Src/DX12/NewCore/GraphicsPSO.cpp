@@ -353,8 +353,13 @@ void RS::GraphicsPSO::ValidateInputLayoutMatchingShader()
         D3D12_SHADER_DESC d12ShaderDesc{};
         DXCall(pReflection->GetDesc(&d12ShaderDesc));
 
-        RS_ASSERT(d12ShaderDesc.InputParameters == m_PSODesc.InputLayout.NumElements,
-            "{} Number of layout input parameters differ from what is defined in the shader!", errorStr.c_str());
+        //RS_ASSERT(d12ShaderDesc.InputParameters == m_PSODesc.InputLayout.NumElements,
+        //    "{} Number of layout input parameters differ from what is defined in the shader!", errorStr.c_str());
+        if (d12ShaderDesc.InputParameters != m_PSODesc.InputLayout.NumElements)
+        {
+            RS_LOG_WARNING("{} Number of layout input parameters differ from what is defined in the shader!", errorStr.c_str());
+        }
+
 
         D3D12_SIGNATURE_PARAMETER_DESC inputParameter = {};
         for (uint i = 0; i < std::min(d12ShaderDesc.InputParameters, m_PSODesc.InputLayout.NumElements); ++i)

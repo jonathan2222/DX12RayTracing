@@ -5,10 +5,7 @@
 #include "Camera2D.h"
 #include "DX12/NewCore/GraphicsPSO.h"
 
-struct Entity
-{
-
-};
+#include "Entity.h"
 
 class Game1App
 {
@@ -26,6 +23,8 @@ private:
 
 	void UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList, uint instanceCount);
 
+	void DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> commandList);
+
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
 	RS::GraphicsPSO m_GraphicsPSO;
@@ -37,20 +36,8 @@ private:
 	std::shared_ptr<RS::RenderTarget> m_RenderTarget;
 	struct RootParameter
 	{
-		static const uint32 PixelData = 0;
-		static const uint32 PixelData2 = 1;
-		static const uint32 VertexData = 2;
-
-		// TODO: Same Table
-		static const uint32 SRVs = 3;
-		static const uint32 ConstantBufferViews = 4;
-		static const uint32 UnordedAccessViews = 5;
-
-		static const uint32 GlobalRTextures = 0; // R Textures that are set used by the engine. (SRV)
-		static const uint32 GlobalRWTextures = 1; // RW Textures that are set used by the engine. (UAV)
-		static const uint32 LocalRTextures = 2; // R Textures that can be changed per frame per shader. This uses bindless data. (SRV)
-		static const uint32 LocalRWTextures = 3; // RW Textures that can be changed per frame per shader. This uses bindless data. (UAV)
-		//static const uint32 
+		static const uint32 CBVs = 0;
+		static const uint32 SRVs = 1;
 	};
 
 	uint32 m_NumVertices;
@@ -61,8 +48,15 @@ private:
 	struct InstanceData
 	{
 		glm::mat4 transform;
+		uint type;
+		uint padding0;
+		uint padding1;
+		uint padding2;
 	};
 	std::shared_ptr<RS::Buffer> m_InstanceBuffer;
 	std::vector<InstanceData> m_InstanceData;
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_InstanceDataSRVDesc;
+
+	// Game data
+	std::vector<Entity> m_Enemies;
 };

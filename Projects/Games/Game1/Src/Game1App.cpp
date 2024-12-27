@@ -37,104 +37,29 @@ void Game1App::FixedTick()
 
 void Game1App::Tick(const RS::FrameStats& frameStats)
 {
+    m_RenderTarget->UpdateSize();
+
+    static bool sCameraIsActive = false;
+    if (RS::Input::Get()->IsKeyClicked(RS::Key::C))
     {
-        m_RenderTarget->UpdateSize();
-
-        auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
-        auto pCommandList = pCommandQueue->GetCommandList();
-
-        // Update Instance data
-        if (g_InstanceCount != (uint)m_InstanceData.size())
-        {
-            UpdateInstanceData(pCommandList, g_InstanceCount);
-        }
-
-        pCommandList->SetRootSignature(m_pRootSignature);
-        pCommandList->SetPipelineState(m_GraphicsPSO);
-
-        D3D12_VIEWPORT viewport{};
-        viewport.MaxDepth = 0;
-        viewport.MinDepth = 1;
-        viewport.TopLeftX = viewport.TopLeftY = 0;
-        viewport.Width = RS::Display::Get()->GetWidth();
-        viewport.Height = RS::Display::Get()->GetHeight();
-        pCommandList->SetViewport(viewport);
-
-        D3D12_RECT scissorRect{};
-        scissorRect.left = scissorRect.top = 0;
-        scissorRect.right = viewport.Width;
-        scissorRect.bottom = viewport.Height;
-        pCommandList->SetScissorRect(scissorRect);
-
-        pCommandList->SetRenderTarget(m_RenderTarget);
-        auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
-        pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
-
-        auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
-        pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
-
-        pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
-
-        struct RootConstData
-        {
-            const float tint[4] = { 1.0, 1.0, 1.0, 1.0 };
-            uint32 texIndex[4] = { (uint32)-1, (uint32)-1, (uint32)-1, (uint32)-1 };
-        } rootConstData;
-        rootConstData.texIndex[0] = 0;
-        rootConstData.texIndex[1] = rootConstData.texIndex[2] = rootConstData.texIndex[3] = 1;
-        pCommandList->SetGraphicsRoot32BitConstants(RootParameter::PixelData, 4 * 2, &rootConstData);
-
-        struct ConstantBufferData
-        {
-            float miscData[4] = { 1.0, 1.0, 1.0, 1.0 };
-        } textIndex;
-        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::PixelData2, sizeof(textIndex), (void*)&textIndex);
-
-        struct VertexConstantBufferData
-        {
-            glm::mat4 transform;
-            glm::mat4 camera;
-        } vertexViewData;
-
-        static bool sCameraIsActive = false;
-        if (RS::Input::Get()->IsKeyClicked(RS::Key::C))
-        {
-            sCameraIsActive ^= 1;
-            if (sCameraIsActive) RS::Input::Get()->LockMouse();
-            else                 RS::Input::Get()->UnlockMouse();
-        }
-        //if (sCameraIsActive)
-            m_Camera.Update(frameStats.frame.currentDT);
-        
-        float scale = 1.0f;
-        vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() : glm::transpose(m_Camera.GetProjection());
-        vertexViewData.transform =
-        {
-            scale, 0.f, 0.f, 0.f,
-            0.f, scale, 0.f, 0.f,
-            0.f, 0.f, scale, 0.0f,
-            0.f, 0.f, 0.f, 1.f
-        };
-        vertexViewData.camera = vertexViewData.camera;
-        vertexViewData.transform = vertexViewData.transform;
-        vertexViewData.transform = glm::transpose(glm::translate(glm::vec3{ g_TranslationX, g_TranslationY, g_TranslationZ }) * vertexViewData.transform);
-        pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
-
-        pCommandList->BindTexture(RootParameter::SRVs, 0, m_NormalTexture);
-        pCommandList->BindTexture(RootParameter::SRVs, 1, m_NullTexture);
-        pCommandList->BindBuffer(RootParameter::SRVs, 2, m_InstanceBuffer, &m_InstanceDataSRVDesc);
-
-        pCommandList->DrawInstanced(m_NumVertices, g_InstanceCount, 0, 0);
-
-        //pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::VertexData, sizeof(vertexViewData), (void*)&vertexViewData);
-
-        // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
-        auto pTexture = m_RenderTarget->GetColorTextures()[0];
-        pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
-
-        pCommandQueue->ExecuteCommandList(pCommandList);
+        sCameraIsActive ^= 1;
+        if (sCameraIsActive) RS::Input::Get()->LockMouse();
+        else                 RS::Input::Get()->UnlockMouse();
     }
+    //if (sCameraIsActive)
+    m_Camera.Update(frameStats.frame.currentDT);
+
+
+    auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
+    auto pCommandList = pCommandQueue->GetCommandList();
+
+    DrawEntites(frameStats, pCommandList);
+
+    // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
+    auto pTexture = m_RenderTarget->GetColorTextures()[0];
+    pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
+
+    pCommandQueue->ExecuteCommandList(pCommandList);
 }
 
 void Game1App::Init()
@@ -149,19 +74,24 @@ void Game1App::Init()
 
     float scale = 1.0f;
     float aspectRatio = 1.0f;
-    RS::Vertex triangleVertices[] =
+    struct Vertex
     {
-        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }, // TL
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // BL
+        glm::vec3 position;
+        glm::vec2 uv;
+    };
+    Vertex triangleVertices[] =
+    {
+        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f } }, // TL
+        { { +scale, +scale * aspectRatio, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f } }, // BL
     
-        { { +scale, +scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }, // TR
-        { { +scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }, // BR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }  // BL
+        { { +scale, +scale * aspectRatio, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { +scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f } }, // BR
+        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f } }  // BL
     };
     m_NumVertices = 6;
     const UINT vertexBufferSize2 = sizeof(triangleVertices);
-    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(RS::Vertex), "Vertex Buffer");
+    m_pVertexBufferResource = pCommandList->CreateVertexBufferResource(vertexBufferSize2, sizeof(Vertex), "Vertex Buffer");
     pCommandList->UploadToBuffer(m_pVertexBufferResource, vertexBufferSize2, (void*)&triangleVertices[0]);
 
     // Texture
@@ -222,7 +152,7 @@ void Game1App::CreatePipelineState()
 {
     RS::Shader shader;
     RS::Shader::Description shaderDesc{};
-    shaderDesc.path = "Core/MeshShader.hlsl";
+    shaderDesc.path = "Game/EntityShader.hlsl";
     shaderDesc.typeFlags = RS::Shader::TypeFlag::Pixel | RS::Shader::TypeFlag::Vertex;
     shader.Create(shaderDesc);
 
@@ -243,8 +173,7 @@ void Game1App::CreatePipelineState()
         inputElementDesc.InstanceDataStepRate = 0;
         inputElementDescs.push_back(inputElementDesc);
 
-        inputElementDescs.push_back({ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     }
 
     m_GraphicsPSO.SetDefaults();
@@ -268,44 +197,40 @@ void Game1App::CreateRootSignature()
     // TODO: Have a main root signature for all shader to share?
     m_pRootSignature = std::make_shared<RS::RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-    uint32 registerSpace = 0;
     uint32 currentShaderRegisterCBV = 0;
     uint32 currentShaderRegisterSRV = 0;
     uint32 currentShaderRegisterUAV = 0;
     uint32 currentShaderRegisterSampler = 0;
 
-    const uint32 cbvRegSpace = 1;
-    const uint32 srvRegSpace = 2;
-    const uint32 uavRegSpace = 3;
+    const uint32 cbvRegSpace = 0;
+    const uint32 srvRegSpace = 1;
+    const uint32 uavRegSpace = 2;
+    const uint32 samplerRegSpace = 0;
 
     auto& rootSignature = *m_pRootSignature.get();
-    rootSignature[RootParameter::PixelData].Constants(4 * 2, currentShaderRegisterCBV++, registerSpace);
-    rootSignature[RootParameter::PixelData2].CBV(currentShaderRegisterCBV++, registerSpace);
-    rootSignature[RootParameter::VertexData].CBV(currentShaderRegisterCBV++, registerSpace);
+    rootSignature[RootParameter::CBVs].CBV(currentShaderRegisterCBV++, cbvRegSpace);
 
     // All bindless buffers, textures overlap using different spaces.
     // TODO: Support bindless descriptors!
-    rootSignature[RootParameter::SRVs][0].SRV(3, 0, srvRegSpace);
-    //rootSignature[RootParameter::ConstantBufferViews][0].CBV(1, 0, cbvRegSpace);
-    //rootSignature[RootParameter::UnordedAccessViews][0].UAV(1, 0, uavRegSpace);
+    rootSignature[RootParameter::SRVs][0].SRV(1, 0, srvRegSpace);
 
-    {
-        CD3DX12_STATIC_SAMPLER_DESC samplerDesc{};
-        samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        samplerDesc.Filter = D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT; // Point sample for min, max, mag, mip.
-        samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-        samplerDesc.MaxAnisotropy = 16;
-        samplerDesc.RegisterSpace = registerSpace;
-        samplerDesc.ShaderRegister = currentShaderRegisterSampler++;
-        samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        samplerDesc.MipLODBias = 0;
-        samplerDesc.MinLOD = 0.0f;
-        samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-        rootSignature.AddStaticSampler(samplerDesc);
-    }
+    //{
+    //    CD3DX12_STATIC_SAMPLER_DESC samplerDesc{};
+    //    samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    //    samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    //    samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    //    samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    //    samplerDesc.Filter = D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT; // Point sample for min, max, mag, mip.
+    //    samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+    //    samplerDesc.MaxAnisotropy = 16;
+    //    samplerDesc.RegisterSpace = samplerRegSpace;
+    //    samplerDesc.ShaderRegister = currentShaderRegisterSampler++;
+    //    samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    //    samplerDesc.MipLODBias = 0;
+    //    samplerDesc.MinLOD = 0.0f;
+    //    samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+    //    rootSignature.AddStaticSampler(samplerDesc);
+    //}
 
     rootSignature.Bake("Game1_RootSignature");
 }
@@ -325,7 +250,8 @@ void Game1App::UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList,
         pos.x += RS::Utils::Rand01() * camSize.x;
         pos.y += RS::Utils::Rand01() * camSize.y;
 
-        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{pos.x, pos.y,0.f})) });
+        uint type = (uint)RS::Utils::RandInt(0, 1);
+        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{pos.x, pos.y,0.f})), type, 255, 255, 255 });
     }
 
     uint size = (uint)(m_InstanceData.size() * sizeof(InstanceData));
@@ -340,4 +266,54 @@ void Game1App::UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList,
     m_InstanceDataSRVDesc.Buffer.NumElements = (uint)m_InstanceData.size();
     m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
     m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+}
+
+void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> pCommandList)
+{
+    // Update Instance data
+    if (g_InstanceCount != (uint)m_InstanceData.size())
+    {
+        UpdateInstanceData(pCommandList, g_InstanceCount);
+    }
+
+    pCommandList->SetRootSignature(m_pRootSignature);
+    pCommandList->SetPipelineState(m_GraphicsPSO);
+
+    D3D12_VIEWPORT viewport{};
+    viewport.MaxDepth = 0;
+    viewport.MinDepth = 1;
+    viewport.TopLeftX = viewport.TopLeftY = 0;
+    viewport.Width = RS::Display::Get()->GetWidth();
+    viewport.Height = RS::Display::Get()->GetHeight();
+    pCommandList->SetViewport(viewport);
+
+    D3D12_RECT scissorRect{};
+    scissorRect.left = scissorRect.top = 0;
+    scissorRect.right = viewport.Width;
+    scissorRect.bottom = viewport.Height;
+    pCommandList->SetScissorRect(scissorRect);
+
+    pCommandList->SetRenderTarget(m_RenderTarget);
+    auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
+    pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
+
+    auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
+    pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
+
+    pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
+
+    struct VertexConstantBufferData
+    {
+        glm::mat4 camera;
+    } vertexViewData;
+
+    float scale = 1.0f;
+    vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() : glm::transpose(m_Camera.GetProjection());
+    vertexViewData.camera = vertexViewData.camera;
+    pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
+
+    pCommandList->BindBuffer(RootParameter::SRVs, 0, m_InstanceBuffer, &m_InstanceDataSRVDesc);
+
+    pCommandList->DrawInstanced(m_NumVertices, g_InstanceCount, 0, 0);
 }

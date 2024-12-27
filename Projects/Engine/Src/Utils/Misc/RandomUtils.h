@@ -41,8 +41,23 @@ namespace RS::Utils
 
 	inline float Rand01()
 	{
+		// TODO: Use std::uniform_real_distribution
 		auto rState = _Internal::RandomState::Get();
 		int val = rState->GetUniformDist(1000)(rState->GetGenerator());
 		return (float)val / 1000.f;
+	}
+
+	inline int RandInt(int minVal, int maxVal)
+	{
+		auto rState = _Internal::RandomState::Get();
+		int val = rState->GetUniformDist(maxVal-minVal + 1)(rState->GetGenerator());
+		return val + minVal;
+	}
+
+	inline int RandInt(int maxVal)
+	{
+		auto rState = _Internal::RandomState::Get();
+		int val = rState->GetUniformDist(maxVal+1)(rState->GetGenerator());
+		return val;
 	}
 }
