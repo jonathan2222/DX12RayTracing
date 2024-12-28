@@ -49,6 +49,7 @@ namespace RS
 
 		uint32	GetWidth() const;
 		uint32	GetHeight() const;
+		glm::vec2 GetSize() const;
 		float	GetAspectRatio() const;
 		bool	HasFocus() const;
 

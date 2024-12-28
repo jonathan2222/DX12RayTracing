@@ -146,6 +146,11 @@ uint32 Display::GetHeight() const
 	return m_Description.Height;
 }
 
+glm::vec2 RS::Display::GetSize() const
+{
+	return { (float)m_Description.Width, (float)m_Description.Height};
+}
+
 float Display::GetAspectRatio() const
 {
 	return (float)m_Description.Width / (float)m_Description.Height;

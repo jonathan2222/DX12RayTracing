@@ -79,6 +79,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
     DrawEntites(frameStats, pCommandList);
 
+    DrawPlayer(pCommandList);
+
     // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
     auto pTexture = m_RenderTarget->GetColorTextures()[0];
     pCommandList->CopyResource(RS::DX12Core3::Get()->GetSwapChain()->GetCurrentBackBuffer(), pTexture);
@@ -92,13 +94,12 @@ void Game1App::Init()
     m_WorldSize = glm::vec2(20 * aspect, 20);
     m_Camera.Init(-m_WorldSize.x * .5f, m_WorldSize.x * .5f, -m_WorldSize.y*.5, m_WorldSize.y*.5f, -10.f, 10.f, { 0.f, 0.f, 1.f });
 
-    CreatePipelineState();
+    CreatePipelineStateEntities();
+    CreatePipelineStatePlayer();
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
 
-    float scale = 1.0f;
-    float aspectRatio = 1.0f;
     struct Vertex
     {
         glm::vec3 position;
@@ -106,13 +107,13 @@ void Game1App::Init()
     };
     Vertex triangleVertices[] =
     {
-        { { -scale, +scale * aspectRatio, 0.0f }, { 0.0f, 1.0f } }, // TL
-        { { +scale, +scale * aspectRatio, 0.0f }, { 1.0f, 1.0f } }, // TR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f } }, // BL
+        { { -1.f, +1.f, 0.0f }, { 0.0f, 1.0f } }, // TL
+        { { +1.f, +1.f, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { -1.f, -1.f, 0.0f }, { 0.0f, 0.0f } }, // BL
     
-        { { +scale, +scale * aspectRatio, 0.0f }, { 1.0f, 1.0f } }, // TR
-        { { +scale, -scale * aspectRatio, 0.0f }, { 1.0f, 0.0f } }, // BR
-        { { -scale, -scale * aspectRatio, 0.0f }, { 0.0f, 0.0f } }  // BL
+        { { +1.f, +1.f, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { +1.f, -1.f, 0.0f }, { 1.0f, 0.0f } }, // BR
+        { { -1.f, -1.f, 0.0f }, { 0.0f, 0.0f } }  // BL
     };
     m_NumVertices = 6;
     const UINT vertexBufferSize2 = sizeof(triangleVertices);
@@ -173,7 +174,7 @@ void Game1App::Init()
     pCommandQueue->WaitForFenceValue(fenceValue);
 }
 
-void Game1App::CreatePipelineState()
+void Game1App::CreatePipelineStateEntities()
 {
     RS::Shader shader;
     RS::Shader::Description shaderDesc{};
@@ -201,18 +202,62 @@ void Game1App::CreatePipelineState()
         inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     }
 
-    m_GraphicsPSO.SetDefaults();
-    m_GraphicsPSO.SetInputLayout(inputElementDescs);
-    m_GraphicsPSO.SetRootSignature(m_pRootSignature);
-    m_GraphicsPSO.SetShader(&shader);
-    m_GraphicsPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
-    //m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
-    m_GraphicsPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    m_EntitiesPSO.SetDefaults();
+    m_EntitiesPSO.SetInputLayout(inputElementDescs);
+    m_EntitiesPSO.SetRootSignature(m_pRootSignature);
+    m_EntitiesPSO.SetShader(&shader);
+    m_EntitiesPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
+    //m_EntitiesPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
+    m_EntitiesPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
     D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
     rasterizerDesc.FrontCounterClockwise = false;
-    m_GraphicsPSO.SetRasterizerState(rasterizerDesc);
-    m_GraphicsPSO.Create();
+    m_EntitiesPSO.SetRasterizerState(rasterizerDesc);
+    m_EntitiesPSO.Create();
+
+    shader.Release();
+}
+
+void Game1App::CreatePipelineStatePlayer()
+{
+    RS::Shader shader;
+    RS::Shader::Description shaderDesc{};
+    shaderDesc.path = "Game/PlayerShader.hlsl";
+    shaderDesc.typeFlags = RS::Shader::TypeFlag::Pixel | RS::Shader::TypeFlag::Vertex;
+    shader.Create(shaderDesc);
+
+    CreateRootSignature();
+
+    auto pDevice = RS::DX12Core3::Get()->GetD3D12Device();
+
+    std::vector<RS::InputElementDesc> inputElementDescs;
+    // TODO: Move this, and don't hardcode it!
+    {
+        RS::InputElementDesc inputElementDesc = {};
+        inputElementDesc.SemanticName = "SV_POSITION";
+        inputElementDesc.SemanticIndex = 0;
+        inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+        inputElementDesc.InputSlot = 0;
+        inputElementDesc.AlignedByteOffset = 0;
+        inputElementDesc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+        inputElementDesc.InstanceDataStepRate = 0;
+        inputElementDescs.push_back(inputElementDesc);
+
+        inputElementDescs.push_back({ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+    }
+
+    m_PlayerPSO.SetDefaults();
+    m_PlayerPSO.SetInputLayout(inputElementDescs);
+    m_PlayerPSO.SetRootSignature(m_pRootSignature);
+    m_PlayerPSO.SetShader(&shader);
+    m_PlayerPSO.SetRTVFormats({ DXGI_FORMAT_R8G8B8A8_UNORM });
+    //m_PlayerPSO.SetDSVFormat(DXGI_FORMAT_UNKNOWN);
+    m_PlayerPSO.SetDSVFormat(DXGI_FORMAT_D32_FLOAT);
+    D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    rasterizerDesc.FrontCounterClockwise = false;
+    m_PlayerPSO.SetRasterizerState(rasterizerDesc);
+    m_PlayerPSO.Create();
 
     shader.Release();
 }
@@ -266,7 +311,7 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
         return;
 
     pCommandList->SetRootSignature(m_pRootSignature);
-    pCommandList->SetPipelineState(m_GraphicsPSO);
+    pCommandList->SetPipelineState(m_EntitiesPSO);
 
     D3D12_VIEWPORT viewport{};
     viewport.MaxDepth = 0;
@@ -305,6 +350,48 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
     pCommandList->BindBuffer(RootParameter::SRVs, 0, m_InstanceBuffer, &m_InstanceDataSRVDesc);
 
     pCommandList->DrawInstanced(m_NumVertices, m_InstanceDataSRVDesc.Buffer.NumElements, 0, 0);
+}
+
+void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
+{
+    pCommandList->SetRootSignature(m_pRootSignature);
+    pCommandList->SetPipelineState(m_PlayerPSO);
+
+    D3D12_VIEWPORT viewport{};
+    viewport.MaxDepth = 0;
+    viewport.MinDepth = 1;
+    viewport.TopLeftX = viewport.TopLeftY = 0;
+    viewport.Width = RS::Display::Get()->GetWidth();
+    viewport.Height = RS::Display::Get()->GetHeight();
+    pCommandList->SetViewport(viewport);
+
+    D3D12_RECT scissorRect{};
+    scissorRect.left = scissorRect.top = 0;
+    scissorRect.right = viewport.Width;
+    scissorRect.bottom = viewport.Height;
+    pCommandList->SetScissorRect(scissorRect);
+
+    pCommandList->SetRenderTarget(m_RenderTarget);
+    
+    pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
+
+    float scale = 2.0f;
+    struct VertexConstantBufferData
+    {
+        glm::mat4 camera;
+    } vertexViewData;
+
+    glm::vec2 mousePos = RS::Input::Get()->GetMousePos() / RS::Display::Get()->GetSize();
+    mousePos.y = 1.f - mousePos.y;
+    mousePos *= m_WorldSize;
+    mousePos -= m_WorldSize * 0.5f;
+    vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() :
+        glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(scale)));
+    vertexViewData.camera = vertexViewData.camera;
+    pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
+
+    pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
 }
 
 void Game1App::SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr<RS::CommandList> pCommandList)

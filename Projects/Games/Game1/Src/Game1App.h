@@ -21,10 +21,12 @@ public:
 
 private:
 	void Init();
-	void CreatePipelineState();
+	void CreatePipelineStateEntities();
+	void CreatePipelineStatePlayer();
 	void CreateRootSignature();
 
 	void DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> commandList);
+	void DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList);
 
 	void SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr<RS::CommandList> pCommandList);
 
@@ -33,7 +35,8 @@ private:
 
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
-	RS::GraphicsPSO m_GraphicsPSO;
+	RS::GraphicsPSO m_EntitiesPSO;
+	RS::GraphicsPSO m_PlayerPSO;
 	std::shared_ptr<RS::VertexBuffer> m_pVertexBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_ConstantBufferResource;
 	std::shared_ptr<RS::Texture> m_NullTexture;
