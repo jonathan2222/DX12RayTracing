@@ -49,9 +49,33 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     //if (sCameraIsActive)
     m_Camera.Update(frameStats.frame.currentDT);
 
+    // == Update ==
+
+    // Update enemy positions
+    for (Entity& ent : m_Enemies)
+        ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
+
+    // Spawn new enemies
+    static float time = 0.f;
+    time += frameStats.frame.currentDT;
+    if (time > 1.f)
+    {
+        float r = RS::Utils::Rand01();
+        Entity::Type type = Entity::Type::EASY_ENEMY;
+        if (r < 0.6)
+            type = Entity::Type::EASY_ENEMY;
+        else
+            type = Entity::Type::NORMAL_ENEMY;
+        SpawnEnemy(type, 4.f, pCommandList);
+        time = 0.f;
+    }
+
+    // == Render ==
+
+    UpdateEntitiesInstanceData(pCommandList);
 
     DrawEntites(frameStats, pCommandList);
 
@@ -65,7 +89,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 void Game1App::Init()
 {
     float aspect = RS::Display::Get()->GetAspectRatio();
-    m_Camera.Init(-10 * aspect, 10 * aspect, -10, 10, -10.f, 10.f, { 0.f, 0.f, 1.f });
+    m_WorldSize = glm::vec2(20 * aspect, 20);
+    m_Camera.Init(-m_WorldSize.x * .5f, m_WorldSize.x * .5f, -m_WorldSize.y*.5, m_WorldSize.y*.5f, -10.f, 10.f, { 0.f, 0.f, 1.f });
 
     CreatePipelineState();
 
@@ -109,7 +134,7 @@ void Game1App::Init()
     }
 
     // Instance data
-    UpdateInstanceData(pCommandList, g_InstanceCount);
+    //UpdateInstanceData(pCommandList, g_InstanceCount);
 
     D3D12_CLEAR_VALUE clearValue;
     clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -235,46 +260,10 @@ void Game1App::CreateRootSignature()
     rootSignature.Bake("Game1_RootSignature");
 }
 
-void Game1App::UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList, uint instanceCount)
-{
-    RS_ASSERT_NO_MSG(instanceCount != 0);
-
-    glm::vec2 camOrigin = m_Camera.GetOrigin();
-    glm::vec2 camSize = m_Camera.GetSize();
-    glm::vec2 camCenterOffset = m_Camera.GetCenterOffset();
-
-    m_InstanceData.clear();
-    for (uint i = 0; i < instanceCount; ++i)
-    {
-        glm::vec2 pos = camOrigin;
-        pos.x += RS::Utils::Rand01() * camSize.x;
-        pos.y += RS::Utils::Rand01() * camSize.y;
-
-        uint type = (uint)RS::Utils::RandInt(0, 1);
-        m_InstanceData.push_back({ glm::transpose(glm::translate(glm::vec3{pos.x, pos.y,0.f})), type, 255, 255, 255 });
-    }
-
-    uint size = (uint)(m_InstanceData.size() * sizeof(InstanceData));
-    m_InstanceBuffer = pCommandList->CreateBufferResource(size, RS::Utils::Format("Instance Data Buffer {}", instanceCount));
-    pCommandList->UploadToBuffer(m_InstanceBuffer, size, (void*)&m_InstanceData[0]);
-
-    m_InstanceDataSRVDesc = {};
-    m_InstanceDataSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-    m_InstanceDataSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-    m_InstanceDataSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    m_InstanceDataSRVDesc.Buffer.FirstElement = 0;
-    m_InstanceDataSRVDesc.Buffer.NumElements = (uint)m_InstanceData.size();
-    m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
-    m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-}
-
 void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> pCommandList)
 {
-    // Update Instance data
-    if (g_InstanceCount != (uint)m_InstanceData.size())
-    {
-        UpdateInstanceData(pCommandList, g_InstanceCount);
-    }
+    if (m_InstanceData.empty())
+        return;
 
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_GraphicsPSO);
@@ -315,5 +304,73 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
 
     pCommandList->BindBuffer(RootParameter::SRVs, 0, m_InstanceBuffer, &m_InstanceDataSRVDesc);
 
-    pCommandList->DrawInstanced(m_NumVertices, g_InstanceCount, 0, 0);
+    pCommandList->DrawInstanced(m_NumVertices, m_InstanceDataSRVDesc.Buffer.NumElements, 0, 0);
+}
+
+void Game1App::SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr<RS::CommandList> pCommandList)
+{
+    // == Add enemy ==
+    
+    // Spawn the enemy outside the view, pick position from a random angle around the unit circle.
+    float angle = RS::Utils::RandRad();
+    glm::vec2 spawnPoint(std::cos(angle), std::sin(angle));
+    spawnPoint *= std::max(m_WorldSize.x, m_WorldSize.y);
+    spawnPoint *= 1.05f; // Add extra distance such that we cannot see them being spawned in.
+    
+    // Pick the velocity to point towards an area around the center of the screen.
+    angle = RS::Utils::RandRad();
+    glm::vec2 velocity(std::cos(angle), std::sin(angle));
+    velocity *= std::min(m_WorldSize.x, m_WorldSize.y) * 0.5f;
+    velocity = glm::normalize(velocity - spawnPoint) * initialSpeed;
+    m_Enemies.emplace_back(type, spawnPoint, velocity);
+
+    // Add entity to instance data
+    InstanceData instanceData;
+    instanceData.transform = glm::transpose(glm::translate(glm::vec3(spawnPoint, 0.f)));
+    instanceData.type = (uint)type;
+    instanceData.padding0 = instanceData.padding1 = instanceData.padding2 = 255;
+    m_InstanceData.push_back(instanceData);
+
+    // Update GPU buffer
+    uint newCount = (uint)m_InstanceData.size();
+    ResizeEntitiesInstanceData(newCount, pCommandList, true);
+}
+
+void Game1App::ResizeEntitiesInstanceData(uint newCount, std::shared_ptr<RS::CommandList> pCommandList, bool updateData)
+{
+    uint sizeInBytes = (uint)(m_InstanceData.size() * sizeof(InstanceData));
+    m_InstanceBuffer = pCommandList->CreateBufferResource(sizeInBytes, RS::Utils::Format("Instance Data Buffer {}", newCount));
+    
+    if (updateData)
+        pCommandList->UploadToBuffer(m_InstanceBuffer, sizeInBytes, (void*)&m_InstanceData[0]);
+
+    m_InstanceDataSRVDesc = {};
+    m_InstanceDataSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    m_InstanceDataSRVDesc.Format = DXGI_FORMAT_UNKNOWN;
+    m_InstanceDataSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    m_InstanceDataSRVDesc.Buffer.FirstElement = 0;
+    m_InstanceDataSRVDesc.Buffer.NumElements = newCount;
+    m_InstanceDataSRVDesc.Buffer.StructureByteStride = sizeof(InstanceData);
+    m_InstanceDataSRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+}
+
+void Game1App::UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pCommandList)
+{
+    if (m_InstanceData.empty())
+        return;
+
+    RS_ASSERT(m_InstanceData.size() == m_Enemies.size(), "Cannot update buffer if the data sizes differ!");
+
+    // Transfer enemy data
+    for (uint i = 0; i < (uint)m_InstanceData.size(); i++)
+    {
+        Entity& enemy = m_Enemies[i];
+        InstanceData& instance = m_InstanceData[i];
+        instance.transform = glm::transpose(glm::translate(glm::vec3(enemy.m_Position, 0.f)));
+        instance.type = (uint)enemy.m_Type;
+    }
+
+    // Upload the new data to the GPU
+    uint sizeInBytes = (uint)(m_InstanceData.size() * sizeof(InstanceData));
+    pCommandList->UploadToBuffer(m_InstanceBuffer, sizeInBytes, (void*)&m_InstanceData[0]);
 }

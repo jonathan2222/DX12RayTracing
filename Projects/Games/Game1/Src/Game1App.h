@@ -7,6 +7,9 @@
 
 #include "Entity.h"
 
+#include "Maths/GLMDefines.h"
+#include "glm/vec2.hpp"
+
 class Game1App
 {
 public:
@@ -21,9 +24,12 @@ private:
 	void CreatePipelineState();
 	void CreateRootSignature();
 
-	void UpdateInstanceData(std::shared_ptr<RS::CommandList> pCommandList, uint instanceCount);
-
 	void DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> commandList);
+
+	void SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr<RS::CommandList> pCommandList);
+
+	void ResizeEntitiesInstanceData(uint newCount, std::shared_ptr<RS::CommandList> pCommandList, bool updateData);
+	void UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pCommandList);
 
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
@@ -58,5 +64,6 @@ private:
 	D3D12_SHADER_RESOURCE_VIEW_DESC m_InstanceDataSRVDesc;
 
 	// Game data
+	glm::vec2 m_WorldSize;
 	std::vector<Entity> m_Enemies;
 };
