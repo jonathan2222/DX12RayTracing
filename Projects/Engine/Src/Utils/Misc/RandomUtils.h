@@ -1,6 +1,7 @@
 #pragma once
 
 #include <random>
+#include <numbers>
 
 namespace RS::Utils
 {
@@ -17,47 +18,75 @@ namespace RS::Utils
 				return s_State;
 			}
 
-			std::uniform_int_distribution<>& GetUniformDist(uint precision)
+			int SampleUniformIntDist(int minVal, int maxVal)
 			{
-				auto entry = m_UniformDists.find(precision);
-				if (entry != m_UniformDists.end())
-					return entry->second;
-
-				return m_UniformDists[precision] = std::uniform_int_distribution<>(0, precision-1);
+				return GetUniformIntDist(minVal, maxVal)(m_Generator);
 			}
 
-			std::mt19937& GetGenerator()
+			float SampleUniformFloatDist(float minVal, float maxVal)
 			{
-				return m_Generator;
+				return GetUniformFloatDist(minVal, maxVal)(m_Generator);
+			}
+
+		private:
+			std::uniform_int_distribution<>& GetUniformIntDist(int minVal, int maxVal)
+			{
+				uint64 hash = ((uint64)maxVal << 32) | minVal;
+				auto entry = m_UniformIntDists.find(hash);
+				if (entry != m_UniformIntDists.end())
+					return entry->second;
+
+				return m_UniformIntDists[hash] = std::uniform_int_distribution<>(minVal, maxVal);
+			}
+
+			std::uniform_real_distribution<float>& GetUniformFloatDist(float minVal, float maxVal)
+			{
+				uint minValU = *reinterpret_cast<uint*>(&minVal);
+				uint maxValU = *reinterpret_cast<uint*>(&maxVal);
+				uint64 hash = ((uint64)maxValU << 32) | minValU;
+				auto entry = m_UniformFloatDists.find(hash);
+				if (entry != m_UniformFloatDists.end())
+					return entry->second;
+
+				return m_UniformFloatDists[hash] = std::uniform_real_distribution<float>(minVal, maxVal);
 			}
 
 		private:
 			std::random_device m_RandomDevice; // Non-deterministic generator
 			std::mt19937 m_Generator; // Mersenne Twister engine
 			
-			std::unordered_map<uint, std::uniform_int_distribution<>> m_UniformDists; // Uniform distribution
+			std::unordered_map<uint, std::uniform_int_distribution<>> m_UniformIntDists; // Uniform distribution
+			std::unordered_map<uint64, std::uniform_real_distribution<float>> m_UniformFloatDists; // Uniform distribution
 		};
 	}
 
 	inline float Rand01()
 	{
-		// TODO: Use std::uniform_real_distribution
 		auto rState = _Internal::RandomState::Get();
-		int val = rState->GetUniformDist(1000)(rState->GetGenerator());
-		return (float)val / 1000.f;
+		return rState->SampleUniformFloatDist(0.f, 1.f);
+	}
+
+	inline float RandRad()
+	{
+		auto rState = _Internal::RandomState::Get();
+		return rState->SampleUniformFloatDist(0.f, std::numbers::pi_v<float> * 2.f);
+	}
+
+	inline float RandDeg()
+	{
+		auto rState = _Internal::RandomState::Get();
+		return rState->SampleUniformFloatDist(0.f, 360.f);
 	}
 
 	inline int RandInt(int minVal, int maxVal)
 	{
 		auto rState = _Internal::RandomState::Get();
-		int val = rState->GetUniformDist(maxVal-minVal + 1)(rState->GetGenerator());
-		return val + minVal;
+		return rState->SampleUniformIntDist(minVal, maxVal);
 	}
 
 	inline int RandInt(int maxVal)
 	{
 		auto rState = _Internal::RandomState::Get();
-		int val = rState->GetUniformDist(maxVal+1)(rState->GetGenerator());
-		return val;
+		return rState->SampleUniformIntDist(0, maxVal);
 	}
 }
