@@ -69,4 +69,5 @@ private:
 	// Game data
 	glm::vec2 m_WorldSize;
 	std::vector<Entity> m_Enemies;
+	uint m_ActiveEntities = 0;
 };

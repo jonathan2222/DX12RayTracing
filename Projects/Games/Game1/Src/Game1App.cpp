@@ -19,6 +19,7 @@
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 3.0f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
+RS_ADD_GLOBAL_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
 
 Game1App::Game1App()
 {
@@ -50,8 +51,28 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     // == Update ==
 
     // Update enemy positions
-    for (Entity& ent : m_Enemies)
-        ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
+    {
+        for (int i = 0; i < m_ActiveEntities; i++)
+        {
+            Entity& ent = m_Enemies[i];
+            ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
+            
+            if (std::abs(ent.m_Position.x) > m_WorldSize.x * 0.5f * 1.1f &&
+                std::abs(ent.m_Position.y) > m_WorldSize.y * 0.5f * 1.1f &&
+                glm::dot(ent.m_Position, ent.m_Velocity) > 0.f)
+            {
+                m_ActiveEntities--;
+                if (i != m_ActiveEntities + 1)
+                {
+                    m_Enemies[i] = m_Enemies[m_ActiveEntities];
+                    i--;
+                }
+                m_Enemies.pop_back();
+            }
+        }
+    }
+
+    g_ActiveEntities = m_ActiveEntities;
 
     auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
     auto pCommandList = pCommandQueue->GetCommandList();
@@ -369,27 +390,13 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
 
     pCommandList->BindBuffer(RootParameter::SRVs, 0, m_InstanceBuffer, &m_InstanceDataSRVDesc);
 
-    pCommandList->DrawInstanced(m_NumVertices, m_InstanceDataSRVDesc.Buffer.NumElements, 0, 0);
+    pCommandList->DrawInstanced(m_NumVertices, m_ActiveEntities, 0, 0);
 }
 
 void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
 {
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_PlayerPSO);
-
-    //D3D12_VIEWPORT viewport{};
-    //viewport.MaxDepth = 0;
-    //viewport.MinDepth = 1;
-    //viewport.TopLeftX = viewport.TopLeftY = 0;
-    //viewport.Width = RS::Display::Get()->GetWidth();
-    //viewport.Height = RS::Display::Get()->GetHeight();
-    //pCommandList->SetViewport(viewport);
-    //
-    //D3D12_RECT scissorRect{};
-    //scissorRect.left = scissorRect.top = 0;
-    //scissorRect.right = viewport.Width;
-    //scissorRect.bottom = viewport.Height;
-    //pCommandList->SetScissorRect(scissorRect);
 
     pCommandList->SetRenderTarget(m_RenderTarget);
     
@@ -422,26 +429,36 @@ void Game1App::SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr
     // Spawn the enemy outside the view, pick position from a random angle around the unit circle.
     float angle = RS::Utils::RandRad();
     glm::vec2 spawnPoint(std::cos(angle), std::sin(angle));
-    spawnPoint *= std::max(m_WorldSize.x, m_WorldSize.y);
-    spawnPoint *= 1.05f; // Add extra distance such that we cannot see them being spawned in.
+    spawnPoint *= std::max(m_WorldSize.x, m_WorldSize.y) * 0.5f;
+    spawnPoint *= 1.1f; // Add extra distance such that we cannot see them being spawned in.
     
     // Pick the velocity to point towards an area around the center of the screen.
     angle = RS::Utils::RandRad();
     glm::vec2 velocity(std::cos(angle), std::sin(angle));
-    velocity *= std::min(m_WorldSize.x, m_WorldSize.y) * 0.5f;
+    velocity *= std::min(m_WorldSize.x, m_WorldSize.y) * 0.5f * 0.5f;
     velocity = glm::normalize(velocity - spawnPoint) * initialSpeed;
     m_Enemies.emplace_back(type, spawnPoint, velocity);
 
+    m_ActiveEntities++;
+    
     // Add entity to instance data
     InstanceData instanceData;
     instanceData.transform = glm::transpose(glm::translate(glm::vec3(spawnPoint, 0.f)));
     instanceData.type = (uint)type;
     instanceData.padding0 = instanceData.padding1 = instanceData.padding2 = 255;
-    m_InstanceData.push_back(instanceData);
+    
+    if (m_ActiveEntities > (uint)m_InstanceData.size())
+    {
+        m_InstanceData.push_back(instanceData);
 
-    // Update GPU buffer
-    uint newCount = (uint)m_InstanceData.size();
-    ResizeEntitiesInstanceData(newCount, pCommandList, true);
+        // Update GPU buffer
+        uint newCount = (uint)m_InstanceData.size();
+        ResizeEntitiesInstanceData(newCount, pCommandList, true);
+    }
+    else
+    {
+        m_InstanceData[m_ActiveEntities - 1] = instanceData;
+    }
 }
 
 void Game1App::ResizeEntitiesInstanceData(uint newCount, std::shared_ptr<RS::CommandList> pCommandList, bool updateData)
@@ -467,10 +484,10 @@ void Game1App::UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pComm
     if (m_InstanceData.empty())
         return;
 
-    RS_ASSERT(m_InstanceData.size() == m_Enemies.size(), "Cannot update buffer if the data sizes differ!");
+    //RS_ASSERT(m_InstanceData.size() == m_Enemies.size(), "Cannot update buffer if the data sizes differ!");
 
     // Transfer enemy data
-    for (uint i = 0; i < (uint)m_InstanceData.size(); i++)
+    for (uint i = 0; i < m_ActiveEntities; i++)
     {
         Entity& enemy = m_Enemies[i];
         InstanceData& instance = m_InstanceData[i];
