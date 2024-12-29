@@ -345,3 +345,15 @@ namespace RS
 		}\
 	}; \
 	static inline _CONCAT(_RSGlobalConsoleVar, var) _CONCAT(g_RSGlobalConsoleVar, var) = _CONCAT(_RSGlobalConsoleVar, var)();
+
+// Example usage: RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(bool, "Canvas.debug1", g_Debug1, false, "A debug var");
+#define RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(type, name, var, defaultValue, docs) static inline type var = defaultValue; \
+	class _CONCAT(_RSGlobalRConsoleVar,var) \
+	{ \
+	public: \
+		_CONCAT(_RSGlobalRConsoleVar, var)() \
+		{ \
+			RS::Console::Get()->AddVar<type>(name, var, RS::Console::Flag::ReadOnly, docs); \
+		}\
+	}; \
+	static inline _CONCAT(_RSGlobalRConsoleVar, var) _CONCAT(g_RSGlobalRConsoleVar, var) = _CONCAT(_RSGlobalRConsoleVar, var)();

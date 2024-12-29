@@ -19,7 +19,7 @@
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 3.0f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
-RS_ADD_GLOBAL_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
+RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
 
 Game1App::Game1App()
 {
@@ -57,6 +57,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
             Entity& ent = m_Enemies[i];
             ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
             
+            // Remove entities outside of bounds and only when they are going away from the playing area.
             if (std::abs(ent.m_Position.x) > m_WorldSize.x * 0.5f * 1.1f &&
                 std::abs(ent.m_Position.y) > m_WorldSize.y * 0.5f * 1.1f &&
                 glm::dot(ent.m_Position, ent.m_Velocity) > 0.f)
