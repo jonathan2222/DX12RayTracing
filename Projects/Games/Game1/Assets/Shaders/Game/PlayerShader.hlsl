@@ -11,6 +11,7 @@ struct PSInput
 struct EnvironmentData
 {
     float4x4 camera; // View, Projection
+    float uvBorderWidth;
 };
 ConstantBuffer<EnvironmentData> env : register(b0, CBV_SPACE);
 
@@ -27,7 +28,8 @@ PSInput VertexMain(float4 position : SV_POSITION, float2 uv : UV0, uint instance
 float4 PixelMain(PSInput input) : SV_TARGET
 {
     float2 v = abs(input.uv-0.5);
-    if (min(v.x, v.y) < 0.4)
+    float width = env.uvBorderWidth*0.5f;
+    if (max(v.x, v.y) < max(0.f,0.5f-width))
         discard;
     return float4(0.8f, 0.8f, 0.8f, 1.f);
 }

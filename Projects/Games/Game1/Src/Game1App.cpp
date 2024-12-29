@@ -16,11 +16,9 @@
 
 #include "Core/Console.h"
 
-RS_ADD_GLOBAL_CONSOLE_VAR(bool, "Game1App.debug1", g_Debug1, false, "A debug bool");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.x", g_TranslationX, 0.f, "Translation x");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.y", g_TranslationY, 0.f, "Translation y");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.translation.z", g_TranslationZ, 0.f, "Translation z");
-RS_ADD_GLOBAL_CONSOLE_VAR(uint, "Game1App.instanceCount", g_InstanceCount, 10, "Instance Count");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 3.0f, "Player Attack Speed in Seconds");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
 
 Game1App::Game1App()
 {
@@ -74,12 +72,55 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     }
 
     // == Render ==
+    D3D12_VIEWPORT viewport{};
+    viewport.MaxDepth = 0;
+    viewport.MinDepth = 1;
+    viewport.TopLeftX = viewport.TopLeftY = 0;
+    viewport.Width = RS::Display::Get()->GetWidth();
+    viewport.Height = RS::Display::Get()->GetHeight();
+    pCommandList->SetViewport(viewport);
+
+    D3D12_RECT scissorRect{};
+    scissorRect.left = scissorRect.top = 0;
+    scissorRect.right = viewport.Width;
+    scissorRect.bottom = viewport.Height;
+    pCommandList->SetScissorRect(scissorRect);
+
+    pCommandList->SetRenderTarget(m_RenderTarget);
+    auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
+    pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
+
+    auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
+    pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
 
     UpdateEntitiesInstanceData(pCommandList);
 
     DrawEntites(frameStats, pCommandList);
 
-    DrawPlayer(pCommandList);
+    static bool isAttacking = false;
+    static float attackSpeedTime = 0.f;
+    static float attackDuration = 0.f;
+    if (!isAttacking)
+    {
+        attackSpeedTime += frameStats.frame.currentDT;
+        if (attackSpeedTime > g_PlayerAttackSpeed)
+        {
+            isAttacking = true;
+            attackSpeedTime = 0.f;
+        }
+    }
+    else
+    {
+        attackDuration += frameStats.frame.currentDT;
+        if (attackDuration > g_PlayerAttackDuration)
+        {
+            isAttacking = false;
+            attackDuration = 0.f;
+        }
+    }
+
+    if (!isAttacking)
+        DrawPlayer(pCommandList);
 
     // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
     auto pTexture = m_RenderTarget->GetColorTextures()[0];
@@ -313,27 +354,6 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_EntitiesPSO);
 
-    D3D12_VIEWPORT viewport{};
-    viewport.MaxDepth = 0;
-    viewport.MinDepth = 1;
-    viewport.TopLeftX = viewport.TopLeftY = 0;
-    viewport.Width = RS::Display::Get()->GetWidth();
-    viewport.Height = RS::Display::Get()->GetHeight();
-    pCommandList->SetViewport(viewport);
-
-    D3D12_RECT scissorRect{};
-    scissorRect.left = scissorRect.top = 0;
-    scissorRect.right = viewport.Width;
-    scissorRect.bottom = viewport.Height;
-    pCommandList->SetScissorRect(scissorRect);
-
-    pCommandList->SetRenderTarget(m_RenderTarget);
-    auto pRenderTargetTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::Color0);
-    pCommandList->ClearTexture(pRenderTargetTexture, pRenderTargetTexture->GetClearValue()->Color);
-
-    auto pRenderTargetDepthTexture = m_RenderTarget->GetAttachment(RS::AttachmentPoint::DepthStencil);
-    pCommandList->ClearDSV(pRenderTargetDepthTexture, D3D12_CLEAR_FLAG_DEPTH, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Depth, pRenderTargetDepthTexture->GetClearValue()->DepthStencil.Stencil);
-
     pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
 
@@ -343,7 +363,7 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
     } vertexViewData;
 
     float scale = 1.0f;
-    vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() : glm::transpose(m_Camera.GetProjection());
+    vertexViewData.camera = glm::transpose(m_Camera.GetProjection());
     vertexViewData.camera = vertexViewData.camera;
     pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
 
@@ -357,19 +377,19 @@ void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_PlayerPSO);
 
-    D3D12_VIEWPORT viewport{};
-    viewport.MaxDepth = 0;
-    viewport.MinDepth = 1;
-    viewport.TopLeftX = viewport.TopLeftY = 0;
-    viewport.Width = RS::Display::Get()->GetWidth();
-    viewport.Height = RS::Display::Get()->GetHeight();
-    pCommandList->SetViewport(viewport);
-
-    D3D12_RECT scissorRect{};
-    scissorRect.left = scissorRect.top = 0;
-    scissorRect.right = viewport.Width;
-    scissorRect.bottom = viewport.Height;
-    pCommandList->SetScissorRect(scissorRect);
+    //D3D12_VIEWPORT viewport{};
+    //viewport.MaxDepth = 0;
+    //viewport.MinDepth = 1;
+    //viewport.TopLeftX = viewport.TopLeftY = 0;
+    //viewport.Width = RS::Display::Get()->GetWidth();
+    //viewport.Height = RS::Display::Get()->GetHeight();
+    //pCommandList->SetViewport(viewport);
+    //
+    //D3D12_RECT scissorRect{};
+    //scissorRect.left = scissorRect.top = 0;
+    //scissorRect.right = viewport.Width;
+    //scissorRect.bottom = viewport.Height;
+    //pCommandList->SetScissorRect(scissorRect);
 
     pCommandList->SetRenderTarget(m_RenderTarget);
     
@@ -380,15 +400,16 @@ void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
     struct VertexConstantBufferData
     {
         glm::mat4 camera;
+        float uvBorderWidth;
     } vertexViewData;
 
     glm::vec2 mousePos = RS::Input::Get()->GetMousePos() / RS::Display::Get()->GetSize();
     mousePos.y = 1.f - mousePos.y;
     mousePos *= m_WorldSize;
     mousePos -= m_WorldSize * 0.5f;
-    vertexViewData.camera = g_Debug1 ? glm::identity<glm::mat4>() :
-        glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(scale)));
+    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(scale)));
     vertexViewData.camera = vertexViewData.camera;
+    vertexViewData.uvBorderWidth = g_PlayerBorderWidth;
     pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
 
     pCommandList->DrawInstanced(m_NumVertices, 1, 0, 0);
