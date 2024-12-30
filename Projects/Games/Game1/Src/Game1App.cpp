@@ -17,9 +17,11 @@
 #include "Core/Console.h"
 
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 3.0f, "Player Attack Speed in Seconds");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 1.5f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDamage", g_PlayerAttackDamage, 50.f, "Player Attack Damage");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
+RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.killCount", g_killCount, 0, "Number of kills");
 
 Game1App::Game1App()
 {
@@ -51,27 +53,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     // == Update ==
 
     // Update enemy positions
-    {
-        for (int i = 0; i < m_ActiveEntities; i++)
-        {
-            Entity& ent = m_Enemies[i];
-            ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
-            
-            // Remove entities outside of bounds and only when they are going away from the playing area.
-            if (std::abs(ent.m_Position.x) > m_WorldSize.x * 0.5f * 1.1f &&
-                std::abs(ent.m_Position.y) > m_WorldSize.y * 0.5f * 1.1f &&
-                glm::dot(ent.m_Position, ent.m_Velocity) > 0.f)
-            {
-                m_ActiveEntities--;
-                if (i != m_ActiveEntities + 1)
-                {
-                    m_Enemies[i] = m_Enemies[m_ActiveEntities];
-                    i--;
-                }
-                m_Enemies.pop_back();
-            }
-        }
-    }
+    UpdateEntities(frameStats);
 
     g_ActiveEntities = m_ActiveEntities;
 
@@ -120,6 +102,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     DrawEntites(frameStats, pCommandList);
 
     static bool isAttacking = false;
+    bool firstAttackFrame = false;
     static float attackSpeedTime = 0.f;
     static float attackDuration = 0.f;
     if (!isAttacking)
@@ -129,6 +112,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         {
             isAttacking = true;
             attackSpeedTime = 0.f;
+            firstAttackFrame = true;
         }
     }
     else
@@ -143,6 +127,16 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
     if (!isAttacking)
         DrawPlayer(pCommandList);
+    
+    if (firstAttackFrame)
+    {
+        // Damage entities
+        for (uint i : m_EnemiesThatOverlapPlayer)
+        {
+            Entity& ent = m_Enemies[i];
+            ent.m_Health -= g_PlayerAttackDamage;
+        }
+    }
 
     // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
     auto pTexture = m_RenderTarget->GetColorTextures()[0];
@@ -168,15 +162,16 @@ void Game1App::Init()
         glm::vec3 position;
         glm::vec2 uv;
     };
+    // Unit square (-.5,-.5) to (.5,.5)
     Vertex triangleVertices[] =
     {
-        { { -1.f, +1.f, 0.0f }, { 0.0f, 1.0f } }, // TL
-        { { +1.f, +1.f, 0.0f }, { 1.0f, 1.0f } }, // TR
-        { { -1.f, -1.f, 0.0f }, { 0.0f, 0.0f } }, // BL
+        { { -.5f, +.5f, 0.0f }, { 0.0f, 1.0f } }, // TL
+        { { +.5f, +.5f, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { -.5f, -.5f, 0.0f }, { 0.0f, 0.0f } }, // BL
     
-        { { +1.f, +1.f, 0.0f }, { 1.0f, 1.0f } }, // TR
-        { { +1.f, -1.f, 0.0f }, { 1.0f, 0.0f } }, // BR
-        { { -1.f, -1.f, 0.0f }, { 0.0f, 0.0f } }  // BL
+        { { +.5f, +.5f, 0.0f }, { 1.0f, 1.0f } }, // TR
+        { { +.5f, -.5f, 0.0f }, { 1.0f, 0.0f } }, // BR
+        { { -.5f, -.5f, 0.0f }, { 0.0f, 0.0f } }  // BL
     };
     m_NumVertices = 6;
     const UINT vertexBufferSize2 = sizeof(triangleVertices);
@@ -368,6 +363,37 @@ void Game1App::CreateRootSignature()
     rootSignature.Bake("Game1_RootSignature");
 }
 
+void Game1App::UpdateEntities(const RS::FrameStats& frameStats)
+{
+    for (int i = 0; i < m_ActiveEntities; i++)
+    {
+        Entity& ent = m_Enemies[i];
+        ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
+
+        // Remove entities outside of bounds and only when they are going away from the playing area.
+        bool isHeadingOutside = glm::dot(ent.m_Position, ent.m_Velocity) > 0.f;
+        bool isOutsideWorld =   std::abs(ent.m_Position.x) > m_WorldSize.x * 0.5f * 1.1f &&
+                                std::abs(ent.m_Position.y) > m_WorldSize.y * 0.5f * 1.1f;
+        bool isDead = ent.m_Health < FLT_EPSILON;
+        if (isDead)
+            g_killCount++;
+
+        bool shouldBeRemoved = (isHeadingOutside && isOutsideWorld) || isDead;
+        if (shouldBeRemoved)
+        {
+            m_ActiveEntities--;
+            if (i != m_ActiveEntities + 1)
+            {
+                m_Enemies[i] = m_Enemies[m_ActiveEntities];
+                i--;
+            }
+            m_Enemies.pop_back();
+        }
+    }
+
+    FindOverlappingEnemiesWithPlayer();
+}
+
 void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> pCommandList)
 {
     if (m_InstanceData.empty())
@@ -404,7 +430,6 @@ void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
     pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     pCommandList->SetVertexBuffers(0, m_pVertexBufferResource);
 
-    float scale = 2.0f;
     struct VertexConstantBufferData
     {
         glm::mat4 camera;
@@ -415,7 +440,8 @@ void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
     mousePos.y = 1.f - mousePos.y;
     mousePos *= m_WorldSize;
     mousePos -= m_WorldSize * 0.5f;
-    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(scale)));
+    m_PlayerPosition = mousePos;
+    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(m_PlayerSize, 1.f)));
     vertexViewData.camera = vertexViewData.camera;
     vertexViewData.uvBorderWidth = g_PlayerBorderWidth;
     pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
@@ -443,10 +469,11 @@ void Game1App::SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr
     m_ActiveEntities++;
     
     // Add entity to instance data
+    Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(type);
     InstanceData instanceData;
-    instanceData.transform = glm::transpose(glm::translate(glm::vec3(spawnPoint, 0.f)));
+    instanceData.transform = glm::transpose(glm::translate(glm::vec3(spawnPoint, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
     instanceData.type = (uint)type;
-    instanceData.padding0 = instanceData.padding1 = instanceData.padding2 = 255;
+    instanceData.color = info.color;
     
     if (m_ActiveEntities > (uint)m_InstanceData.size())
     {
@@ -488,15 +515,60 @@ void Game1App::UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pComm
     //RS_ASSERT(m_InstanceData.size() == m_Enemies.size(), "Cannot update buffer if the data sizes differ!");
 
     // Transfer enemy data
+    uint counter = 0;
     for (uint i = 0; i < m_ActiveEntities; i++)
     {
         Entity& enemy = m_Enemies[i];
+        Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(enemy.m_Type);
+
         InstanceData& instance = m_InstanceData[i];
-        instance.transform = glm::transpose(glm::translate(glm::vec3(enemy.m_Position, 0.f)));
+        instance.transform = glm::transpose(glm::translate(glm::vec3(enemy.m_Position, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
         instance.type = (uint)enemy.m_Type;
+
+        bool isOverlapping = false;
+        uint overlappingEntityIdx = counter < m_EnemiesThatOverlapPlayer.size() ? m_EnemiesThatOverlapPlayer[counter] : (uint)-1;
+        if (overlappingEntityIdx != (uint)-1)
+        {
+            if (overlappingEntityIdx == i)
+            {
+                isOverlapping = true;
+                counter++;
+            }
+        }
+
+        instance.color = isOverlapping ? glm::vec3(1.f, 1.f, 0.f) : info.color;
     }
 
     // Upload the new data to the GPU
     uint sizeInBytes = (uint)(m_InstanceData.size() * sizeof(InstanceData));
     pCommandList->UploadToBuffer(m_InstanceBuffer, sizeInBytes, (void*)&m_InstanceData[0]);
+}
+
+void Game1App::FindOverlappingEnemiesWithPlayer()
+{
+    struct AABB
+    {
+        glm::vec2 minP;
+        glm::vec2 maxP;
+        AABB(const glm::vec2& center, const glm::vec2& size)
+            : minP(center-size*.5f), maxP(center+size*.5f) {}
+        bool IsOverlapping(const AABB& other)
+        {
+            bool overlap = (minP.x < other.maxP.x && maxP.x > other.minP.x) && (minP.y < other.maxP.y && maxP.y > other.minP.y);
+            bool aContainsB = (minP.x < other.minP.x && maxP.x > other.maxP.x) && (minP.y < other.minP.y && maxP.y > other.maxP.y);
+            bool bContainsA = (minP.x > other.minP.x && maxP.x < other.maxP.x) && (minP.y > other.minP.y && maxP.y < other.maxP.y);
+            return overlap || aContainsB || bContainsA;
+        }
+    };
+
+    AABB playerAABB(m_PlayerPosition, m_PlayerSize);
+    m_EnemiesThatOverlapPlayer.clear();
+    for (uint i = 0; i < (uint)m_Enemies.size(); i++)
+    {
+        Entity& ent = m_Enemies[i];
+        Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(ent.m_Type);
+        AABB aabb(ent.m_Position, info.size);
+        if (aabb.IsOverlapping(playerAABB))
+            m_EnemiesThatOverlapPlayer.push_back(i);
+    }
 }

@@ -9,6 +9,7 @@
 
 #include "Maths/GLMDefines.h"
 #include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 
 class Game1App
 {
@@ -25,6 +26,8 @@ private:
 	void CreatePipelineStatePlayer();
 	void CreateRootSignature();
 
+	void UpdateEntities(const RS::FrameStats& frameStats);
+
 	void DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS::CommandList> commandList);
 	void DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList);
 
@@ -32,6 +35,8 @@ private:
 
 	void ResizeEntitiesInstanceData(uint newCount, std::shared_ptr<RS::CommandList> pCommandList, bool updateData);
 	void UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pCommandList);
+
+	void FindOverlappingEnemiesWithPlayer();
 
 private:
 	std::shared_ptr<RS::RootSignature> m_pRootSignature;
@@ -57,10 +62,8 @@ private:
 	struct InstanceData
 	{
 		glm::mat4 transform;
+		glm::vec3 color;
 		uint type;
-		uint padding0;
-		uint padding1;
-		uint padding2;
 	};
 	std::shared_ptr<RS::Buffer> m_InstanceBuffer;
 	std::vector<InstanceData> m_InstanceData;
@@ -69,5 +72,9 @@ private:
 	// Game data
 	glm::vec2 m_WorldSize;
 	std::vector<Entity> m_Enemies;
+	std::vector<uint> m_EnemiesThatOverlapPlayer;
 	uint m_ActiveEntities = 0;
+
+	glm::vec2 m_PlayerPosition;
+	glm::vec2 m_PlayerSize = glm::vec2(3.f, 3.f);
 };

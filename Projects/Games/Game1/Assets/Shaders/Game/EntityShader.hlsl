@@ -6,7 +6,8 @@ struct PSInput
 {
     float4 position : SV_POSITION;
     float2 uv : UV0;
-    uint type : CUSTOM;
+    float3 color : CUSTOM1;
+    uint type : CUSTOM0;
 };
 
 struct EnvironmentData
@@ -18,10 +19,8 @@ ConstantBuffer<EnvironmentData> env : register(b0, CBV_SPACE);
 struct InstanceData
 {
     float4x4 transform;
+    float3 color;
     uint type;
-    uint padding0;
-    uint padding1;
-    uint padding2;
 };
 StructuredBuffer<InstanceData> vsInstanceData : register(t0, SRV_SPACE);
 
@@ -33,6 +32,7 @@ PSInput VertexMain(float4 position : SV_POSITION, float2 uv : UV0, uint instance
     result.position = mul(mul(env.camera, instanceData.transform), float4(position.xyz, 1.0f)); // Clip space.
     result.uv = uv;
     result.type = instanceData.type;
+    result.color = instanceData.color;
 
     return result;
 }
@@ -42,7 +42,7 @@ static uint TYPE_CIRCLE = 1;
 
 float4 PixelMain(PSInput input) : SV_TARGET
 {
-    float4 color = float4(1.f, 0.f, 0.f, 1.f);
+    float4 color = float4(input.color, 1.f);
     uint type = input.type;
     if (type == TYPE_SQUARE)
         return color;
