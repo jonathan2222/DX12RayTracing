@@ -22,6 +22,8 @@ namespace RS
 
 		void Update(float dt);
 
+		void StartScreenShake();
+
 		void SetPosition(const glm::vec3& position);
 
 		glm::mat4 GetMatrix() const;
@@ -63,5 +65,8 @@ namespace RS
 		glm::vec3 m_RightV;
 
 		glm::vec3 m_Position;
+
+		glm::vec3 m_StartPosition;
+		float m_StartRoll;
 	};
 }

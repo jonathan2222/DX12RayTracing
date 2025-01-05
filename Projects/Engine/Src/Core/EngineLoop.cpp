@@ -14,6 +14,8 @@
 // TODO: Remove this when in relase build!
 #include "Render/ImGuiRenderer.h"
 
+#include "GUI/FreetypeAdapter.h"
+
 using namespace RS;
 
 const wchar_t* EngineLoop::c_hitGroupName = L"MyHitGroup";
@@ -37,6 +39,8 @@ void EngineLoop::Init()
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
+    FreetypeAdapter::Get()->Init();
+
     m_DebugWindowsManager.Init();
 
     InitConsoleCommands();
@@ -44,7 +48,10 @@ void EngineLoop::Init()
 
 void EngineLoop::Release()
 {
+
     m_DebugWindowsManager.Destory();
+
+    FreetypeAdapter::Get()->Release();
 
     DX12Core3::Get()->Release();
 

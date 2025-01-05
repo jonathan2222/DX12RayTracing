@@ -136,6 +136,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
             Entity& ent = m_Enemies[i];
             ent.m_Health -= g_PlayerAttackDamage;
         }
+
+        // Initialize scree shake.
     }
 
     // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
@@ -191,9 +193,6 @@ void Game1App::Init()
         std::unique_ptr<RS::CorePlatform::Image> pImage = RS::CorePlatform::Get()->LoadImageData(texturePath, RS::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y);
         m_NullTexture = pCommandList->CreateTexture(pImage->width, pImage->height, pImage->pData, RS::DX12::GetDXGIFormat(pImage->format), "Null Texture Resource");
     }
-
-    // Instance data
-    //UpdateInstanceData(pCommandList, g_InstanceCount);
 
     D3D12_CLEAR_VALUE clearValue;
     clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -342,24 +341,6 @@ void Game1App::CreateRootSignature()
     // TODO: Support bindless descriptors!
     rootSignature[RootParameter::SRVs][0].SRV(1, 0, srvRegSpace);
 
-    //{
-    //    CD3DX12_STATIC_SAMPLER_DESC samplerDesc{};
-    //    samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-    //    samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-    //    samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-    //    samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    //    samplerDesc.Filter = D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT; // Point sample for min, max, mag, mip.
-    //    samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-    //    samplerDesc.MaxAnisotropy = 16;
-    //    samplerDesc.RegisterSpace = samplerRegSpace;
-    //    samplerDesc.ShaderRegister = currentShaderRegisterSampler++;
-    //    samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    //    samplerDesc.MipLODBias = 0;
-    //    samplerDesc.MinLOD = 0.0f;
-    //    samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-    //    rootSignature.AddStaticSampler(samplerDesc);
-    //}
-
     rootSignature.Bake("Game1_RootSignature");
 }
 
@@ -411,7 +392,7 @@ void Game1App::DrawEntites(const RS::FrameStats& frameStats, std::shared_ptr<RS:
     } vertexViewData;
 
     float scale = 1.0f;
-    vertexViewData.camera = glm::transpose(m_Camera.GetProjection());
+    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * m_Camera.GetView());
     vertexViewData.camera = vertexViewData.camera;
     pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);
 
@@ -441,7 +422,7 @@ void Game1App::DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList)
     mousePos *= m_WorldSize;
     mousePos -= m_WorldSize * 0.5f;
     m_PlayerPosition = mousePos;
-    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(m_PlayerSize, 1.f)));
+    vertexViewData.camera = glm::transpose(m_Camera.GetProjection() * m_Camera.GetView() * glm::translate(glm::vec3(mousePos, 0.f)) * glm::scale(glm::vec3(m_PlayerSize, 1.f)));
     vertexViewData.camera = vertexViewData.camera;
     vertexViewData.uvBorderWidth = g_PlayerBorderWidth;
     pCommandList->SetGraphicsDynamicConstantBuffer(RootParameter::CBVs, sizeof(vertexViewData), (void*)&vertexViewData);

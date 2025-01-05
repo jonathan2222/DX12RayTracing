@@ -12,7 +12,8 @@ function EngineIncludes()
 		"%{includeDir.stb}",
 		"%{includeDir.json}",
 		"%{includeDir.glfw}",
-		"%{includeDir.renderdoc}"
+		"%{includeDir.renderdoc}",
+		"%{includeDir.freetype2}"
 	}
 end
 
@@ -25,7 +26,8 @@ function EngineLinks()
 			"d3d12.lib",
 			"dxgi.lib",
 			"dxguid.lib",
-			"%{libDir.dxc}dxcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib",
+			"%{libDir.freetype2}windows/x64/DebugStatic/freetype.lib"
 		}
 
 	filter "configurations:Release"
@@ -35,7 +37,8 @@ function EngineLinks()
 			"imgui",
 			"d3d12.lib",
 			"dxgi.lib",
-			"%{libDir.dxc}dxcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib",
+			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib"
 		}
 	filter "configurations:Production"
 		links
@@ -44,7 +47,8 @@ function EngineLinks()
 			"imgui",
 			"d3d12.lib",
 			"dxgi.lib",
-			"%{libDir.dxc}dxcompiler.lib"
+			"%{libDir.dxc}dxcompiler.lib",
+			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib"
 		}
 	filter {}
 end

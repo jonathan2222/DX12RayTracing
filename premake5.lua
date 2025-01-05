@@ -98,9 +98,11 @@ includeDir["spdlog"] 			= "%{wks.location}/Externals/spdlog/include"
 includeDir["stb"] 				= "%{wks.location}/Externals/stb/"
 includeDir["json"] 				= "%{wks.location}/Externals/json/single_include"
 includeDir["renderdoc"] 		= "%{wks.location}/Externals/renderdoc/includes/"
+includeDir["freetype2"] 		= "%{wks.location}/Externals/freetype2/includes/"
 
 libDir = {}
 libDir["dxc"]					= "%{wks.location}/Externals/dxc/lib/"
+libDir["freetype2"]				= "%{wks.location}/Externals/freetype2/libs/"
 
 dllDir = {}
 dllDir["dxc"]					= "%{wks.location}\\Externals\\dxc\\Bin\\"

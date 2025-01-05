@@ -81,7 +81,7 @@ namespace Camera2D_Local
 
 void RS::Camera2D::Init(float left, float right, float bottom, float top, float nearPlane, float farPlane, const glm::vec3& position)
 {
-	m_Position = position;
+	m_Position = m_StartPosition = position;
 	m_Left = left;
 	m_Right = right;
 	m_Bottom = bottom;
@@ -94,7 +94,7 @@ void RS::Camera2D::Init(float left, float right, float bottom, float top, float 
 
 	m_NearPlane = nearPlane;
 	m_FarPlane = farPlane;
-	m_Roll = 0;
+	m_Roll = m_StartRoll = 0;
 
 	//Camera2D_Local::LoadFromDisk();
 	g_Left = m_Left;
@@ -140,6 +140,10 @@ void RS::Camera2D::Update(float dt)
 	//	m_Position -= m_GlobalUp * m_Speed * dt * m_SpeedFactor;
 
 	UpdatePlanes();
+}
+
+void RS::Camera2D::StartScreenShake()
+{
 }
 
 void RS::Camera2D::SetPosition(const glm::vec3& position)
