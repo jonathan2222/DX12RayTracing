@@ -592,6 +592,7 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_p
 
     m_pDynamicDescriptorHeap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]->StageDescriptors(rootParameterIndex, descriptorOffset, 1, pTexture->GetShaderResourceView(pSRVDesc));
 
+    // Note: this migth cause issues. If it does not work use the other BindTexture function and specify the offset manually.
     descriptorOffset++;
 
     TrackResource(pTexture);

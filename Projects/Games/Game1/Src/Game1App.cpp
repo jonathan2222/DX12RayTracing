@@ -142,7 +142,8 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
         // Initialize scree shake.
     }
 
-    RS::TextRenderer::Get()->RenderText("Hello World", 500, 500, 1.f, glm::vec3(1.f, 0.f, 0.f));
+    std::string score = RS::Utils::Format("Kills: {}", g_killCount);
+    RS::TextRenderer::Get()->RenderText(score, 50, RS::Display::Get()->GetHeight()*0.9f, 1.f, glm::vec3(0.f, 0.f, 1.f));
 
     RS::TextRenderer::Get()->Render(pCommandList, m_RenderTarget);
 

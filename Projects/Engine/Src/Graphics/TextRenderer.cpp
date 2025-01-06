@@ -11,6 +11,10 @@
 
 #include "Utils/Utils.h"
 
+#include "Core/Console.h"
+
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Core.TextRenderer.threshold", g_Threshold, 0.55f, "SDF text threshold");
+
 std::shared_ptr<RS::TextRenderer> RS::TextRenderer::Get()
 {
     static std::shared_ptr<TextRenderer> s_Freetype = std::make_shared<TextRenderer>();
@@ -22,9 +26,9 @@ void RS::TextRenderer::Init()
     FT_Error error = FT_Init_FreeType(&m_pLibrary);
     RS_ASSERT(error == FT_Err_Ok, "Coult not initialize freetype!");
 
-    std::string faSolid900 = RS_FONT_PATH FONT_ICON_FILE_NAME_FAS;
-    faSolid900 = Engine::GetInternalDataFilePath() + faSolid900;
-    AddFont(faSolid900);
+    std::string fontPath = RS_FONT_PATH "arial.ttf";
+    fontPath = Engine::GetInternalDataFilePath() + fontPath;
+    AddFont(fontPath);
 
     InitRenderData();
 }
@@ -55,7 +59,7 @@ bool RS::TextRenderer::AddFont(const std::string& fontPath)
 
     std::unordered_map<char, std::shared_ptr<Texture>> textures;
     m_Characters.clear();
-    for (unsigned char c = 32; c < 255; c++)
+    for (unsigned char c = 0; c < 255; c++)
     {
         error = FT_Load_Char(pFace, c, FT_LOAD_RENDER);
         if (error != FT_Err_Ok)
@@ -73,7 +77,9 @@ bool RS::TextRenderer::AddFont(const std::string& fontPath)
 
         // TODO: Render to an atlas instead of multiple textures!
         std::string name = Utils::Format("Font {} {} Texture", fontCount, (char)c);
-        auto pTexture = pCommandList->CreateTexture(slot->bitmap.width, slot->bitmap.rows, (const uint8*)slot->bitmap.buffer,
+        std::shared_ptr<Texture> pTexture = DX12Core3::Get()->pTextureBlack;
+        if (slot->bitmap.width != 0 && slot->bitmap.rows != 0)
+            pTexture = pCommandList->CreateTexture(slot->bitmap.width, slot->bitmap.rows, (const uint8*)slot->bitmap.buffer,
             DXGI_FORMAT_R8_UNORM, name);
         textures[(char)c] = pTexture;
         Character character = {
@@ -116,21 +122,19 @@ void RS::TextRenderer::Render(std::shared_ptr<RS::CommandList> pCommandList, std
 
     glm::mat4 projection = glm::transpose(glm::orthoRH(0.f, (float)desc.Width, 0.f, (float)desc.Height, -10.f, 10.f));
 
-    //D3D12_VIEWPORT viewport{};
-    //viewport.MaxDepth = 0;
-    //viewport.MinDepth = 1;
-    //viewport.TopLeftX = viewport.TopLeftY = 0;
-    //viewport.Width = desc.Width;
-    //viewport.Height = desc.Height;
-    //D3D12_RECT scissorRect{};
-    //scissorRect.left = scissorRect.top = 0;
-    //scissorRect.right = viewport.Width;
-    //scissorRect.bottom = viewport.Height;
+    D3D12_VIEWPORT viewport{};
+    viewport.MaxDepth = 0;
+    viewport.MinDepth = 1;
+    viewport.TopLeftX = viewport.TopLeftY = 0;
+    viewport.Width = desc.Width;
+    viewport.Height = desc.Height;
+    D3D12_RECT scissorRect{};
+    scissorRect.left = scissorRect.top = 0;
+    scissorRect.right = viewport.Width;
+    scissorRect.bottom = viewport.Height;
 
-    //auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
-    //auto pCommandList = pCommandQueue->GetCommandList();
-    //pCommandList->SetViewport(viewport);
-    //pCommandList->SetScissorRect(scissorRect);
+    pCommandList->SetViewport(viewport);
+    pCommandList->SetScissorRect(scissorRect);
     pCommandList->SetRootSignature(m_pRootSignature);
     pCommandList->SetPipelineState(m_GraphicsPSO);
     pCommandList->SetRenderTarget(pRenderTarget, CommandList::RenderTargetMode::ColorOnly);
@@ -147,7 +151,7 @@ void RS::TextRenderer::Render(std::shared_ptr<RS::CommandList> pCommandList, std
         } pixelData = {
             projection,
             color,
-            0.5f
+            g_Threshold
         };
         pCommandList->SetGraphicsDynamicConstantBuffer(0, sizeof(pixelData), (void*)& pixelData);
 
@@ -182,8 +186,7 @@ void RS::TextRenderer::Render(std::shared_ptr<RS::CommandList> pCommandList, std
             std::shared_ptr<Texture>& pTexture = textureMap[c];
             pCommandList->BindTexture(1, 0, pTexture);
             pCommandList->DrawInstanced(6, 1, 0, 0);
-            //pCommandQueue->ExecuteCommandList(pCommandList);
-            //break;
+
             item.x += (ch.Advance >> 6) * item.scale;
         }
     }

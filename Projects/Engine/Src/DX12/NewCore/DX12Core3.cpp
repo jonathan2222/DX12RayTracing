@@ -123,6 +123,18 @@ void RS::DX12Core3::Init(HWND window, int width, int height)
         
         m_ResizeTexturePipelineState = nullptr;
     }
+
+    // TODO: Move these to the renderer!
+    {
+        auto pCommandList = m_pDirectCommandQueue->GetCommandList();
+        uint8 value = 0u;
+        pTextureBlack = pCommandList->CreateTexture(1, 1, (const uint8*)&value, DXGI_FORMAT_R8_UNORM, "Core 1x1 Texture Black");
+        value = 255u;
+        pTextureWhite = pCommandList->CreateTexture(1, 1, (const uint8*)&value, DXGI_FORMAT_R8_UNORM, "Core 1x1 Texture White");
+        // Wait for load to finish.
+        uint64 fenceValue = m_pDirectCommandQueue->ExecuteCommandList(pCommandList);
+        m_pDirectCommandQueue->WaitForFenceValue(fenceValue);
+    }
 }
 
 void RS::DX12Core3::Release()
