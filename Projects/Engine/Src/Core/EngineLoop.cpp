@@ -14,7 +14,7 @@
 // TODO: Remove this when in relase build!
 #include "Render/ImGuiRenderer.h"
 
-#include "GUI/FreetypeAdapter.h"
+#include "Graphics/TextRenderer.h"
 
 using namespace RS;
 
@@ -39,7 +39,7 @@ void EngineLoop::Init()
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
-    FreetypeAdapter::Get()->Init();
+    TextRenderer::Get()->Init();
 
     m_DebugWindowsManager.Init();
 
@@ -48,10 +48,9 @@ void EngineLoop::Init()
 
 void EngineLoop::Release()
 {
-
     m_DebugWindowsManager.Destory();
 
-    FreetypeAdapter::Get()->Release();
+    TextRenderer::Get()->Release();
 
     DX12Core3::Get()->Release();
 

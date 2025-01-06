@@ -16,6 +16,8 @@
 
 #include "Core/Console.h"
 
+#include "Graphics/TextRenderer.h"
+
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 1.5f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
@@ -139,6 +141,10 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
 
         // Initialize scree shake.
     }
+
+    RS::TextRenderer::Get()->RenderText("Hello World", 500, 500, 1.f, glm::vec3(1.f, 0.f, 0.f));
+
+    RS::TextRenderer::Get()->Render(pCommandList, m_RenderTarget);
 
     // TODO: Change this to render to backbuffer instead of copy. Reason: If window gets resized this will not work.
     auto pTexture = m_RenderTarget->GetColorTextures()[0];
@@ -321,7 +327,7 @@ void Game1App::CreatePipelineStatePlayer()
 
 void Game1App::CreateRootSignature()
 {
-    // TODO: Have a main root signature for all shader to share?
+    // TODO: Have a main root signature for all shaders to share?
     m_pRootSignature = std::make_shared<RS::RootSignature>(D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
     uint32 currentShaderRegisterCBV = 0;

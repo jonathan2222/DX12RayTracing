@@ -126,7 +126,13 @@ namespace RS
 			D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc = nullptr,
 			D3D12_RESOURCE_STATES stateAfter = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 
-		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget);
+		enum class RenderTargetMode : uint
+		{
+			All = 0,
+			DepthOnly,
+			ColorOnly
+		};
+		void SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget, RenderTargetMode mode = RenderTargetMode::All);
 
 		void DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance);
 		void DrawIndexInstanced(uint32 indexCountPerInstance, uint32 instanceCount, uint32 startIndexLocation, int32 baseVertexLocation, uint32 startInstanceLocation);
@@ -134,6 +140,8 @@ namespace RS
 		void ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint32 newWidth, uint32 newHeight);
 
 		Microsoft::WRL::ComPtr<DX12_COMMAND_LIST_TYPE> GetGraphicsCommandList() const { return m_d3d12CommandList; }
+
+		RenderTarget* GetCurrentRenderTarget();
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
@@ -150,6 +158,8 @@ namespace RS
 
 		ID3D12RootSignature* m_pRootSignature;
 		ID3D12PipelineState* m_pPipelineState;
+
+		RenderTarget* m_pCurrentRenderTarget = nullptr;
 
 		uint64 m_ID;
 	};

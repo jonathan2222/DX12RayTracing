@@ -597,38 +597,47 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_p
     TrackResource(pTexture);
 }
 
-void RS::CommandList::SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget)
+void RS::CommandList::SetRenderTarget(const std::shared_ptr<RenderTarget>& pRenderTarget, RenderTargetMode mode)
 {
     const std::vector<std::shared_ptr<Texture>>& colorTextures = pRenderTarget->GetColorTextures();
 
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> renderTargetDescriptors;
 
     // Max 8 render targets can be bound to the rendering pipeline.
-    for (uint32 i = 0; i < 8; ++i)
+    if (mode == RenderTargetMode::All || mode == RenderTargetMode::ColorOnly)
     {
-        std::shared_ptr<Texture> pTexture = colorTextures[i];
-        if (pTexture)
+        for (uint32 i = 0; i < 8; ++i)
         {
-            TransitionBarrier(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
-            renderTargetDescriptors.push_back(pTexture->GetRenderTargetView());
+            std::shared_ptr<Texture> pTexture = colorTextures[i];
+            if (pTexture)
+            {
+                TransitionBarrier(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                renderTargetDescriptors.push_back(pTexture->GetRenderTargetView());
 
-            // Track it such that it will not get lost while in-flight (used for rendering).
-            TrackResource(pTexture);
+                // Track it such that it will not get lost while in-flight (used for rendering).
+                TrackResource(pTexture);
+            }
         }
     }
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE depthStencilDescriptor(D3D12_DEFAULT);
-    std::shared_ptr<Texture> pDepthTexture = pRenderTarget->GetDepthTexture();
-    if (pDepthTexture)
+    if (mode == RenderTargetMode::All || mode == RenderTargetMode::DepthOnly)
     {
-        TransitionBarrier(pDepthTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-        depthStencilDescriptor = pDepthTexture->GetDepthStencilView();
+        std::shared_ptr<Texture> pDepthTexture = pRenderTarget->GetDepthTexture();
+        if (pDepthTexture)
+        {
+            TransitionBarrier(pDepthTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            depthStencilDescriptor = pDepthTexture->GetDepthStencilView();
 
-        // Track it such that it will not get lost while in-flight (used for rendering).
-        TrackResource(pDepthTexture);
+            // Track it such that it will not get lost while in-flight (used for rendering).
+            TrackResource(pDepthTexture);
+        }
     }
+
     D3D12_CPU_DESCRIPTOR_HANDLE* pDSV = depthStencilDescriptor.ptr != 0 ? &depthStencilDescriptor : nullptr;
     m_d3d12CommandList->OMSetRenderTargets(renderTargetDescriptors.size(), renderTargetDescriptors.data(), FALSE, pDSV);
+
+    m_pCurrentRenderTarget = pRenderTarget.get();
 }
 
 void RS::CommandList::DrawInstanced(uint32 vertexCount, uint32 instanceCount, uint32 startVertex, uint32 startInstance)
@@ -649,4 +658,9 @@ void RS::CommandList::DrawIndexInstanced(uint32 indexCountPerInstance, uint32 in
         m_pDynamicDescriptorHeap[i]->CommitStagedDescriptorsForDraw(*this); // Binds the descriptors
 
     m_d3d12CommandList->DrawIndexedInstanced(indexCountPerInstance, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
+}
+
+RS::RenderTarget* RS::CommandList::GetCurrentRenderTarget()
+{
+    return m_pCurrentRenderTarget;
 }
