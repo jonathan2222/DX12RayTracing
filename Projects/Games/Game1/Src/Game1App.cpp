@@ -13,6 +13,7 @@
 #include "glm/mat4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
+#include <glm/gtx/norm.hpp>
 
 #include "Core/Console.h"
 
@@ -25,8 +26,12 @@ RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWi
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 1.5f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.4f, "Player Attack Duration in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDamage", g_PlayerAttackDamage, 50.f, "Player Attack Damage");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.spread", g_BitSpread, 2.f, "Bit spread");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.friction", g_BitFriction, 1.25f, "Bit friction");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.maxPickupSpeed", g_BitMaxPickupSpeed, 0.5f, "Bit max pickup speed");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.killCount", g_killCount, 0, "Number of kills");
+RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.bits.count", g_BitCount, 0, "Number of bits");
 
 Game1App::Game1App()
 {
@@ -137,17 +142,53 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     {
         pButtonOnSound->Play();
         // Damage entities
-        for (uint i : m_EnemiesThatOverlapPlayer)
+        for (uint i : m_EntitiesThatOverlapPlayer)
         {
-            Entity& ent = m_Enemies[i];
-            ent.m_Health -= g_PlayerAttackDamage;
+            Entity& ent = m_Entities[i];
+            if (Entity::IsEnemy(ent.m_Type))
+            {
+                ent.m_Health -= g_PlayerAttackDamage;
+
+                Entity::EntityInfo info = Entity::GetEntityInfoFromType(ent.m_Type);
+
+                m_PlayerCurrentHealth -= info.attack;
+                if (m_PlayerCurrentHealth <= 0)
+                {
+                    // Player is dead!
+                }
+
+                // Spawn Bits!
+                if (ent.m_Health <= 0)
+                {
+                    for (uint bitIndex = 0; bitIndex < info.bitCount; bitIndex++)
+                        SpawnBit(ent.m_Position, ent.m_Velocity, pCommandList);
+                }
+            }
         }
 
         // Initialize scree shake.
     }
 
+    // Gather bits
+    for (uint i : m_EntitiesThatOverlapPlayer)
+    {
+        Entity& ent = m_Entities[i];
+        if (ent.m_Type == Entity::Type::BIT)
+        {
+            float v2 = glm::length2(ent.m_Velocity);
+            if (v2 > g_BitMaxPickupSpeed)
+                continue;
+            g_BitCount++;
+            ent.m_Health = 0;
+        }
+    }
+
     std::string score = RS::Utils::Format("Kills: {}", g_killCount);
-    RS::TextRenderer::Get()->RenderText(score, 50, RS::Display::Get()->GetHeight()*0.9f, 1.f, glm::vec3(0.f, 0.f, 1.f));
+    RS::TextRenderer::Get()->RenderText(score, 50, RS::Display::Get()->GetHeight() * 0.9f, 1.f, glm::vec3(0.f, 0.f, 1.f));
+    std::string health = RS::Utils::Format("Health: {}", m_PlayerCurrentHealth);
+    RS::TextRenderer::Get()->RenderText(health, 50, RS::Display::Get()->GetHeight() * 0.9f - 50, 1.f, glm::vec3(0.f, 0.f, 1.f));
+    std::string bits = RS::Utils::Format("Bits: {}", g_BitCount);
+    RS::TextRenderer::Get()->RenderText(bits, 50, RS::Display::Get()->GetHeight() * 0.9f - 100, 1.f, glm::vec3(0.f, 0.f, 1.f));
 
     RS::TextRenderer::Get()->Render(pCommandList, m_RenderTarget);
 
@@ -369,8 +410,17 @@ void Game1App::UpdateEntities(const RS::FrameStats& frameStats)
 {
     for (int i = 0; i < m_ActiveEntities; i++)
     {
-        Entity& ent = m_Enemies[i];
+        Entity& ent = m_Entities[i];
         ent.m_Position += ent.m_Velocity * frameStats.frame.currentDT;
+
+        float v2 = glm::length2(ent.m_Velocity);
+        if (ent.m_Friction > FLT_EPSILON)
+        {
+            if (v2 > 0.005)
+                ent.m_Velocity -= ent.m_Velocity * ent.m_Friction * frameStats.frame.currentDT;
+            else
+                ent.m_Velocity = glm::vec2(0.f, 0.f);
+        }
 
         // Remove entities outside of bounds and only when they are going away from the playing area.
         bool isHeadingOutside = glm::dot(ent.m_Position, ent.m_Velocity) > 0.f;
@@ -386,10 +436,10 @@ void Game1App::UpdateEntities(const RS::FrameStats& frameStats)
             m_ActiveEntities--;
             if (i != m_ActiveEntities + 1)
             {
-                m_Enemies[i] = m_Enemies[m_ActiveEntities];
+                m_Entities[i] = m_Entities[m_ActiveEntities];
                 i--;
             }
-            m_Enemies.pop_back();
+            m_Entities.pop_back();
         }
     }
 
@@ -466,17 +516,52 @@ void Game1App::SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr
     glm::vec2 velocity(std::cos(angle), std::sin(angle));
     velocity *= std::min(m_WorldSize.x, m_WorldSize.y) * 0.5f * 0.5f;
     velocity = glm::normalize(velocity - spawnPoint) * initialSpeed;
-    m_Enemies.emplace_back(type, spawnPoint, velocity);
+    m_Entities.emplace_back(type, spawnPoint, velocity);
 
     m_ActiveEntities++;
     
     // Add entity to instance data
-    Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(type);
+    Entity::EntityInfo info = Entity::GetEntityInfoFromType(type);
     InstanceData instanceData;
     instanceData.transform = glm::transpose(glm::translate(glm::vec3(spawnPoint, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
     instanceData.type = (uint)type;
     instanceData.color = info.color;
     
+    if (m_ActiveEntities > (uint)m_InstanceData.size())
+    {
+        m_InstanceData.push_back(instanceData);
+
+        // Update GPU buffer
+        uint newCount = (uint)m_InstanceData.size();
+        ResizeEntitiesInstanceData(newCount, pCommandList, true);
+    }
+    else
+    {
+        m_InstanceData[m_ActiveEntities - 1] = instanceData;
+    }
+}
+
+void Game1App::SpawnBit(const glm::vec2& pos, const glm::vec2& initialSpeed, std::shared_ptr<RS::CommandList> pCommandList)
+{
+    float spread = g_BitSpread; // In world space
+
+    // Spawn the bit in a unit circle around the given position.
+    float angle = RS::Utils::RandRad();
+    glm::vec2 velocity(std::cos(angle), std::sin(angle));
+    velocity *= spread;
+    velocity += initialSpeed;
+    float friction = g_BitFriction;
+    m_Entities.emplace_back(Entity::Type::BIT, pos, velocity, friction);
+
+    m_ActiveEntities++;
+
+    // Add entity to instance data
+    Entity::EntityInfo info = Entity::GetEntityInfoFromType(Entity::Type::BIT);
+    InstanceData instanceData;
+    instanceData.transform = glm::transpose(glm::translate(glm::vec3(pos, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
+    instanceData.type = (uint)Entity::Type::BIT;
+    instanceData.color = info.color;
+
     if (m_ActiveEntities > (uint)m_InstanceData.size())
     {
         m_InstanceData.push_back(instanceData);
@@ -520,15 +605,15 @@ void Game1App::UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pComm
     uint counter = 0;
     for (uint i = 0; i < m_ActiveEntities; i++)
     {
-        Entity& enemy = m_Enemies[i];
-        Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(enemy.m_Type);
+        Entity& enemy = m_Entities[i];
+        Entity::EntityInfo info = Entity::GetEntityInfoFromType(enemy.m_Type);
 
         InstanceData& instance = m_InstanceData[i];
         instance.transform = glm::transpose(glm::translate(glm::vec3(enemy.m_Position, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
         instance.type = (uint)enemy.m_Type;
 
         bool isOverlapping = false;
-        uint overlappingEntityIdx = counter < m_EnemiesThatOverlapPlayer.size() ? m_EnemiesThatOverlapPlayer[counter] : (uint)-1;
+        uint overlappingEntityIdx = counter < m_EntitiesThatOverlapPlayer.size() ? m_EntitiesThatOverlapPlayer[counter] : (uint)-1;
         if (overlappingEntityIdx != (uint)-1)
         {
             if (overlappingEntityIdx == i)
@@ -564,13 +649,13 @@ void Game1App::FindOverlappingEnemiesWithPlayer()
     };
 
     AABB playerAABB(m_PlayerPosition, m_PlayerSize);
-    m_EnemiesThatOverlapPlayer.clear();
-    for (uint i = 0; i < (uint)m_Enemies.size(); i++)
+    m_EntitiesThatOverlapPlayer.clear();
+    for (uint i = 0; i < (uint)m_Entities.size(); i++)
     {
-        Entity& ent = m_Enemies[i];
-        Entity::EnemyInfo info = Entity::GetEnemyInfoFromType(ent.m_Type);
+        Entity& ent = m_Entities[i];
+        Entity::EntityInfo info = Entity::GetEntityInfoFromType(ent.m_Type);
         AABB aabb(ent.m_Position, info.size);
         if (aabb.IsOverlapping(playerAABB))
-            m_EnemiesThatOverlapPlayer.push_back(i);
+            m_EntitiesThatOverlapPlayer.push_back(i);
     }
 }

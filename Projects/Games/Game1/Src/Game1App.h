@@ -34,6 +34,7 @@ private:
 	void DrawPlayer(std::shared_ptr<RS::CommandList> pCommandList);
 
 	void SpawnEnemy(Entity::Type type, float initialSpeed, std::shared_ptr<RS::CommandList> pCommandList);
+	void SpawnBit(const glm::vec2& pos, const glm::vec2& initialSpeed, std::shared_ptr<RS::CommandList> pCommandList);
 
 	void ResizeEntitiesInstanceData(uint newCount, std::shared_ptr<RS::CommandList> pCommandList, bool updateData);
 	void UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pCommandList);
@@ -73,12 +74,15 @@ private:
 
 	// Game data
 	glm::vec2 m_WorldSize;
-	std::vector<Entity> m_Enemies;
-	std::vector<uint> m_EnemiesThatOverlapPlayer;
+	std::vector<Entity> m_Entities;
+	std::vector<uint> m_EntitiesThatOverlapPlayer;
 	uint m_ActiveEntities = 0;
 
 	glm::vec2 m_PlayerPosition;
 	glm::vec2 m_PlayerSize = glm::vec2(3.f, 3.f);
+
+	uint m_PlayerMaxHealth = 100;
+	int m_PlayerCurrentHealth = 100;
 
 	// Sounds
 	RS::Sound* pButtonOnSound = nullptr;

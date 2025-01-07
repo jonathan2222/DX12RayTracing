@@ -39,6 +39,7 @@ PSInput VertexMain(float4 position : SV_POSITION, float2 uv : UV0, uint instance
 
 static uint TYPE_SQUARE = 0;
 static uint TYPE_CIRCLE = 1;
+static uint TYPE_BIT    = 2;
 
 float4 PixelMain(PSInput input) : SV_TARGET
 {
@@ -51,6 +52,10 @@ float4 PixelMain(PSInput input) : SV_TARGET
         float2 v = (frac(input.uv)-float2(0.5,0.5)) * 2.f;
         if (dot(v,v) > 1.)
             discard;
+        return color;
+    }
+    else if (type == TYPE_BIT)
+    {
         return color;
     }
     return float4(1.f, 0.f, 1.f, 1.f);
