@@ -56,6 +56,7 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 #define RS_TEXTURE_PATH "Textures/"
 #define RS_MODEL_PATH "Models/"
 #define RS_FONT_PATH "Fonts/"
+#define RS_AUDIO_PATH "Audio/"
 
 #define RS_UNREFERENCED_VARIABLE(v) (void)v
 #define FLAG(x) (1 << x)

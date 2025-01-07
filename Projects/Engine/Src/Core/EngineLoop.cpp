@@ -15,6 +15,7 @@
 #include "Render/ImGuiRenderer.h"
 
 #include "Graphics/RenderCore.h"
+#include "Audio/AudioSystem.h"
 
 using namespace RS;
 
@@ -41,6 +42,8 @@ void EngineLoop::Init()
 
     GetRenderCore()->Init();
 
+    AudioSystem::Get()->Init();
+
     m_DebugWindowsManager.Init();
 
     InitConsoleCommands();
@@ -49,6 +52,8 @@ void EngineLoop::Init()
 void EngineLoop::Release()
 {
     m_DebugWindowsManager.Destory();
+
+    AudioSystem::Get()->Destroy();
 
     GetRenderCore()->Destory();
 
@@ -129,6 +134,8 @@ void EngineLoop::Tick(const RS::FrameStats& frameStats)
 
     if (additionalTickFunction)
         additionalTickFunction(frameStats);
+
+    AudioSystem::Get()->Update();
 
     DX12Core3::Get()->Render();
 }

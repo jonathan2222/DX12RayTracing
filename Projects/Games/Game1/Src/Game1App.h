@@ -11,6 +11,8 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 
+#include "Audio/Sound.h"
+
 class Game1App
 {
 public:
@@ -77,4 +79,7 @@ private:
 
 	glm::vec2 m_PlayerPosition;
 	glm::vec2 m_PlayerSize = glm::vec2(3.f, 3.f);
+
+	// Sounds
+	RS::Sound* pButtonOnSound = nullptr;
 };

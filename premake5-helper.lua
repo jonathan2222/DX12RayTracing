@@ -29,7 +29,7 @@ function EngineLinks()
 			"dxguid.lib",
 			"%{libDir.dxc}dxcompiler.lib",
 			"%{libDir.freetype2}windows/x64/DebugStatic/freetype.lib",
-			"%{libDir.PortAudio}Debug/portaudio_x64.lib"
+			"%{libDir.PortAudio}Debug/portaudio_static_x64.lib"
 		}
 
 	filter "configurations:Release"
@@ -41,7 +41,7 @@ function EngineLinks()
 			"dxgi.lib",
 			"%{libDir.dxc}dxcompiler.lib",
 			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib",
-			"%{libDir.PortAudio}Release/portaudio_x64.lib"
+			"%{libDir.PortAudio}Release/portaudio_static_x64.lib"
 		}
 	filter "configurations:Production"
 		links
@@ -52,7 +52,7 @@ function EngineLinks()
 			"dxgi.lib",
 			"%{libDir.dxc}dxcompiler.lib",
 			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib",
-			"%{libDir.PortAudio}Release/portaudio_x64.lib"
+			"%{libDir.PortAudio}Release/portaudio_static_x64.lib"
 		}
 	filter {}
 end

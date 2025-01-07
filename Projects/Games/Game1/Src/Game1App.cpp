@@ -18,7 +18,9 @@
 
 #include "Graphics/TextRenderer.h"
 
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
+#include "Audio/AudioSystem.h"
+
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.4f, "Player Border Width");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 1.5f, "Player Attack Speed in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDamage", g_PlayerAttackDamage, 50.f, "Player Attack Damage");
@@ -132,6 +134,7 @@ void Game1App::Tick(const RS::FrameStats& frameStats)
     
     if (firstAttackFrame)
     {
+        pButtonOnSound->Play();
         // Damage entities
         for (uint i : m_EnemiesThatOverlapPlayer)
         {
@@ -236,6 +239,10 @@ void Game1App::Init()
 
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
+
+    std::string audioPath = RS::Engine::GetDataFilePath() + RS_AUDIO_PATH + "SoundEffects/ButtonOn.mp3";
+    pButtonOnSound = RS::AudioSystem::Get()->CreateSound(audioPath);
+    pButtonOnSound->SetVolume(0.1f);
 }
 
 void Game1App::CreatePipelineStateEntities()

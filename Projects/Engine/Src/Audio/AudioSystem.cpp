@@ -138,6 +138,8 @@ void RS::AudioSystem::LoadStreamFile(SoundHandle* pSoundHandle, const std::strin
 	if (ext == "mp3") pSoundHandle->type = SoundHandle::Type::TYPE_MP3;
 	if (ext == "wav") pSoundHandle->type = SoundHandle::Type::TYPE_WAV;
 
+	RS_ASSERT(std::filesystem::exists(filePath), "Could not find sound effect file {}!", filePath.c_str());
+
 	// Load file.
 	switch (pSoundHandle->type)
 	{
@@ -169,6 +171,8 @@ void RS::AudioSystem::LoadEffectFile(SoundHandle* pSoundHandle, const std::strin
 	std::string ext = filePath.substr(filePath.find_last_of(".") + 1);
 	if (ext == "mp3") pSoundHandle->type = SoundHandle::Type::TYPE_MP3;
 	if (ext == "wav") pSoundHandle->type = SoundHandle::Type::TYPE_WAV;
+
+	RS_ASSERT(std::filesystem::exists(filePath), "Could not find sound effect file {}!", filePath.c_str());
 
 	// Load file.
 	switch (pSoundHandle->type)
