@@ -13,6 +13,8 @@
 
 #include "Core/Console.h"
 
+#include "Graphics/RenderCore.h"
+
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Core.TextRenderer.threshold", g_Threshold, 0.55f, "SDF text threshold");
 
 std::shared_ptr<RS::TextRenderer> RS::TextRenderer::Get()
@@ -33,9 +35,11 @@ void RS::TextRenderer::Init()
     InitRenderData();
 }
 
-void RS::TextRenderer::Release()
+void RS::TextRenderer::Destory()
 {
     FT_Done_FreeType(m_pLibrary);
+    m_pRootSignature.reset();
+    m_pVertexBufferResource.reset();
 }
 
 bool RS::TextRenderer::AddFont(const std::string& fontPath)
@@ -77,7 +81,7 @@ bool RS::TextRenderer::AddFont(const std::string& fontPath)
 
         // TODO: Render to an atlas instead of multiple textures!
         std::string name = Utils::Format("Font {} {} Texture", fontCount, (char)c);
-        std::shared_ptr<Texture> pTexture = DX12Core3::Get()->pTextureBlack;
+        std::shared_ptr<Texture> pTexture = GetRenderCore()->pTextureBlack;
         if (slot->bitmap.width != 0 && slot->bitmap.rows != 0)
             pTexture = pCommandList->CreateTexture(slot->bitmap.width, slot->bitmap.rows, (const uint8*)slot->bitmap.buffer,
             DXGI_FORMAT_R8_UNORM, name);

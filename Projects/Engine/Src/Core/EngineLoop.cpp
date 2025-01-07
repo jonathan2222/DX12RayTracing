@@ -14,7 +14,7 @@
 // TODO: Remove this when in relase build!
 #include "Render/ImGuiRenderer.h"
 
-#include "Graphics/TextRenderer.h"
+#include "Graphics/RenderCore.h"
 
 using namespace RS;
 
@@ -39,7 +39,7 @@ void EngineLoop::Init()
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
     DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
 
-    TextRenderer::Get()->Init();
+    GetRenderCore()->Init();
 
     m_DebugWindowsManager.Init();
 
@@ -50,7 +50,7 @@ void EngineLoop::Release()
 {
     m_DebugWindowsManager.Destory();
 
-    TextRenderer::Get()->Release();
+    GetRenderCore()->Destory();
 
     DX12Core3::Get()->Release();
 

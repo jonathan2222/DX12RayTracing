@@ -1,6 +1,7 @@
 #pragma once
 
 #include <format>
+#include <filesystem>
 
 namespace RS::Utils
 {
@@ -279,5 +280,17 @@ namespace RS::Utils
 	inline std::string Format(const char* msg)
 	{
 		return Format("{}", msg);
+	}
+
+	inline std::string GetNameFromPath(const std::string& path)
+	{
+		std::filesystem::path fsPath(path);
+		return fsPath.stem().string();
+	}
+
+	inline std::string GetExtension(const std::string& path)
+	{
+		std::filesystem::path fsPath(path);
+		return fsPath.extension().string();
 	}
 }

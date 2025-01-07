@@ -17,6 +17,8 @@ namespace RS
 		void DrawRect(float x, float y, float width, float height, Color color);
 		void DrawCircle(float x, float y, float radius, Color color);
 
+		void Render();
+
 	private:
 		std::shared_ptr<RS::RootSignature> m_pRootSignature;
 		RS::GraphicsPSO m_GraphicsPSO;

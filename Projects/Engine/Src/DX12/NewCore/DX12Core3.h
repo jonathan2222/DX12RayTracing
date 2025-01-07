@@ -69,10 +69,6 @@ namespace RS
 
 		std::array<uint32, FRAME_BUFFER_COUNT> GetNumberOfPendingPremovals();
 
-		// TODO: Move these to the renderer!
-		std::shared_ptr<Texture> pTextureBlack;
-		std::shared_ptr<Texture> pTextureWhite;
-
 	private:
 		DX12Core3();
 

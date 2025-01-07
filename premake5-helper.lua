@@ -13,7 +13,8 @@ function EngineIncludes()
 		"%{includeDir.json}",
 		"%{includeDir.glfw}",
 		"%{includeDir.renderdoc}",
-		"%{includeDir.freetype2}"
+		"%{includeDir.freetype2}",
+		"%{includeDir.PortAudio}"
 	}
 end
 
@@ -27,7 +28,8 @@ function EngineLinks()
 			"dxgi.lib",
 			"dxguid.lib",
 			"%{libDir.dxc}dxcompiler.lib",
-			"%{libDir.freetype2}windows/x64/DebugStatic/freetype.lib"
+			"%{libDir.freetype2}windows/x64/DebugStatic/freetype.lib",
+			"%{libDir.PortAudio}Debug/portaudio_x64.lib"
 		}
 
 	filter "configurations:Release"
@@ -38,7 +40,8 @@ function EngineLinks()
 			"d3d12.lib",
 			"dxgi.lib",
 			"%{libDir.dxc}dxcompiler.lib",
-			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib"
+			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib",
+			"%{libDir.PortAudio}Release/portaudio_x64.lib"
 		}
 	filter "configurations:Production"
 		links
@@ -48,7 +51,8 @@ function EngineLinks()
 			"d3d12.lib",
 			"dxgi.lib",
 			"%{libDir.dxc}dxcompiler.lib",
-			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib"
+			"%{libDir.freetype2}windows/x64/ReleaseStatic/freetype.lib",
+			"%{libDir.PortAudio}Release/portaudio_x64.lib"
 		}
 	filter {}
 end

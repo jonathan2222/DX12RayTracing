@@ -33,7 +33,7 @@ namespace RS
 		static std::shared_ptr<TextRenderer> Get();
 
 		void Init();
-		void Release();
+		void Destory();
 		
 		bool AddFont(const std::string& fontPath);
 
