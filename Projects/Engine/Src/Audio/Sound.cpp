@@ -4,6 +4,8 @@
 #include "PortAudio.h"
 #include "AudioSystem.h"
 
+#include "Core/LaunchArguments.h"
+
 RS::Sound::Sound(PortAudio* pPortAudioPtr)
     : m_pPortAudioPtr(pPortAudioPtr)
 {
@@ -93,6 +95,10 @@ void RS::Sound::Destroy()
 void RS::Sound::Play()
 {
 	Stop();
+
+	if (LaunchArguments::Contains(LaunchParams::noSound))
+		return;
+
 	//m_pUserData->delayBuffer.clear();
 	PORT_AUDIO_CHECK(Pa_StartStream(m_pStream), "Failed to start stream!");
 	m_IsStreamOn = true;

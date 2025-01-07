@@ -4,3 +4,4 @@ DEF_LAUNCH_PARAM(logDXNamedObjects, 0, "Logs all calls to when a DirectX object 
 DEF_LAUNCH_PARAM(logShaderDebug, 0, "Logs extra info when compiling shader sources.")
 DEF_LAUNCH_PARAM(logResources, 0, "Logs info about the GPU resources.")
 DEF_LAUNCH_PARAM(injectRenderDoc, 0, "Enable RenderDoc to inject automatically into the process at startup.")
+DEF_LAUNCH_PARAM(noSound, 0, "Disable all types of sounds.")

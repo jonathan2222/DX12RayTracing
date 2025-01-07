@@ -19,10 +19,11 @@
 #include "Graphics/TextRenderer.h"
 
 #include "Audio/AudioSystem.h"
+#include "Audio/Filters/LowpassFilter.h"
 
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.4f, "Player Border Width");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.borderWidth", g_PlayerBorderWidth, 0.1f, "Player Border Width");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackSpeed", g_PlayerAttackSpeed, 1.5f, "Player Attack Speed in Seconds");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.1f, "Player Attack Duration in Seconds");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttackDuration, 0.4f, "Player Attack Duration in Seconds");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDamage", g_PlayerAttackDamage, 50.f, "Player Attack Damage");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.killCount", g_killCount, 0, "Number of kills");
@@ -240,9 +241,15 @@ void Game1App::Init()
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
 
-    std::string audioPath = RS::Engine::GetDataFilePath() + RS_AUDIO_PATH + "SoundEffects/ButtonOn.mp3";
-    pButtonOnSound = RS::AudioSystem::Get()->CreateSound(audioPath);
-    pButtonOnSound->SetVolume(0.1f);
+    std::string audioBasePath = RS::Engine::GetDataFilePath() + RS_AUDIO_PATH;
+    pButtonOnSound = RS::AudioSystem::Get()->CreateSound(audioBasePath + "SoundEffects/ButtonOn.mp3");
+    pButtonOnSound->SetVolume(0.015f);
+
+    pBackgroundSound = RS::AudioSystem::Get()->CreateSound(audioBasePath + "Music/MedievalMusic.mp3");
+    pBackgroundSound->SetVolume(0.018f);
+    pBackgroundSound->SetLoop(true);
+    pBackgroundSound->AddFilter(new RS::LowpassFilter());
+    pBackgroundSound->Play();
 }
 
 void Game1App::CreatePipelineStateEntities()

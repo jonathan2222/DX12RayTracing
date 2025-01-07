@@ -82,4 +82,5 @@ private:
 
 	// Sounds
 	RS::Sound* pButtonOnSound = nullptr;
+	RS::Sound* pBackgroundSound = nullptr;
 };
