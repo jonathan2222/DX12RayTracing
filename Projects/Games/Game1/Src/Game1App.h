@@ -67,6 +67,10 @@ private:
 		glm::mat4 transform;
 		glm::vec3 color;
 		uint type;
+		float scale = 1.f;
+		uint padding0;
+		uint padding1;
+		uint padding2;
 	};
 	std::shared_ptr<RS::Buffer> m_InstanceBuffer;
 	std::vector<InstanceData> m_InstanceData;

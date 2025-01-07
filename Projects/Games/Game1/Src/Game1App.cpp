@@ -28,7 +28,7 @@ RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDuration", g_PlayerAttac
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.player.attackDamage", g_PlayerAttackDamage, 50.f, "Player Attack Damage");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.spread", g_BitSpread, 2.f, "Bit spread");
 RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.friction", g_BitFriction, 1.25f, "Bit friction");
-RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.maxPickupSpeed", g_BitMaxPickupSpeed, 0.5f, "Bit max pickup speed");
+RS_ADD_GLOBAL_CONSOLE_VAR(float, "Game1App.bits.maxPickupSpeed", g_BitMaxPickupSpeed, 1.25f, "Bit max pickup speed");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.activeEntities", g_ActiveEntities, 0, "Active entities");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.killCount", g_killCount, 0, "Number of kills");
 RS_ADD_GLOBAL_READONLY_CONSOLE_VAR(uint, "Game1App.bits.count", g_BitCount, 0, "Number of bits");
@@ -422,6 +422,11 @@ void Game1App::UpdateEntities(const RS::FrameStats& frameStats)
                 ent.m_Velocity = glm::vec2(0.f, 0.f);
         }
 
+        if (ent.m_Type == Entity::Type::BIT)
+        {
+            ent.m_Scale = RS::Utils::Lerp(1.f, 1.5f, RS::Utils::Smoothstep(0.005f, 5.f, v2));
+        }
+
         // Remove entities outside of bounds and only when they are going away from the playing area.
         bool isHeadingOutside = glm::dot(ent.m_Position, ent.m_Velocity) > 0.f;
         bool isOutsideWorld =   std::abs(ent.m_Position.x) > m_WorldSize.x * 0.5f * 1.1f &&
@@ -605,12 +610,13 @@ void Game1App::UpdateEntitiesInstanceData(std::shared_ptr<RS::CommandList> pComm
     uint counter = 0;
     for (uint i = 0; i < m_ActiveEntities; i++)
     {
-        Entity& enemy = m_Entities[i];
-        Entity::EntityInfo info = Entity::GetEntityInfoFromType(enemy.m_Type);
+        Entity& entity = m_Entities[i];
+        Entity::EntityInfo info = Entity::GetEntityInfoFromType(entity.m_Type);
 
         InstanceData& instance = m_InstanceData[i];
-        instance.transform = glm::transpose(glm::translate(glm::vec3(enemy.m_Position, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
-        instance.type = (uint)enemy.m_Type;
+        instance.transform = glm::transpose(glm::translate(glm::vec3(entity.m_Position, 0.f)) * glm::scale(glm::vec3(info.size, 1.f)));
+        instance.type = (uint)entity.m_Type;
+        instance.scale = entity.m_Scale;
 
         bool isOverlapping = false;
         uint overlappingEntityIdx = counter < m_EntitiesThatOverlapPlayer.size() ? m_EntitiesThatOverlapPlayer[counter] : (uint)-1;

@@ -30,12 +30,12 @@ public:
 
 public:
 	Entity(Type type, const glm::vec2& pos, const glm::vec2& vel, float friction = 0.f, float health = 100.f)
-		: m_Type(type), m_Position(pos), m_Velocity(vel), m_Friction(friction), m_Health(health) {}
+		: m_Type(type), m_Position(pos), m_Velocity(vel), m_Friction(friction), m_Health(health), m_Scale(1.f) {}
 
 	Type m_Type;
 	glm::vec2 m_Position;
 	glm::vec2 m_Velocity;
 	float m_Friction;
 	float m_Health;
-
+	float m_Scale;
 };

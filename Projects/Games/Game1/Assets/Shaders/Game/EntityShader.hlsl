@@ -21,25 +21,29 @@ struct InstanceData
     float4x4 transform;
     float3 color;
     uint type;
+    float scale;
+    uint padding0;
+    uint padding1;
+    uint padding2;
 };
 StructuredBuffer<InstanceData> vsInstanceData : register(t0, SRV_SPACE);
+
+static uint TYPE_SQUARE = 0;
+static uint TYPE_CIRCLE = 1;
+static uint TYPE_BIT    = 2;
 
 PSInput VertexMain(float4 position : SV_POSITION, float2 uv : UV0, uint instanceIndex : SV_InstanceID)
 {
     PSInput result = (PSInput)0;
 
     InstanceData instanceData = vsInstanceData[instanceIndex]; 
-    result.position = mul(mul(env.camera, instanceData.transform), float4(position.xyz, 1.0f)); // Clip space.
+    result.position = mul(mul(env.camera, instanceData.transform), float4(position.xyz * instanceData.scale , 1.0f)); // Clip space.
     result.uv = uv;
-    result.type = instanceData.type;
     result.color = instanceData.color;
+    result.type = instanceData.type;
 
     return result;
 }
-
-static uint TYPE_SQUARE = 0;
-static uint TYPE_CIRCLE = 1;
-static uint TYPE_BIT    = 2;
 
 float4 PixelMain(PSInput input) : SV_TARGET
 {
