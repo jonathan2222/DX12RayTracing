@@ -248,9 +248,9 @@ void Game1App::Init()
 
     D3D12_CLEAR_VALUE clearValue;
     clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    clearValue.Color[0] = 0.2f;
-    clearValue.Color[1] = 0.5f;
-    clearValue.Color[2] = 0.1f;
+    clearValue.Color[0] = 0.02f;
+    clearValue.Color[1] = 0.02f;
+    clearValue.Color[2] = 0.02f;
     clearValue.Color[3] = 1.0f;
     m_RenderTarget = std::make_shared<RS::RenderTarget>();
     auto pRenderTexture = pCommandList->CreateTexture(
