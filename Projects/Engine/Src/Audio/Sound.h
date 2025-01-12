@@ -3,6 +3,11 @@
 #include "PCMFunctions.h"
 #include "Filters/Filter.h"
 
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <queue>
+
 namespace RS
 {
 	class PortAudio;
@@ -61,5 +66,27 @@ namespace RS
 		PCM::UserData* m_pUserData = nullptr;
 		bool m_IsStreamOn = false;
 		std::string m_Name = "NO_NAME";
+
+	private:
+		void ThreadFunction(const std::string& threadName);
+
+		// Threading (TODO: try to minimize the number of threads! We do not want one thread per sound!)
+		std::thread* m_pThread;
+		std::mutex m_Mutex;
+		std::condition_variable m_CV;
+		bool m_Running = true;
+		enum class ItemType
+		{
+			None,
+			Play,
+			Pause,
+			Stop
+		};
+		struct QueueItem
+		{
+			ItemType m_Type = ItemType::None;
+			Sound* m_pSound = nullptr;
+		};
+		std::queue<QueueItem> m_TaskQueue;
 	};
 }

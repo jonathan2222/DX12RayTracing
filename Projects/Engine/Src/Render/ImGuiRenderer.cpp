@@ -142,8 +142,8 @@ void RS::ImGuiRenderer::InternalInit()
 	m_IsInitialized = true;
 	m_IsReleased = false;
 
-	auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
-	auto pCommandList = pCommandQueue->GetCommandList();
+	//auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
+	//auto pCommandList = pCommandQueue->GetCommandList();
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();

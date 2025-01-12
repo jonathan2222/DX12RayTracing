@@ -167,8 +167,8 @@ void RS::DX12Core3::Render()
     ReleasePendingResourceRemovals(frameIndex);
 
     // Clear swap chain's back buffer.
-    auto pCommandQueue = GetDirectCommandQueue();
-    auto pCommandList = pCommandQueue->GetCommandList();
+    //auto pCommandQueue = GetDirectCommandQueue();
+    //auto pCommandList = pCommandQueue->GetCommandList();
     //float pClearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     //pCommandList->ClearTexture(m_pSwapChain->GetCurrentBackBuffer(), pClearColor);
     //pCommandQueue->ExecuteCommandList(pCommandList);
@@ -238,6 +238,7 @@ void RS::DX12Core3::ResizeTexture(const std::shared_ptr<Texture>& pTexture, uint
         auto pCommandList = pCommandQueue->GetCommandList();
         pSRVTexture = pCommandList->CreateTexture(textureDesc.Width, textureDesc.Height, nullptr, textureDesc.Format, copyName);
         pCommandList->CopyResource(pSRVTexture, pTexture);
+        // TODO: Might need to wait for this to have been executed before executing the next one!
         pCommandQueue->ExecuteCommandList(pCommandList);
     }
 

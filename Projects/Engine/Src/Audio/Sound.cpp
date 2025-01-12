@@ -6,6 +6,8 @@
 
 #include "Core/LaunchArguments.h"
 
+#include "Core/CorePlatform.h"
+
 RS::Sound::Sound(PortAudio* pPortAudioPtr)
     : m_pPortAudioPtr(pPortAudioPtr)
 {
@@ -39,6 +41,11 @@ void RS::Sound::Init(PCM::UserData* pUserData)
 		PCM::PaCallbackPCM,
 		m_pUserData);
 	PORT_AUDIO_CHECK(err, "Failed to open default stream!");
+
+	// Threading
+	static uint s_SoundCounter = 0;
+	std::string threadName = Utils::Format("SoundThread #{}", s_SoundCounter++);
+	m_pThread = new std::thread(&RS::Sound::ThreadFunction, this, threadName);
 }
 
 void RS::Sound::Destroy()
@@ -46,6 +53,7 @@ void RS::Sound::Destroy()
 	if (IsCreated())
 	{
 		Stop();
+
 		PORT_AUDIO_CHECK(Pa_CloseStream(m_pStream), "Failed to close stream!");
 		m_pStream = nullptr;
 
@@ -90,29 +98,42 @@ void RS::Sound::Destroy()
 			m_pUserData = nullptr;
 		}
 	}
+
+	// Stop and delete thread
+	m_Running = false;
+	if (m_pThread == nullptr)
+		return;
+
+	m_CV.notify_one();
+	m_pThread->join();
+	delete m_pThread;
+	m_pThread = nullptr;
 }
 
 void RS::Sound::Play()
 {
-	Stop();
-
 	if (LaunchArguments::Contains(LaunchParams::noSound))
 		return;
 
-	//m_pUserData->delayBuffer.clear();
-	PORT_AUDIO_CHECK(Pa_StartStream(m_pStream), "Failed to start stream!");
-	m_IsStreamOn = true;
+	std::unique_lock<std::mutex> readLock(m_Mutex);
+	QueueItem item;
+	item.m_Type = ItemType::Play;
+	item.m_pSound = this;
+	m_TaskQueue.push(item);
+	m_CV.notify_one();
 }
 
 void RS::Sound::Pause()
 {
-	if (m_IsStreamOn)
-	{
-		PORT_AUDIO_CHECK(Pa_StopStream(m_pStream), "Failed to stop stream!");
-		PCM::SetPos(&m_pUserData->handle, m_pUserData->handle.pos);
-		m_pUserData->finished = false;
-		m_IsStreamOn = false;
-	}
+	if (LaunchArguments::Contains(LaunchParams::noSound))
+		return;
+
+	std::unique_lock<std::mutex> readLock(m_Mutex);
+	QueueItem item;
+	item.m_Type = ItemType::Pause;
+	item.m_pSound = this;
+	m_TaskQueue.push(item);
+	m_CV.notify_one();
 }
 
 void RS::Sound::Unpause()
@@ -122,13 +143,15 @@ void RS::Sound::Unpause()
 
 void RS::Sound::Stop()
 {
-	if (m_IsStreamOn)
-	{
-		PORT_AUDIO_CHECK(Pa_StopStream(m_pStream), "Failed to stop stream!");
-		PCM::SetPos(&m_pUserData->handle, 0);
-		m_pUserData->finished = false;
-		m_IsStreamOn = false;
-	}
+	if (LaunchArguments::Contains(LaunchParams::noSound))
+		return;
+
+	std::unique_lock<std::mutex> readLock(m_Mutex);
+	QueueItem item;
+	item.m_Type = ItemType::Stop;
+	item.m_pSound = this;
+	m_TaskQueue.push(item);
+	m_CV.notify_one();
 }
 
 void RS::Sound::SetName(const std::string& name)
@@ -228,4 +251,65 @@ void RS::Sound::SetReceiver(const glm::vec3& pos, const glm::vec3& right, const 
 bool RS::Sound::IsCreated() const
 {
 	return m_pStream != nullptr;
+}
+
+void RS::Sound::ThreadFunction(const std::string& threadName)
+{
+	CorePlatform::SetCurrentThreadName(threadName);
+
+	while (m_Running)
+	{
+		Sound::QueueItem item;
+		{
+			std::unique_lock<std::mutex> readLock(m_Mutex);
+			m_CV.wait(readLock, [&] { return !m_TaskQueue.empty() || !m_Running; });
+			if (!m_Running)
+				break;
+			item = m_TaskQueue.front();
+			m_TaskQueue.pop();
+		}
+
+		Sound* pSound = item.m_pSound;
+		if (item.m_Type == Sound::ItemType::None
+			|| pSound == nullptr)
+			continue;
+
+		if (item.m_Type == Sound::ItemType::Play)
+		{
+			// Stop previous sound
+			if (pSound->m_IsStreamOn)
+			{
+				PORT_AUDIO_CHECK(Pa_StopStream(pSound->m_pStream), "Failed to stop stream!");
+				PCM::SetPos(&pSound->m_pUserData->handle, 0);
+				pSound->m_pUserData->finished = false;
+				pSound->m_IsStreamOn = false;
+			}
+
+			// Play it
+			PORT_AUDIO_CHECK(Pa_StartStream(pSound->m_pStream), "Failed to start stream!");
+			pSound->m_IsStreamOn = true;
+		}
+		else if (item.m_Type == Sound::ItemType::Stop)
+		{
+			// Stop previous sound
+			if (pSound->m_IsStreamOn)
+			{
+				PORT_AUDIO_CHECK(Pa_StopStream(pSound->m_pStream), "Failed to stop stream!");
+				PCM::SetPos(&pSound->m_pUserData->handle, 0);
+				pSound->m_pUserData->finished = false;
+				pSound->m_IsStreamOn = false;
+			}
+		}
+		else if (item.m_Type == Sound::ItemType::Pause)
+		{
+			// Stop previous sound
+			if (pSound->m_IsStreamOn)
+			{
+				PORT_AUDIO_CHECK(Pa_StopStream(pSound->m_pStream), "Failed to pause stream!");
+				PCM::SetPos(&pSound->m_pUserData->handle, pSound->m_pUserData->handle.pos);
+				pSound->m_pUserData->finished = false;
+				pSound->m_IsStreamOn = false;
+			}
+		}
+	}
 }

@@ -52,7 +52,7 @@ namespace RS
 
 			// Allocate memory from the page.
 			// Throws std::bad_alloc if the the allocation size is larger than the page size or the size of the allocation exceeds the remaining space in the page.
-			// (This is not thread sage!)
+			// (This is not thread safe!)
 			Allocation Allocate(size_t sizeInBytes, size_t alignment);
 
 			// Reset the page for resue.
