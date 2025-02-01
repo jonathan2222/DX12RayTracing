@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DX12/NewCore/Resources.h"
+#include <DX12/NewCore/RootSignature.h>
 
 namespace RS
 {
@@ -15,6 +16,8 @@ namespace RS
 	public:
 		void Init();
 		void Destory();
+
+		std::shared_ptr<RootSignature> GetMainRootSignature();
 
 	private:
 

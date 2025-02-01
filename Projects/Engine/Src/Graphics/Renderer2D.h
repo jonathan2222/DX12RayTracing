@@ -20,6 +20,10 @@ namespace RS
 		void Render();
 
 	private:
+		void CreateRootSignature();
+		void CreateGraphicsPSO();
+
+	private:
 		std::shared_ptr<RS::RootSignature> m_pRootSignature;
 		RS::GraphicsPSO m_GraphicsPSO;
 		std::shared_ptr<RS::VertexBuffer> m_pVertexBufferResource;
