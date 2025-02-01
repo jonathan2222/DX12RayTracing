@@ -23,4 +23,4 @@
 - [ ] Remake how command list are used. Make them easier to understand when they are executed and how they are fetched and reset. What we want:
   - [ ] One command list of each type per thread (direct, compute, raytracing)
   - [ ] Use residency manager to keep GPU memory under control.
-  - [ ] Use a render thread to 
+  - [ ] Use a render thread
