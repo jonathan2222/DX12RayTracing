@@ -21,11 +21,12 @@
 
 #define _RS_ENUM_FLAGS_ENTRY(x, i) x = (1 << (i)),
 #define RS_ENUM_FLAGS(type, name, ...) \
+	typedef type name##s; \
 	enum name : type \
 	{ \
 		RS_INDEXED_FOR_EACH(_RS_ENUM_FLAGS_ENTRY, __VA_ARGS__) \
 		MASK = (1 << (RS_VA_NARGS(__VA_ARGS__)))-1, \
 		COUNT = RS_VA_NARGS(__VA_ARGS__), \
 		NONE = 0 \
-	}
+	};
 
