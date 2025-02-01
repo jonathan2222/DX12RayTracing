@@ -147,7 +147,7 @@ namespace RS
 
     constexpr FormatInfo GetFormatInfo(Format format)
     {
-        RS_ASSERT_NO_MSG(format != RS_FORMAT_UNKNOWN);
+        RS_ASSERT(format != RS_FORMAT_UNKNOWN);
 
         auto CreateFormatIinfo = [](uint32 channelCount, uint32 bitDepth, FormatType formatType)->FormatInfo
         {
@@ -219,8 +219,8 @@ namespace RS
 
 	constexpr Format GetFormat(uint32 channelCount, uint32 bitDepth, FormatType type)
 	{
-		RS_ASSERT_NO_MSG(channelCount <= 4);
-		RS_ASSERT_NO_MSG(bitDepth == 8 || bitDepth == 16 || bitDepth == 32);
+		RS_ASSERT(channelCount <= 4);
+		RS_ASSERT(bitDepth == 8 || bitDepth == 16 || bitDepth == 32);
 
         switch (type)
         {

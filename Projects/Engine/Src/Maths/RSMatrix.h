@@ -317,7 +317,7 @@ namespace RS
 	inline Vec<Type, Col>& Mat<Type, Row, Col>::operator[](uint32 index)
 #endif
 	{
-		RS_ASSERT_NO_MSG(index < DATA_VECTOR_ELEMET_COUNT);
+		RS_ASSERT(index < DATA_VECTOR_ELEMET_COUNT);
 		return data[index];
 	}
 
@@ -328,7 +328,7 @@ namespace RS
 	inline const Vec<Type, Col>& Mat<Type, Row, Col>::operator[](uint32 index) const
 #endif
 	{
-		RS_ASSERT_NO_MSG(index < DATA_VECTOR_ELEMET_COUNT);
+		RS_ASSERT(index < DATA_VECTOR_ELEMET_COUNT);
 		return data[index];
 	}
 

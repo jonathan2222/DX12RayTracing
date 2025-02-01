@@ -1,6 +1,5 @@
 #pragma once
 
-#include <format>
 #include <filesystem>
 
 namespace RS::Utils
@@ -19,7 +18,6 @@ namespace RS::Utils
 	*	ToString		- Converts a wide string into a normal string.
 	*	EndsWith		- Checks if the string ends with a certain substring.
 	*	StartsWith		- Checks if the string starts with a certain substring.
-	*	Format			- Formats the string using fmt syntax.
 	*/
 
 	/*
@@ -29,7 +27,7 @@ namespace RS::Utils
 	template<typename T>
 	inline void Split(std::vector<T>& vector, const T& str, char delimiter)
 	{
-		RS_ASSERT_NO_MSG(vector.empty());
+		RS_ASSERT(vector.empty());
 		if (str.empty())
 			return;
 
@@ -262,24 +260,6 @@ namespace RS::Utils
 		TrimLeft(result);
 		TrimRight(result);
 		return result;
-	}
-
-	// Format strings
-	//template<typename... Args>
-	//inline std::string Format(const char* formatStr, Args&&...args)
-	//{
-	//	return std::vformat(formatStr, std::make_format_args(std::forward<Args>(args)...));
-	//}
-
-	template<typename... Args>
-	inline std::string Format(const char* formatStr, Args&&...args)
-	{
-		return std::vformat(formatStr, std::make_format_args(args...));
-	}
-
-	inline std::string Format(const char* msg)
-	{
-		return Format("{}", msg);
 	}
 
 	inline std::string GetNameFromPath(const std::string& path)

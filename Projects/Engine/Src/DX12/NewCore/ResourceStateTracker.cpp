@@ -100,7 +100,7 @@ void RS::ResourceStateTracker::AliasBarrier(const Resource* resourceBefore, cons
 
 uint32 RS::ResourceStateTracker::FlushPendingResourceBarriers(CommandList& commandList)
 {
-    RS_ASSERT_NO_MSG(ms_IsLocked);
+    RS_ASSERT(ms_IsLocked);
 
     // Resolve the pending resource barriers by checking the global state of the (sub)resources.
     // Add barriers if the pending state and the global state do not match.
@@ -174,7 +174,7 @@ void RS::ResourceStateTracker::FlushResourceBarriers(CommandList& commandList)
 
 void RS::ResourceStateTracker::CommitFinalResourceStates()
 {
-    RS_ASSERT_NO_MSG(ms_IsLocked);
+    RS_ASSERT(ms_IsLocked);
 
     // Commit final resource states to the global resource state array (map).
     for (const auto& resourceState : m_FinalResourceState)

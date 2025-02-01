@@ -79,7 +79,7 @@ void RS::CommandList::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY primitiveTop
 
 void RS::CommandList::ClearTexture(const std::shared_ptr<Texture>& pTexture, const float clearColor[4])
 {
-    RS_ASSERT_NO_MSG(pTexture);
+    RS_ASSERT(pTexture);
 
     TransitionBarrier(pTexture, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
     m_d3d12CommandList->ClearRenderTargetView(pTexture->GetRenderTargetView(), clearColor, 0, nullptr);
@@ -95,7 +95,7 @@ void RS::CommandList::ClearTextures(const std::vector<std::shared_ptr<Texture>>&
 
 void RS::CommandList::ClearDSV(const std::shared_ptr<Texture>& pTexture, D3D12_CLEAR_FLAGS clearFlags, float depth, uint8 stencil)
 {
-    RS_ASSERT_NO_MSG(pTexture);
+    RS_ASSERT(pTexture);
 
     TransitionBarrier(pTexture, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
     m_d3d12CommandList->ClearDepthStencilView(pTexture->GetDepthStencilView(), clearFlags, depth, stencil, 0, nullptr);
@@ -201,7 +201,7 @@ void RS::CommandList::TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object)
 
 void RS::CommandList::TrackResource(const std::shared_ptr<Resource>& resource)
 {
-    RS_ASSERT_NO_MSG(resource);
+    RS_ASSERT(resource);
     TrackResource(resource->GetD3D12Resource());
 }
 
@@ -308,7 +308,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> RS::CommandList::CreateBuffer(size_t buff
 
 std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32 height, const uint8* pPixelData, DXGI_FORMAT format, const std::string& name, D3D12_RESOURCE_FLAGS flags, D3D12_CLEAR_VALUE* pClearValue)
 {
-    RS_ASSERT_NO_MSG(width != 0 && height != 0);
+    RS_ASSERT(width != 0 && height != 0);
 
     D3D12_RESOURCE_DESC textureDesc{};
     textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -336,7 +336,7 @@ std::shared_ptr<RS::Texture> RS::CommandList::CreateTexture(uint32 width, uint32
 
     if (pClearValue)
     {
-        RS_ASSERT_NO_MSG(pTexture->m_pD3D12ClearValue == nullptr);
+        RS_ASSERT(pTexture->m_pD3D12ClearValue == nullptr);
         pTexture->m_pD3D12ClearValue = new D3D12_CLEAR_VALUE();
         memcpy(pTexture->m_pD3D12ClearValue, pClearValue, sizeof(D3D12_CLEAR_VALUE));
     }
@@ -398,7 +398,7 @@ void RS::CommandList::SetViewport(const D3D12_VIEWPORT& viewport)
 
 void RS::CommandList::SetViewports(const std::vector<D3D12_VIEWPORT>& viewports)
 {
-    RS_ASSERT_NO_MSG(viewports.size() < D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
+    RS_ASSERT(viewports.size() < D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
     m_d3d12CommandList->RSSetViewports(static_cast<UINT>(viewports.size()), viewports.data());
 }
 
@@ -409,13 +409,13 @@ void RS::CommandList::SetScissorRect(const D3D12_RECT scissorRect)
 
 void RS::CommandList::SetScissorRects(const std::vector<D3D12_RECT>& scissorRects)
 {
-    RS_ASSERT_NO_MSG(scissorRects.size() < D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
+    RS_ASSERT(scissorRects.size() < D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
     m_d3d12CommandList->RSSetScissorRects(static_cast<UINT>(scissorRects.size()), scissorRects.data());
 }
 
 void RS::CommandList::SetPipelineState(ID3D12PipelineState* pPipelineState, bool forceUpdate)
 {
-    RS_ASSERT_NO_MSG(pPipelineState);
+    RS_ASSERT(pPipelineState);
 
     if (m_pPipelineState != pPipelineState || forceUpdate)
     {
@@ -429,7 +429,7 @@ void RS::CommandList::SetPipelineState(ID3D12PipelineState* pPipelineState, bool
 
 void RS::CommandList::SetRootSignature(const std::shared_ptr<RootSignature>& pRootSignature)
 {
-    RS_ASSERT_NO_MSG(pRootSignature);
+    RS_ASSERT(pRootSignature);
 
     auto d3d12RootSignature = pRootSignature->GetRootSignature().Get();
     if (m_pRootSignature != d3d12RootSignature)
@@ -476,7 +476,7 @@ void RS::CommandList::BindDescriptorHeaps()
 
 void RS::CommandList::SetGraphicsDynamicConstantBuffer(uint32 rootParameterIndex, size_t sizeInBytes, const void* bufferData)
 {
-    RS_ASSERT_NO_MSG(bufferData);
+    RS_ASSERT(bufferData);
 
     // Constant buffers must be 256-byte aligned.
     auto heapAllococation = m_pUploadBuffer->Allocate(sizeInBytes, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -487,14 +487,14 @@ void RS::CommandList::SetGraphicsDynamicConstantBuffer(uint32 rootParameterIndex
 
 void RS::CommandList::SetGraphicsRoot32BitConstants(uint32 rootParameterIndex, uint32 numConstants, const void* pConstants)
 {
-    RS_ASSERT_NO_MSG(pConstants);
+    RS_ASSERT(pConstants);
 
     m_d3d12CommandList->SetGraphicsRoot32BitConstants(rootParameterIndex, numConstants, pConstants, 0);
 }
 
 void RS::CommandList::SetVertexBuffers(uint32 slot, const std::shared_ptr<VertexBuffer>& pVertexBuffer)
 {
-    RS_ASSERT_NO_MSG(pVertexBuffer);
+    RS_ASSERT(pVertexBuffer);
 
     D3D12_VERTEX_BUFFER_VIEW view = pVertexBuffer->CreateView();
     m_d3d12CommandList->IASetVertexBuffers(slot, 1, &view);
@@ -502,7 +502,7 @@ void RS::CommandList::SetVertexBuffers(uint32 slot, const std::shared_ptr<Vertex
 
 void RS::CommandList::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& pIndexBuffer)
 {
-    RS_ASSERT_NO_MSG(pIndexBuffer);
+    RS_ASSERT(pIndexBuffer);
 
     D3D12_INDEX_BUFFER_VIEW view = pIndexBuffer->CreateView();
     m_d3d12CommandList->IASetIndexBuffer(&view);
@@ -510,14 +510,14 @@ void RS::CommandList::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& pIndexB
 
 void RS::CommandList::SetBlendFactor(const float blendFactor[4])
 {
-    RS_ASSERT_NO_MSG(blendFactor);
+    RS_ASSERT(blendFactor);
 
     m_d3d12CommandList->OMSetBlendFactor(blendFactor);
 }
 
 void RS::CommandList::BindShaderResourceView(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Resource>& pResource, D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources, const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
 {
-    RS_ASSERT_NO_MSG(pResource);
+    RS_ASSERT(pResource);
 
     if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
     {
@@ -538,7 +538,7 @@ void RS::CommandList::BindShaderResourceView(uint32 rootParameterIndex, uint32 d
 
 void RS::CommandList::BindUnorderedAccessView(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Resource>& pResource, D3D12_RESOURCE_STATES stateAfter, UINT firstSubresource, UINT numSubresources, const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav)
 {
-    RS_ASSERT_NO_MSG(pResource);
+    RS_ASSERT(pResource);
 
     if (numSubresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
     {
@@ -560,7 +560,7 @@ void RS::CommandList::BindUnorderedAccessView(uint32 rootParameterIndex, uint32 
 void RS::CommandList::BindBuffer(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Buffer>& pBuffer,
     D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
-    RS_ASSERT_NO_MSG(pBuffer);
+    RS_ASSERT(pBuffer);
 
     TransitionBarrier(pBuffer, stateAfter);
 
@@ -572,7 +572,7 @@ void RS::CommandList::BindBuffer(uint32 rootParameterIndex, uint32 descriptorOff
 void RS::CommandList::BindTexture(uint32 rootParameterIndex, uint32 descriptorOffset, const std::shared_ptr<Texture>& pTexture,
     D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
-    RS_ASSERT_NO_MSG(pTexture);
+    RS_ASSERT(pTexture);
 
     TransitionBarrier(pTexture, stateAfter);
 
@@ -584,7 +584,7 @@ void RS::CommandList::BindTexture(uint32 rootParameterIndex, uint32 descriptorOf
 void RS::CommandList::BindTexture(uint32 rootParameterIndex, const std::shared_ptr<Texture>& pTexture,
     D3D12_SHADER_RESOURCE_VIEW_DESC* pSRVDesc, D3D12_RESOURCE_STATES stateAfter)
 {
-    RS_ASSERT_NO_MSG(pTexture);
+    RS_ASSERT(pTexture);
 
     TransitionBarrier(pTexture, stateAfter);
 

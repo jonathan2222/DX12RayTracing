@@ -84,7 +84,7 @@ void RS::CommandQueue::WaitForFenceValue(uint64 fenceValue)
     if (!IsFenceComplete(fenceValue))
     {
         HANDLE eventHandle = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-        RS_ASSERT_NO_MSG(eventHandle, "Failed to create fence event handle!");
+        RS_ASSERT(eventHandle, "Failed to create fence event handle!");
 
         DXCallVerbose(m_d3d12Fence->SetEventOnCompletion(fenceValue, eventHandle));
         ::WaitForSingleObject(eventHandle, DWORD_MAX);

@@ -310,7 +310,7 @@ bool RS::Console::AddFunction(const std::string& name, Func func, const std::vec
 bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFuncArgsFlags flags)
 {
 	Console* pConsole = Console::Get();
-	RS_ASSERT_NO_MSG(pConsole);
+	RS_ASSERT(pConsole);
 
 	const bool argCountMustMatch = flags & ValidateFuncArgsFlag::ArgCountMustMatch;
 	const bool typeMatchOnly = flags & ValidateFuncArgsFlag::TypeMatchOnly;
@@ -385,9 +385,9 @@ bool RS::Console::ValidateFuncArgs(FuncArgs args, FuncArgs validArgs, ValidateFu
 
 bool RS::Console::AddVarInternal(const std::string& name, const Variable& var)
 {
-	RS_ASSERT_NO_MSG(!name.empty());
-	RS_ASSERT_NO_MSG(!var.name.empty());
-	RS_ASSERT_NO_MSG((var.type != Type::Function && var.pVar != nullptr) || (var.type == Type::Function && var.func));
+	RS_ASSERT(!name.empty());
+	RS_ASSERT(!var.name.empty());
+	RS_ASSERT((var.type != Type::Function && var.pVar != nullptr) || (var.type == Type::Function && var.func));
 
 	std::lock_guard<std::mutex> lock(m_VariablesMutex);
 	if (auto it = std::find_if(m_VariablesMap.begin(), m_VariablesMap.end(),
@@ -492,7 +492,7 @@ int RS::Console::HandleInputText(ImGuiInputTextCallbackData* data)
 				}
 
 				// Note: This does not change the searchable item!
-				RS_ASSERT_NO_MSG(m_CurrentMatchedVarIndex < m_MatchedSearchList.size());
+				RS_ASSERT(m_CurrentMatchedVarIndex < m_MatchedSearchList.size());
 				MatchedSearchItem& item = m_MatchedSearchList[m_CurrentMatchedVarIndex];
 				data->DeleteChars(m_CurrentSearchableItemStartPos, data->BufTextLen - m_CurrentSearchableItemStartPos);
 				data->InsertChars(m_CurrentSearchableItemStartPos, item.fullLine.c_str());

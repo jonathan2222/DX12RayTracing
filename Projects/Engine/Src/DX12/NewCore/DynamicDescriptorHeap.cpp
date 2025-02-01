@@ -63,7 +63,7 @@ void RS::DynamicDescriptorHeap::CommitStagedDescriptors(CommandList& commandList
 	{
 		auto device = DX12Core3::Get()->GetD3D12Device();
 		auto d3d12GraphicsCommandList = commandList.GetGraphicsCommandList().Get();
-		RS_ASSERT_NO_MSG(d3d12GraphicsCommandList != nullptr);
+		RS_ASSERT(d3d12GraphicsCommandList != nullptr);
 
 		if (!m_CurrentDescriptorHeap || m_NumFreeHandles < numDescriptorsToCommit)
 		{

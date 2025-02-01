@@ -71,16 +71,16 @@ namespace RS
 			bool IsEmpty() { return m_Type == Type::UNKNOWN; }
 
 			// Implicit convertions:
-			operator bool&()					{ RS_ASSERT_NO_MSG(m_Type == Type::BOOL); return m_Bool; }
-			operator bool() const				{ RS_ASSERT_NO_MSG(m_Type == Type::BOOL); return m_Bool; }
-			operator int32&()					{ RS_ASSERT_NO_MSG(m_Type == Type::INT); return m_Int32; }
-			operator int32() const				{ RS_ASSERT_NO_MSG(m_Type == Type::INT); return m_Int32; }
-			operator uint32&()					{ RS_ASSERT_NO_MSG(m_Type == Type::UINT); return m_UInt32; }
-			operator uint32() const				{ RS_ASSERT_NO_MSG(m_Type == Type::UINT); return m_UInt32; }
-			operator float&()					{ RS_ASSERT_NO_MSG(m_Type == Type::FLOAT); return m_Float; }
-			operator float() const				{ RS_ASSERT_NO_MSG(m_Type == Type::FLOAT); return m_Float; }
-			operator std::string&()				{ RS_ASSERT_NO_MSG(m_Type == Type::STRING); return m_String; }
-			operator const std::string&() const	{ RS_ASSERT_NO_MSG(m_Type == Type::STRING); return m_String; }
+			operator bool&()					{ RS_ASSERT(m_Type == Type::BOOL); return m_Bool; }
+			operator bool() const				{ RS_ASSERT(m_Type == Type::BOOL); return m_Bool; }
+			operator int32&()					{ RS_ASSERT(m_Type == Type::INT); return m_Int32; }
+			operator int32() const				{ RS_ASSERT(m_Type == Type::INT); return m_Int32; }
+			operator uint32&()					{ RS_ASSERT(m_Type == Type::UINT); return m_UInt32; }
+			operator uint32() const				{ RS_ASSERT(m_Type == Type::UINT); return m_UInt32; }
+			operator float&()					{ RS_ASSERT(m_Type == Type::FLOAT); return m_Float; }
+			operator float() const				{ RS_ASSERT(m_Type == Type::FLOAT); return m_Float; }
+			operator std::string&()				{ RS_ASSERT(m_Type == Type::STRING); return m_String; }
+			operator const std::string&() const	{ RS_ASSERT(m_Type == Type::STRING); return m_String; }
 
 			template<typename T>
 			bool IsOfType()
@@ -155,19 +155,19 @@ namespace RS
 		VMap& operator=(VMap&& other) noexcept { return Move(std::move(other)); }
 
 		// Implicit conversions:
-		operator VElement&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator VElement() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator VElement&() { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator VElement() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
 
-		operator bool&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator bool() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator int32&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator int32() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator uint32& () { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator uint32() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator float&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator float() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator std::string&() { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
-		operator const std::string&() const { RS_ASSERT_NO_MSG(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator bool&() { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator bool() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator int32&() { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator int32() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator uint32& () { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator uint32() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator float&() { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator float() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator std::string&() { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
+		operator const std::string&() const { RS_ASSERT(m_Type == Type::ELEMENT); return m_ElementData; }
 
 		// Index operators:
 		VMap& operator[](uint index) { return Get(std::format("{}", index), true); }

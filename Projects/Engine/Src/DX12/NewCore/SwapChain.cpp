@@ -141,10 +141,10 @@ void RS::SwapChain::CreateSwapChain(HWND window, uint32 width, uint32 height, DX
     fullscreenSwapChainDesc.Windowed = TRUE;
 
     auto pFactory = DX12Core3::Get()->GetDXGIFactory();
-    RS_ASSERT_NO_MSG(pFactory);
+    RS_ASSERT(pFactory);
 
     CommandQueue* pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
-    RS_ASSERT_NO_MSG(pCommandQueue);
+    RS_ASSERT(pCommandQueue);
 
     ComPtr<IDXGISwapChain1> swapChain;
     DXCall(pFactory->CreateSwapChainForHwnd(pCommandQueue->GetD3D12CommandQueue().Get(), window, &swapChainDesc, &fullscreenSwapChainDesc, nullptr, &swapChain));
@@ -158,7 +158,7 @@ void RS::SwapChain::CreateSwapChain(HWND window, uint32 width, uint32 height, DX
 void RS::SwapChain::CreateResources()
 {
     auto pDevice = DX12Core3::Get()->GetD3D12Device();
-    RS_ASSERT_NO_MSG(pDevice);
+    RS_ASSERT(pDevice);
 
     for (UINT i = 0; i < FRAME_BUFFER_COUNT; i++)
     {

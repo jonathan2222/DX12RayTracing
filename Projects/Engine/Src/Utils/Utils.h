@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Misc/FormatUtils.h"
 #include "Misc/StringUtils.h"
 #include "Misc/BitUtils.h"
 #include "Misc/HashUtils.h"

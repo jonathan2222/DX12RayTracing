@@ -60,7 +60,7 @@ bool RS::DescriptorAllocation::IsNull() const
 
 D3D12_CPU_DESCRIPTOR_HANDLE RS::DescriptorAllocation::GetDescriptorHandle(uint32 offset) const
 {
-    RS_ASSERT_NO_MSG(offset < m_NumHandles);
+    RS_ASSERT(offset < m_NumHandles);
     return { m_Descriptor.ptr + (m_DescriptorSize * offset) };
 }
 

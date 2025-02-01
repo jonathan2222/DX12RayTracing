@@ -34,21 +34,50 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 
 #ifdef RS_THROW_INSTEAD_OF_ASSERT
 	#include <stdexcept>
-	#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) { if (!(exp)) throw std::runtime_error("Error"); }
-	#define RS_INTERNAL_ASSERT(exp, ...) { if (!(exp)) throw std::runtime_error(RS::Utils::Format(__VA_ARGS__)); }
+	#include <format>
+	inline std::string RS_ASSERT_INTERNAL_GetString()
+	{
+		return "Error";
+	}
+	template<typename... Args>
+	inline std::string RS_ASSERT_INTERNAL_GetString(const char* formatStr, Args&&... arguments)
+	{
+		return std::vformat(formatStr, std::make_format_args(arguments...));
+	}
+	template<typename T>
+	inline std::string RS_ASSERT_INTERNAL_GetString(const T& msg)
+	{
+		return msg;
+	}
+	#define RS_INTERNAL_ASSERT(exp, ...) { if (!(exp)) throw std::runtime_error(RS_ASSERT_INTERNAL_GetString(__VA_ARGS__)); }
 #elif defined(RS_NO_ASSERT)
-	#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...)
 	#define RS_INTERNAL_ASSERT(exp, ...)
 #else
 	#ifdef RS_CONFIG_DEVELOPMENT
-		#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) {assert(exp);}
-		#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){LOG_CRITICAL(__VA_ARGS__); LOG_FLUSH();} assert(exp); }
+		inline void RS_ASSERT_INTERNAL_LogCritical(const char* pFileName, int line, const char* pFuncName)
+		{
+			RS_UNUSED(pFileName);
+			RS_UNUSED(line);
+			RS_UNUSED(pFuncName);
+		}
+		template<typename... Args>
+		inline void RS_ASSERT_INTERNAL_LogCritical(const char* pFileName, int line, const char* pFuncName, std::format_string<Args...> fmt, Args&&... arguments)
+		{
+			RS::Logger::GetMultiLogger()->log(spdlog::source_loc{ pFileName, line, pFuncName }, spdlog::level::critical, fmt, std::forward<Args>(arguments)...);
+			LOG_FLUSH();
+		}
+		template<typename T>
+		inline void RS_ASSERT_INTERNAL_LogCritical(const char* pFileName, int line, const char* pFuncName, const T& msg)
+		{
+			RS::Logger::GetMultiLogger()->log(spdlog::source_loc{ pFileName, line, pFuncName }, spdlog::level::critical, msg);
+			LOG_FLUSH();
+		}
+		#define RS_INTERNAL_LOG_CRITICAL(...)
+		#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, __VA_ARGS__); } assert(exp); }
 	#else
-		#define RS_INTERNAL_ASSERT_NO_MSG(exp, ...) {assert(exp);}
 		#define RS_INTERNAL_ASSERT(exp, ...) {assert(exp);}
 	#endif
 #endif
-#define RS_ASSERT_NO_MSG(exp, ...) RS_INTERNAL_ASSERT_NO_MSG(exp, __VA_ARGS__)
 #define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
 
 #define RS_CONFIG_FILE_PATH "Config/EngineConfig.cfg"

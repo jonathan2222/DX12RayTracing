@@ -166,7 +166,7 @@ void RS::ConsoleInspectorTool::SortTable(std::vector<Console::Variable>& refVari
 				case 1: delta = 0; break; // TODO: Add sort for type value!
 				case 2: delta = (a.flags & Console::Flag::ReadOnly) - (b.flags & Console::Flag::ReadOnly); break;
 				default:
-					RS_ASSERT_NO_MSG(false);
+					RS_ASSERT(false);
 					break;
 				}
 				if (delta > 0)

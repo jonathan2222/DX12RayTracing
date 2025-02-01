@@ -77,7 +77,7 @@ void RS::RootSignature::Bake(const std::string& debugName)
 uint32 RS::RootSignature::GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE heapType) const
 {
 	RS_ASSERT(!m_Dirty, "Trying to get the descriptor table bit mask when root signature needs baking!");
-    RS_ASSERT_NO_MSG(heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
+	RS_ASSERT(heapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
 		heapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     return m_DescriptorTableBitMasks[heapType];
 }
@@ -85,14 +85,14 @@ uint32 RS::RootSignature::GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE h
 const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& RS::RootSignature::GetRootSignatureDesc() const
 {
 	RS_ASSERT(!m_Dirty, "Trying to get the root signature desc when root signature needs baking!");
-	RS_ASSERT_NO_MSG(m_RootSignature);
+	RS_ASSERT(m_RootSignature);
 	return m_VersionedRootSignatureDesc;
 }
 
 uint32 RS::RootSignature::GetNumDescriptors(uint32 rootIndex) const
 {
 	RS_ASSERT(!m_Dirty, "Trying to get the number of descriptors when root signature needs baking!");
-	RS_ASSERT_NO_MSG(rootIndex < m_VersionedRootSignatureDesc.Desc_1_1.NumParameters);
+	RS_ASSERT(rootIndex < m_VersionedRootSignatureDesc.Desc_1_1.NumParameters);
 
 	const Entry& entry = m_Entries[rootIndex];
 	if (entry.IsTable() == false)

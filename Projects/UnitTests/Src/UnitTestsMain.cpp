@@ -14,7 +14,7 @@ void AssertTest()
 
 void AssertTestNoMessage()
 {
-    RS_ASSERT_NO_MSG(false, "Error: {} {} {} [{}]", "This", "should", "throw", 256);
+    RS_ASSERT(false, "Error: {} {} {} [{}]", "This", "should", "throw", 256);
 }
 
 TEST_CASE("Assert testing", "[RS_ASSERT]")

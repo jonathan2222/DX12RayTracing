@@ -540,7 +540,7 @@ namespace RS_New
 			for (uint32 i = n; i < N; ++i)
 				this->data[i] = this->data[n - 1];
 		}
-		RS_ASSERT_NO_MSG(n <= N);
+		RS_ASSERT(n <= N);
 	}
 
 	using Vec2 = VecNew<2u, float>;
@@ -904,14 +904,14 @@ namespace RS
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Type& Vec<Type, N, SwizzlingData>::At(uint32 index)
 	{
-		RS_ASSERT_NO_MSG(index < N);
+		RS_ASSERT(index < N);
 		return this->values[index];
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Type Vec<Type, N, SwizzlingData>::AtConst(uint32 index) const
 	{
-		RS_ASSERT_NO_MSG(index < N);
+		RS_ASSERT(index < N);
 		return this->values[index];
 	}
 
@@ -967,14 +967,14 @@ namespace RS
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline Type* Vec<Type, N, SwizzlingData>::Data() const
 	{
-		RS_ASSERT_NO_MSG(N > 0);
+		RS_ASSERT(N > 0);
 		return &this->values[0];
 	}
 
 	template<typename Type, uint32 N, typename SwizzlingData>
 	inline void Vec<Type, N, SwizzlingData>::SetData(const Type* pData, uint32 size)
 	{
-		RS_ASSERT_NO_MSG(pData != nullptr);
+		RS_ASSERT(pData != nullptr);
 
 		for (uint32 i = 0; i < std::min(N, size); ++i)
 			this->values[i] = pData[i];
@@ -997,7 +997,7 @@ namespace RS
 			for (uint32 i = n; i < N; ++i)
 				this->values[i] = this->values[n - 1];
 		}
-		RS_ASSERT_NO_MSG(n <= N);
+		RS_ASSERT(n <= N);
 	}
 
 	// ------------ Global functions ------------

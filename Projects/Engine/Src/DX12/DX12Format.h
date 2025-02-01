@@ -89,7 +89,7 @@ namespace RS::DX12
 
     constexpr FormatInfo GetFormatInfo(DXGI_FORMAT format)
     {
-        RS_ASSERT_NO_MSG(format != RS_FORMAT_UNKNOWN);
+        RS_ASSERT(format != RS_FORMAT_UNKNOWN);
 
         auto CreateFormatIinfo = [](uint32 channelCount, uint32 bitDepth, FormatType formatType)->FormatInfo
         {
