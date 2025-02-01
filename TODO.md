@@ -2,7 +2,7 @@
 
 - [ ] Start with implementing support for a normal DX12 pipleline
   - [x] Shaders.
-  - [ ] shader hot reloading.
+  - [x] shader hot reloading.
     - [ ] Allow includes to also be included in the hot shader reloading.
   - [x] Buffer resource class.
   - [x] Texture resource class.
@@ -13,3 +13,12 @@
 - [ ] DX12 Raytracing.
   - [ ] Add a new Pipleling for Raytracing.
   - [ ] Add the new shader types.
+
+## New goal
+
+- [ ] Isolate windows specific code. Right now windows.h is included in Defines.h
+- [ ] Use the DX12 smaples MiniEngine as reference of how to create the backend for dx12 rendering.
+- [ ] Remake how command list are used. Make them easier to understand when they are executed and how they are fetched and reset. What we want:
+  - [ ] One command list of each type per thread (direct, compute, raytracing)
+  - [ ] Use residency manager to keep GPU memory under control.
+  - [ ] Use a render thread to 
