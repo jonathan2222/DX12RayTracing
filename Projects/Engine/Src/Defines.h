@@ -16,6 +16,16 @@
 
 #define FRAME_BUFFER_COUNT 3
 
+#if !defined(_MSVC_TRADITIONAL) || _MSVC_TRADITIONAL
+// Logic using the traditional preprocessor
+#define RS_TRADITIONAL_PREPROCESSOR
+#else
+// Logic using cross-platform compatible preprocessor
+#define RS_CROSS_PLATFORM_PREPROCESSOR
+#endif
+
+#include "Utils/EnumDefines.h"
+
 // Concepts
 template <typename T>
 concept NumberType = std::unsigned_integral<T> || std::integral<T> || std::floating_point<T>;
@@ -73,12 +83,22 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 			LOG_FLUSH();
 		}
 		#define RS_INTERNAL_LOG_CRITICAL(...)
-		#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, __VA_ARGS__); } assert(exp); }
+		#ifdef RS_CROSS_PLATFORM_PREPROCESSOR
+			#define _RS_ASSERT_INTERNAL_LogCritical(file, line, ...) RS_ASSERT_INTERNAL_LogCritical(file, line, __VA_ARGS__)
+			#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ _RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, ## __VA_ARGS__); } assert(exp); }
+		#else
+			#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, __VA_ARGS__); } assert(exp); }
+		#endif	
 	#else
 		#define RS_INTERNAL_ASSERT(exp, ...) {assert(exp);}
 	#endif
 #endif
-#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
+
+#ifdef RS_CROSS_PLATFORM_PREPROCESSOR
+	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, ## __VA_ARGS__)
+#else
+	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
+#endif
 
 #define RS_CONFIG_FILE_PATH "Config/EngineConfig.cfg"
 #define RS_SHADER_PATH "Shaders/"

@@ -16,6 +16,9 @@ workspace "RayTracingProjectD3D12"
 	-- LNK4098: defaultlib 'library' conflicts with use of other libs; use /NODEFAULTLIB:library
 	linkoptions { "-IGNORE:4006,4099,4098" }
 
+	-- Should use: usestandardpreprocessor 'On', but does not work for some reason. So setting it manualy.
+	buildoptions { "/Zc:preprocessor" }
+
 	-- Platform
 	platforms
 	{

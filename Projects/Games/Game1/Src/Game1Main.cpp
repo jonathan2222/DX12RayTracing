@@ -3,6 +3,8 @@
 #include <RSEngine.h>
 #include "Game1App.h"
 
+#include "Utils/EnumDefines.h"
+
 int main(int argc, char* argv[])
 {
     RS::Engine::SetInternalDataFilePath("../../../Assets/");
