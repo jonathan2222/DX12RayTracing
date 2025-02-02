@@ -1,9 +1,23 @@
 #pragma once
 
+#include "Types.h"
+
 namespace RS::Utils
 {
+	template <typename T>
+	inline T AlignUpWithMask(T value, uint64 mask)
+	{
+		return (T)(((uint64)value + mask) & ~mask);
+	}
+
+	template <typename T>
+	inline T AlignDownWithMask(T value, uint64 mask)
+	{
+		return (T)((uint64)value & ~mask);
+	}
+
 	template<typename T>
-	inline T AlignUp(T x, T alignment)
+	inline T AlignUp(T x, uint64 alignment)
 	{
 		// Align 1010 1101b with 4 (100b)
 		// mask 4 or greater => 4-1 = 11b
@@ -21,13 +35,27 @@ namespace RS::Utils
 		// 1011 0000
 		// 1111 1100 &
 		// 1011 0000
-		return (x + (alignment - 1)) & ~(alignment - 1);
+		//return (x + (alignment - 1)) & ~(alignment - 1);
+		return AlignUpWithMask<T>(x, alignment - 1);
 	}
 
 	template<typename T>
-	inline T AlignDown(T x, T alignment)
+	inline T AlignDown(T x, uint64 alignment)
 	{
-		return x & ~(alignment - 1);
+		//return x & ~(alignment - 1);
+		return AlignDownWithMask<T>(x, alignment - 1);
+	}
+
+	template <typename T>
+	inline bool IsAligned(T value, uint64 alignment)
+	{
+		return 0 == ((uint64)value & (alignment - 1));
+	}
+
+	template <typename T>
+	inline T DivideByMultiple(T value, uint64 alignment)
+	{
+		return (T)((value + alignment - 1) / alignment);
 	}
 
 	// Check if power of 2 and treat 0 as false. (with other words, check if only one bit is set)

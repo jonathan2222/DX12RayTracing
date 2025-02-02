@@ -7,6 +7,7 @@
 #include "Misc/RandomUtils.h"
 #include "Misc/MathUtils.h"
 #include "Misc/ShapingFunctions.h"
+#include "Misc/FormatUtils.h"
 #include <limits>
 
 namespace RS::Utils
