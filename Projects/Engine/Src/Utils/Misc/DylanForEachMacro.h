@@ -42,6 +42,19 @@
 */
 #define RS_INDEXED_FOR_EACH(what, ...) RS_INDEXED_FOR_EACH_N(RS_VA_NARGS(__VA_ARGS__), what, __VA_ARGS__)
 
+
+/*
+	Usage:
+	#define Foo(x, i, d) d x = i;
+	RS_INDEXED_FOR_EACH_DATA(Foo, int, A, B, C)
+
+	Output:
+	int A = 0;
+	int B = 1;
+	int C = 2;
+*/
+#define RS_INDEXED_FOR_EACH_DATA(what, data, ...) RS_INDEXED_FOR_EACH_DATA_N(RS_VA_NARGS(__VA_ARGS__), what, data, __VA_ARGS__)
+
 // Implementation of macro argument count
 #define RS_VA_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 
@@ -74,3 +87,16 @@
 #define RS_INDEXED_FOR_EACH_9(what, index, x, ...) what(x, index)RS_EXPAND(RS_INDEXED_FOR_EACH_8(what, index+1, __VA_ARGS__))
 #define RS_INDEXED_FOR_EACH_10(what, index, x, ...) what(x,index)RS_EXPAND(RS_INDEXED_FOR_EACH_9(what, index+1, __VA_ARGS__))
 #define RS_INDEXED_FOR_EACH_N(N, what, ...) RS_EXPAND(RS_CONCATENATE(RS_INDEXED_FOR_EACH_, N)(what, 0, __VA_ARGS__))
+
+// Implementation of RS_INDEXED_FOR_EACH_DATA
+#define RS_INDEXED_FOR_EACH_DATA_1(what, index, data, x, ...) what(x, index, data)
+#define RS_INDEXED_FOR_EACH_DATA_2(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_1(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_3(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_2(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_4(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_3(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_5(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_4(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_6(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_5(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_7(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_6(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_8(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_7(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_9(what, index, data, x, ...) what(x, index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_8(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_10(what, index, data, x, ...) what(x,index, data)RS_EXPAND(RS_INDEXED_FOR_EACH_DATA_9(what, index+1, data, __VA_ARGS__))
+#define RS_INDEXED_FOR_EACH_DATA_N(N, what, data, ...) RS_EXPAND(RS_CONCATENATE(RS_INDEXED_FOR_EACH_DATA_, N)(what, 0, data, __VA_ARGS__))
