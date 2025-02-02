@@ -412,8 +412,8 @@ namespace RS::DX12
     // Naming helper for ComPtr<T>.
     // Assigns the name of the variable as the name of the object.
     // The indexed variant will include the index in the name of the object.
-    #define NAME_D3D12_OBJECT(x) SetName((x).Get(), L#x)
-    #define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), L#x, n)
+    #define NAME_D3D12_OBJECT(x) SetName((x).Get(), L""#x)
+    #define NAME_D3D12_OBJECT_INDEXED(x, n) SetNameIndexed((x)[n].Get(), L""#x, n)
 
     inline UINT Align(UINT size, UINT alignment)
     {

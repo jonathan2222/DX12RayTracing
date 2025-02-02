@@ -81,7 +81,8 @@ bool RS::TextRenderer::AddFont(const std::string& fontPath)
 
         // TODO: Render to an atlas instead of multiple textures!
         std::string name = Utils::Format("Font {} {} Texture", fontCount, (char)c);
-        std::shared_ptr<Texture> pTexture = GetRenderCore()->pTextureBlack;
+        std::shared_ptr<Texture> pTexture = nullptr;// GetRenderCore()->pTextureBlack;
+        RS_ASSERT(pTexture != nullptr);
         if (slot->bitmap.width != 0 && slot->bitmap.rows != 0)
             pTexture = pCommandList->CreateTexture(slot->bitmap.width, slot->bitmap.rows, (const uint8*)slot->bitmap.buffer,
             DXGI_FORMAT_R8_UNORM, name);
@@ -112,7 +113,7 @@ void RS::TextRenderer::RenderText(const std::string& txt, uint posX, uint posY, 
     item.x = posX;
     item.y = posY;
     item.scale = scale;
-    item.color = PackColor(color);
+    item.color = Color::ToColor32(color);
     m_RenderItems.push_back(item);
 }
 
@@ -146,7 +147,7 @@ void RS::TextRenderer::Render(std::shared_ptr<RS::CommandList> pCommandList, std
 
     for (RenderItem& item : m_RenderItems)
     {
-        glm::vec3 color = UnpackColor(item.color);
+        glm::vec3 color = Color::ToVec3(item.color);
         struct PixelData
         {
             glm::mat4 projection;

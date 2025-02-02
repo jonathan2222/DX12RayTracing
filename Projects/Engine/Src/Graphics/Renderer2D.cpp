@@ -9,11 +9,11 @@ void RS::Renderer2D::Destory()
 {
 }
 
-void RS::Renderer2D::DrawRect(float x, float y, float width, float height, Color color)
+void RS::Renderer2D::DrawRect(float x, float y, float width, float height, Color32 color)
 {
 }
 
-void RS::Renderer2D::DrawCircle(float x, float y, float radius, Color color)
+void RS::Renderer2D::DrawCircle(float x, float y, float radius, Color32 color)
 {
 }
 

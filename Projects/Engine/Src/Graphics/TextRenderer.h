@@ -49,7 +49,7 @@ namespace RS
 			std::string text;
 			uint x, y;
 			float scale;
-			Color color;
+			Color32 color;
 		};
 
 	private:

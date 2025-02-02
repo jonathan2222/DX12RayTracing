@@ -14,8 +14,8 @@ namespace RS
 		void Init();
 		void Destory();
 
-		void DrawRect(float x, float y, float width, float height, Color color);
-		void DrawCircle(float x, float y, float radius, Color color);
+		void DrawRect(float x, float y, float width, float height, Color32 color);
+		void DrawCircle(float x, float y, float radius, Color32 color);
 
 		void Render();
 
