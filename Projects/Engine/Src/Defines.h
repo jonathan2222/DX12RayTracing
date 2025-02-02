@@ -29,6 +29,8 @@
 // Concepts
 template <typename T>
 concept NumberType = std::unsigned_integral<T> || std::integral<T> || std::floating_point<T>;
+template <typename T>
+concept FloatType = std::floating_point<T>;
 template<typename T>
 concept ForceUIntType = std::unsigned_integral<T>;
 template<typename T>
@@ -98,6 +100,39 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, ## __VA_ARGS__)
 #else
 	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
+#endif
+
+#ifdef RS_CONFIG_DEVELOPMENT
+	inline void RS_LOG_WARNING_ONCE_IF_LogWarning(const char* pFileName, int line, const char* pFuncName)
+	{
+		RS_UNUSED(pFileName);
+		RS_UNUSED(line);
+		RS_UNUSED(pFuncName);
+	}
+	template<typename... Args>
+	inline void RS_LOG_WARNING_ONCE_IF_LogWarning(const char* pFileName, int line, const char* pFuncName, std::format_string<Args...> fmt, Args&&... arguments)
+	{
+		RS::Logger::GetMultiLogger()->log(spdlog::source_loc{ pFileName, line, pFuncName }, spdlog::level::warn, fmt, std::forward<Args>(arguments)...);
+	}
+	template<typename T>
+	inline void RS_LOG_WARNING_ONCE_IF_LogWarning(const char* pFileName, int line, const char* pFuncName, const T& msg)
+	{
+		RS::Logger::GetMultiLogger()->log(spdlog::source_loc{ pFileName, line, pFuncName }, spdlog::level::warn, msg);
+	}
+	#define _RS_LOG_WARNING_ONCE_IF_LogWarning(file, line, ...) RS_LOG_WARNING_ONCE_IF_LogWarning(file, line, __VA_ARGS__)
+
+	#define RS_LOG_WARNING_ONCE_IF(isTrue, ...) \
+	{ \
+		static bool sTriggeredWarning = false; \
+		if ((bool)(isTrue) && !sTriggeredWarning) { \
+			sTriggeredWarning = true; \
+			RS_LOG_WARNING_ONCE_IF_LogWarning(__FILE__, __LINE__, SPDLOG_FUNCTION, ## __VA_ARGS__); \
+		}\
+	}
+	#define RS_LOG_WARNING_ONCE_IF_NOT(isTrue, ...) RS_LOG_WARNING_ONCE_IF(!(isTrue), __VA_ARGS__)
+#else
+	#define RS_LOG_WARNING_ONCE_IF(isTrue, ...) 
+	#define RS_LOG_WARNING_ONCE_IF_NOT(isTrue, ...)
 #endif
 
 #define RS_CONFIG_FILE_PATH "Config/EngineConfig.cfg"
