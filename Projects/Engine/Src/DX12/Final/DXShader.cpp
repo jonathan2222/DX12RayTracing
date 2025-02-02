@@ -488,6 +488,8 @@ std::optional<RS::DX12::DXShader::PartData> RS::DX12::DXShader::CompileShaderPar
 		DXCallVerbose(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler)));
 	}
 
+	std::filesystem::path path(file.name);
+	std::wstring directory = path.parent_path().wstring();
 	std::wstring sourceName = file.name.empty() ? L"" : Utils::ToWString(file.name);
 	std::wstring entryPoint = L"Main";
 	std::wstring version = L"6_0";
@@ -523,6 +525,9 @@ std::optional<RS::DX12::DXShader::PartData> RS::DX12::DXShader::CompileShaderPar
 	//arguments.push_back(L"-Fre");
 	//arguments.push_back(L"<reflectionPath>");
 	arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
+
+	arguments.push_back(L"-I");
+	arguments.push_back(directory.c_str());
 
 	if (!file.name.empty())
 	{
@@ -658,6 +663,7 @@ RS::DX12::DXShader::File RS::DX12::DXShader::ReadFile(const std::string& path, c
 
 		// Add defines string to data
 		RS_ASSERT(definesStr.copy((char*)file.pData, defSize, 0) == defSize);
+		file.size += defSize;
 
 		return file;
 	}

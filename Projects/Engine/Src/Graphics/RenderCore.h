@@ -43,6 +43,29 @@ namespace RS
 		inline static D3D12_CPU_DESCRIPTOR_HANDLE SamplerPointBorder;
 		inline static D3D12_CPU_DESCRIPTOR_HANDLE SamplerLinearBorder;
 
+		inline static D3D12_RASTERIZER_DESC RasterizerDefault;	// Counter-clockwise
+		inline static D3D12_RASTERIZER_DESC RasterizerDefaultMsaa;
+		inline static D3D12_RASTERIZER_DESC RasterizerDefaultCw;	// Clockwise winding
+		inline static D3D12_RASTERIZER_DESC RasterizerDefaultCwMsaa;
+		inline static D3D12_RASTERIZER_DESC RasterizerTwoSided;
+		inline static D3D12_RASTERIZER_DESC RasterizerTwoSidedMsaa;
+
+		inline static D3D12_BLEND_DESC BlendNoColorWrite;
+		inline static D3D12_BLEND_DESC BlendPreMultiplied;
+		inline static D3D12_BLEND_DESC BlendDisable;
+		inline static D3D12_BLEND_DESC BlendTraditional;
+		inline static D3D12_BLEND_DESC BlendAdditive;
+		inline static D3D12_BLEND_DESC BlendTraditionalAdditive;
+
+		inline static D3D12_DEPTH_STENCIL_DESC DepthStateDisabled;
+		inline static D3D12_DEPTH_STENCIL_DESC DepthStateReadWrite;
+		inline static D3D12_DEPTH_STENCIL_DESC DepthStateReadOnly;
+		inline static D3D12_DEPTH_STENCIL_DESC DepthStateReadOnlyReversed;
+		inline static D3D12_DEPTH_STENCIL_DESC DepthStateTestEqual;
+
+		inline static DX12::DXCommandSignature DispatchIndirectCommandSignature = DX12::DXCommandSignature(1);
+		inline static DX12::DXCommandSignature DrawIndirectCommandSignature = DX12::DXCommandSignature(1);
+
 		inline static DX12::DXComputePSO GenerateMipsLinearPSO[4] =
 		{
 			{L"Generate Mips Linear CS"},
@@ -58,9 +81,6 @@ namespace RS
 			{ L"Generate Mips Gamma Odd Y CS" },
 			{ L"Generate Mips Gamma Odd CS" },
 		};
-
-		inline static DX12::DXCommandSignature DispatchIndirectCommandSignature = DX12::DXCommandSignature(1);
-		inline static DX12::DXCommandSignature DrawIndirectCommandSignature = DX12::DXCommandSignature(1);
 
 	private:
 		inline static DX12::DXRootSignature m_sCommonRootSignature;

@@ -52,13 +52,14 @@ float4 LoadColor( uint Index )
     return float4( gs_R[Index], gs_G[Index], gs_B[Index], gs_A[Index]);
 }
 
-float3 ApplySRGBCurve(float3 x)
+float3 ApplySRGBCurve( float3 v )
 {
-    // This is exactly the sRGB curve
-    //return select(x < 0.0031308, 12.92 * x, 1.055 * pow(abs(x), 1.0 / 2.4) - 0.055);
-     
-    // This is cheaper but nearly equivalent
-    return select(x < 0.0031308, 12.92 * x, 1.13005 * sqrt(abs(x - 0.00228)) - 0.13448 * x + 0.005719);
+    // Approximately pow(x, 1.0 / 2.2)
+    return float3(
+        v.x < 0.0031308 ? 12.92 * v.x : 1.055 * pow(v.x, 1.0 / 2.4) - 0.055,
+        v.y < 0.0031308 ? 12.92 * v.y : 1.055 * pow(v.y, 1.0 / 2.4) - 0.055,
+        v.z < 0.0031308 ? 12.92 * v.z : 1.055 * pow(v.z, 1.0 / 2.4) - 0.055
+    );
 }
 
 float4 PackColor(float4 Linear)
@@ -72,7 +73,7 @@ float4 PackColor(float4 Linear)
 
 [RootSignature(Common_RootSig)]
 [numthreads( 8, 8, 1 )]
-void main( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
+void ComputeMain( uint GI : SV_GroupIndex, uint3 DTid : SV_DispatchThreadID )
 {
     // One bilinear sample is insufficient when scaling down by more than 2x.
     // You will slightly undersample in the case where the source dimension

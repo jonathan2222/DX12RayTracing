@@ -31,6 +31,9 @@ namespace RS
 
 		static long long GetCurrentTimeSeconds();
 
+		static uint64 GetCurrentTick();
+		static double CalcTimeIntervalInSeconds(uint64 startTick, uint64 endTick);
+
 	private:
 		std::chrono::time_point<std::chrono::steady_clock> m_StartTime;
 		std::chrono::time_point<std::chrono::steady_clock> m_EndTime;

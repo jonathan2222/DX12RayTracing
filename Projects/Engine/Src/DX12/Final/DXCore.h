@@ -6,15 +6,21 @@
 
 namespace RS::DX12
 {
+	class DXDisplay;
 	class DXContextManager;
 	class DXCore
 	{
 	public:
 		static void Init();
+		static DXDisplay* GetDXDisplay() { return m_pDisplay; }
 		static void Release();
 
 		static DX12_DEVICE_TYPE* GetDevice() {
 			return m_sDevice.GetD3D12Device();
+		};
+
+		static DXDevice* GetDXDevice() {
+			return &m_sDevice;
 		};
 
 		static DXContextManager* GetContextManager() {
@@ -35,6 +41,7 @@ namespace RS::DX12
 		inline static DXDevice m_sDevice;
 		inline static DXCommandListManager m_sCommandListManager;
 		inline static DXContextManager* m_spContextManager = nullptr;
+		inline static DX12::DXDisplay* m_pDisplay = nullptr;
 
 		inline static DXDescriptorAllocator m_sDescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
 		{

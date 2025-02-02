@@ -39,6 +39,20 @@ long long RS::Timer::GetCurrentTimeSeconds()
 	return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
 }
 
+uint64 RS::Timer::GetCurrentTick()
+{
+	std::chrono::time_point<std::chrono::steady_clock> time = std::chrono::high_resolution_clock::now();
+	return (uint64)time.time_since_epoch().count();
+}
+
+double RS::Timer::CalcTimeIntervalInSeconds(uint64 startTick, uint64 endTick)
+{
+	if (endTick < startTick) return FLT_EPSILON;
+	uint64 diff = endTick - startTick;
+	std::chrono::steady_clock::duration duration(diff);
+	return std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+}
+
 float TimeStamp::GetDeltaTimeSec() const
 {
 	return (float)(m_DT / 1000.0);
