@@ -16,9 +16,14 @@ void VertexMain(
     Pos = float4(lerp(float2(-1, 1), float2(1, -1), Tex), 0, 1);
 }
 
+cbuffer Constants : register(b0)
+{
+    float scale;
+}
+
 [RootSignature(Common_RootSig)]
 float3 PixelMain(float4 position : SV_Position, float2 uv : TexCoord0) : SV_Target0
 {
-    float3 color = ATexture.SampleLevel(LinearFilter, uv, 0);
+    float3 color = ATexture.SampleLevel(LinearFilter, uv*scale, 0);
     return color;
 }

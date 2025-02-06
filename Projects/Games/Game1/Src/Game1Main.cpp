@@ -124,11 +124,12 @@ int main(int argc, char* argv[])
         context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         context.SetPipelineState(graphicsPSO);
+        context.SetConstant(0, 0, RS::DX12::DXDWParam(1.0f));
         context.TransitionResource(texture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         context.SetDynamicDescriptor(1, 0, texture.GetSRV());
         context.TransitionResource(buffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
         context.SetRenderTarget(buffer.GetRTV());
-        context.SetViewportAndScissor(0, 0, texture.GetWidth(), texture.GetHeight());
+        context.SetViewportAndScissor(0, 0, buffer.GetWidth(), buffer.GetHeight());
         context.Draw(3);
         context.Finish();
 
