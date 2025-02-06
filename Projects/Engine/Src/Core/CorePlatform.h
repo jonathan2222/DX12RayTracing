@@ -32,7 +32,7 @@ namespace RS
 			uint32 height;
 			Format format;
 		};
-		std::unique_ptr<Image> LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags = ImageFlag::NONE);
+		static std::unique_ptr<Image> LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags = ImageFlag::NONE, bool isInternalPath = false);
 
 		struct BinaryFile
 		{

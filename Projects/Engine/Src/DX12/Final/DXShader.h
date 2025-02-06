@@ -24,7 +24,7 @@ namespace RS::DX12
 		{
 			bool isInternalPath = false;
 			std::string path;
-			TypeFlags	typeFlags = TypeFlag::Auto;
+			TypeFlag	typeFlags = TypeFlag::Auto;
 			// If typeFlags is AUTO, it will load all shader types it sees and put them into the same shader.
 			// If it is something else, it will only load the specific types, even though there might be more in the source!
 			// TODO: Make it able to combine different Shader objects into one, if the user choose to load one shader part per shader instance?
@@ -55,6 +55,8 @@ namespace RS::DX12
 		const std::string& GetVirtualPath() const { return m_ShaderVirtualPath; }
 
 		const Description& GetDescription() const { return m_Description; }
+
+		TypeFlag GetTypes() const { return m_Types; }
 
 	private:
 		struct PartData

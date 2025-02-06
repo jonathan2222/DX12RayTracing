@@ -23,18 +23,16 @@ namespace RS
 			s_TempFilePath = tempFilePath;
 		}
 
-		static const std::string& GetInternalDataFilePath()
+		static const std::string& GetDataFilePath(bool isInternal)
 		{
-			return s_InternalDataFilePath;
+			return isInternal ? s_InternalDataFilePath : s_DataFilePath;
 		}
-		static const std::string& GetDataFilePath()
-		{
-			return s_DataFilePath;
-		}
+
 		static const std::string& GetDebugFilePath()
 		{
 			return s_DebugFilePath;
 		}
+
 		static const std::string& GetTempFilePath()
 		{
 			return s_TempFilePath;

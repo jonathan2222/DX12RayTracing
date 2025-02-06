@@ -461,6 +461,8 @@ void DXGraphicsContext::SetScissor(const D3D12_RECT& rect)
 
 void DXCommandContext::TransitionResource(DXGPUResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate)
 {
+    // Note: One cannot transition the same resource multiple times within the same command list before executing it. It only remembers the last transition!
+
     D3D12_RESOURCE_STATES OldState = Resource.m_UsageState;
 
     if (m_Type == D3D12_COMMAND_LIST_TYPE_COMPUTE)

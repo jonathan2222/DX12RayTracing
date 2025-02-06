@@ -112,6 +112,35 @@ void RS::DX12::DXGraphicsPSO::SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_V
     m_PSODesc.IBStripCutValue = IBProps;
 }
 
+void RS::DX12::DXGraphicsPSO::SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size)
+{
+    RS_ASSERT(Utils::IsPowerOfTwo(type), "Cannot pass in more shader types, only one is allowed!");
+    switch (type)
+    {
+    case DXShader::TypeFlag::Pixel: SetPixelShader(pBinary, (size_t)size); return;
+    case DXShader::TypeFlag::Vertex: SetVertexShader(pBinary, (size_t)size); return;
+    case DXShader::TypeFlag::Geometry: SetGeometryShader(pBinary, (size_t)size); return;
+    case DXShader::TypeFlag::Domain: SetDomainShader(pBinary, (size_t)size); return;
+    case DXShader::TypeFlag::Hull: SetHullShader(pBinary, (size_t)size); return;
+    default:
+        RS_ASSERT_ALWAYS("Shader of type '{}' is not supported for DXGraphicsPSO!", type.GetName());
+        break;
+    }
+}
+
+void RS::DX12::DXGraphicsPSO::SetShader(DXShader& shader)
+{
+    uint32 shaderIndex = UINT32_MAX;
+    DXShader::TypeFlags shaderTypes = shader.GetTypes();
+    while (Utils::ForwardBitScan(shaderTypes, shaderIndex))
+    {
+        Utils::ClearBit(shaderTypes.Get(), shaderIndex);
+        DXShader::TypeFlags shaderType = 1 << shaderIndex;
+        IDxcBlob* pShaderBlob = shader.GetShaderBlob(shaderType);
+        SetShader(shaderType, pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize());
+    }
+}
+
 void RS::DX12::DXGraphicsPSO::Finalize()
 {
     // Make sure the root signature is finalized first
@@ -160,6 +189,29 @@ RS::DX12::DXComputePSO::DXComputePSO(const wchar_t* Name)
 {
     ZeroMemory(&m_PSODesc, sizeof(m_PSODesc));
     m_PSODesc.NodeMask = 1;
+}
+
+
+void RS::DX12::DXComputePSO::SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size)
+{
+    RS_ASSERT(Utils::IsPowerOfTwo(type), "Cannot pass in more shader types, only one is allowed!");
+    switch (type)
+    {
+    case DXShader::TypeFlag::Compute: SetComputeShader(pBinary, (size_t)size); return;
+    default:
+        RS_ASSERT_ALWAYS("Shader of type '{}' is not supported for DXComputePSO!", type.GetName());
+        break;
+    }
+}
+
+void RS::DX12::DXComputePSO::SetShader(DXShader& shader)
+{
+    DXShader::TypeFlag shaderTypes = shader.GetTypes();
+    RS_ASSERT(shaderTypes.IsOne(), "Setting a computePSO shader of multiple types '{}' is not supported for DXComputePSO!", shaderTypes.Get());
+    RS_ASSERT(shaderTypes.Has(DXShader::TypeFlag::Compute), "Shader of type '{}' is not supported for DXComputePSO!", shaderTypes.GetName());
+
+    IDxcBlob* pShaderBlob = shader.GetShaderBlob(DXShader::TypeFlag::Compute);
+    SetComputeShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize());
 }
 
 void RS::DX12::DXComputePSO::Finalize()

@@ -21,6 +21,6 @@ namespace RS
 	class FBXLoader
 	{
 	public:
-		static Mesh* Load(const std::string& path);
+		static Mesh* Load(const std::string& path, bool isInternalPath = false);
 	};
 }

@@ -16,6 +16,7 @@
 
 #include "DX12/Final/DX12Defines.h"
 #include "DX12/Final/DXRootSignature.h"
+#include "DX12/Final/DXShader.h"
 
 namespace RS::DX12
 {
@@ -75,12 +76,15 @@ namespace RS::DX12
         void SetGeometryShader(const void* Binary, size_t Size) { m_PSODesc.GS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetHullShader(const void* Binary, size_t Size) { m_PSODesc.HS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetDomainShader(const void* Binary, size_t Size) { m_PSODesc.DS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
+        void SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size);
 
         void SetVertexShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.VS = Binary; }
         void SetPixelShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.PS = Binary; }
         void SetGeometryShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.GS = Binary; }
         void SetHullShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.HS = Binary; }
         void SetDomainShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.DS = Binary; }
+
+        void SetShader(DXShader& shader);
 
         // Perform validation and compute a hash value for fast state block comparisons
         void Finalize();
@@ -101,6 +105,8 @@ namespace RS::DX12
 
         void SetComputeShader(const void* Binary, size_t Size) { m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetComputeShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.CS = Binary; }
+        void SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size);
+        void SetShader(DXShader& shader);
 
         void Finalize();
 

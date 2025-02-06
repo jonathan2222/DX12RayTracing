@@ -218,6 +218,13 @@ void RS::DX12::DXDisplay::Resize(uint32 width, uint32 height)
     // TODO: Resize display dependent buffers!
 }
 
+void RS::DX12::DXDisplay::OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed)
+{
+    RS_UNUSED(isFullscreen);
+    RS_UNUSED(windowed);
+    Resize(width, height);
+}
+
 void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase)
 {
     DXGraphicsContext& context = DXGraphicsContext::Begin(L"Present");

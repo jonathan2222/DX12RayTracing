@@ -4,6 +4,7 @@
 #include "DX12/Final/DXColorBuffer.h"
 #include "DX12/Final/DXRootSignature.h"
 #include "DX12/Final/DXPipelineState.h"
+#include "Core/Display.h"
 
 #include "Utils/Timer.h"
 
@@ -11,7 +12,7 @@
 
 namespace RS::DX12
 {
-	class DXDisplay
+	class DXDisplay : public IDisplaySizeChange
 	{
 	public:
 		DXDisplay();
@@ -22,6 +23,8 @@ namespace RS::DX12
 		void Present(DXColorBuffer* pBase);
 
 		void Resize(uint32 width, uint32 height);
+
+		void OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed) override;
 
 	private:
 		void PresentSDR(DXColorBuffer* pBase);

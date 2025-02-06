@@ -26,6 +26,7 @@ namespace RS::DX12
 
         DXTexture() { m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN; }
         DXTexture(D3D12_CPU_DESCRIPTOR_HANDLE Handle) : m_hCpuDescriptorHandle(Handle) {}
+        ~DXTexture() { Destroy(); }
 
         // Create a 1-level textures
         void Create2D(size_t RowPitchBytes, size_t Width, size_t Height, DXGI_FORMAT Format, const void* InitData);

@@ -282,7 +282,7 @@ void Game1App::Init()
     // Wait for load to finish.
     pCommandQueue->WaitForFenceValue(fenceValue);
 
-    std::string audioBasePath = RS::Engine::GetDataFilePath() + RS_AUDIO_PATH;
+    std::string audioBasePath = RS::Engine::GetDataFilePath(false) + RS_AUDIO_PATH;
     pButtonOnSound = RS::AudioSystem::Get()->CreateSound(audioBasePath + "SoundEffects/ButtonOn.mp3");
     pButtonOnSound->SetVolume(0.015f);
 

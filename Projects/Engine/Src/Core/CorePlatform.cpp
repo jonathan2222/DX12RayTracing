@@ -57,9 +57,9 @@ std::string RS::CorePlatform::GetConfigurationAsStr() const
 #endif
 }
 
-std::unique_ptr<RS::CorePlatform::Image> RS::CorePlatform::LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags)
+std::unique_ptr<RS::CorePlatform::Image> RS::CorePlatform::LoadImageData(const std::string& path, Format requestedFormat, ImageFlags flags, bool isInternalPath)
 {
-	std::string texturePath = Engine::GetDataFilePath() + RS_TEXTURE_PATH + path;
+	std::string texturePath = Engine::GetDataFilePath(isInternalPath) + RS_TEXTURE_PATH + path;
 	FormatInfo requestedFormatInfo = GetFormatInfo(requestedFormat);
 
 	std::unique_ptr<RS::CorePlatform::Image> pImage = std::make_unique<RS::CorePlatform::Image>();

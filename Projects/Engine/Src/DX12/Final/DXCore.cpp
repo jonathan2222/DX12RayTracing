@@ -25,6 +25,7 @@ void RS::DX12::DXCore::Init()
 
 	std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
 	m_pDisplay->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+	pDisplay->AddOnSizeChangeCallback("Display SizeChangeCallback", dynamic_cast<RS::IDisplaySizeChange*>(m_pDisplay));
 }
 
 void RS::DX12::DXCore::Release()

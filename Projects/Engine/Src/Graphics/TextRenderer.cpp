@@ -29,7 +29,7 @@ void RS::TextRenderer::Init()
     RS_ASSERT(error == FT_Err_Ok, "Coult not initialize freetype!");
 
     std::string fontPath = RS_FONT_PATH "arial.ttf";
-    fontPath = Engine::GetInternalDataFilePath() + fontPath;
+    fontPath = Engine::GetDataFilePath(true) + fontPath;
     AddFont(fontPath);
 
     InitRenderData();

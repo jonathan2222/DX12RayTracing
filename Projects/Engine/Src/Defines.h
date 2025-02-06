@@ -62,8 +62,10 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 		return msg;
 	}
 	#define RS_INTERNAL_ASSERT(exp, ...) { if (!(exp)) throw std::runtime_error(RS_ASSERT_INTERNAL_GetString(__VA_ARGS__)); }
+	#define RS_INTERNAL_ASSERT_ALWAYS(...) { throw std::runtime_error(RS_ASSERT_INTERNAL_GetString(__VA_ARGS__)); }
 #elif defined(RS_NO_ASSERT)
 	#define RS_INTERNAL_ASSERT(exp, ...)
+	#define RS_INTERNAL_ASSERT_ALWAYS(...)
 #else
 	#ifdef RS_CONFIG_DEVELOPMENT
 		inline void RS_ASSERT_INTERNAL_LogCritical(const char* pFileName, int line, const char* pFuncName)
@@ -88,18 +90,23 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 		#ifdef RS_CROSS_PLATFORM_PREPROCESSOR
 			#define _RS_ASSERT_INTERNAL_LogCritical(file, line, ...) RS_ASSERT_INTERNAL_LogCritical(file, line, __VA_ARGS__)
 			#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ _RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, ## __VA_ARGS__); } assert(exp); }
+			#define RS_INTERNAL_ASSERT_ALWAYS(...) { _RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, ## __VA_ARGS__); assert(false); }
 		#else
 			#define RS_INTERNAL_ASSERT(exp, ...) {if(!(exp)){ RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, __VA_ARGS__); } assert(exp); }
+			#define RS_INTERNAL_ASSERT_ALWAYS(...) { RS_ASSERT_INTERNAL_LogCritical(__FILE__, __LINE__, SPDLOG_FUNCTION, __VA_ARGS__); assert(false); }
 		#endif	
 	#else
 		#define RS_INTERNAL_ASSERT(exp, ...) {assert(exp);}
+		#define RS_INTERNAL_ASSERT_ALWAYS(...) {assert(false);}
 	#endif
 #endif
 
 #ifdef RS_CROSS_PLATFORM_PREPROCESSOR
 	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, ## __VA_ARGS__)
+	#define RS_ASSERT_ALWAYS(...) RS_INTERNAL_ASSERT_ALWAYS(__VA_ARGS__)
 #else
 	#define RS_ASSERT(exp, ...) RS_INTERNAL_ASSERT(exp, __VA_ARGS__)
+	#define RS_ASSERT_ALWAYS(...) RS_INTERNAL_ASSERT_ALWAYS(__VA_ARGS__)
 #endif
 
 #ifdef RS_CONFIG_DEVELOPMENT

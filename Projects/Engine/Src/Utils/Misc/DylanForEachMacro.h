@@ -32,6 +32,19 @@
 
 /*
 	Usage:
+	#define Foo(x) int x = 0;
+	#define Bar(x) int x = 1;
+	RS_FOR_EACH_END(Foo, A, B, C)
+
+	Output:
+	int A = 0;
+	int B = 0;
+	int C = 1;
+*/
+#define RS_FOR_EACH_END(what, whatE, ...) RS_FOR_EACH_END_N(RS_VA_NARGS(__VA_ARGS__), what, whatE, __VA_ARGS__)
+
+/*
+	Usage:
 	#define Foo(x, i) int x = i;
 	RS_INDEXED_FOR_EACH(Foo, A, B, C)
 
@@ -74,6 +87,19 @@
 #define RS_FOR_EACH_9(what, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_8(what,  __VA_ARGS__))
 #define RS_FOR_EACH_10(what, x, ...) what(x)RS_EXPAND(RS_FOR_EACH_9(what,  __VA_ARGS__))
 #define RS_FOR_EACH_N(N, what, ...) RS_EXPAND(RS_CONCATENATE(RS_FOR_EACH_, N)(what, __VA_ARGS__))
+
+// Implementation of RS_FOR_EACH_END
+#define RS_FOR_EACH_END_1(what, whatE, x, ...)  whatE(x)
+#define RS_FOR_EACH_END_2(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_1(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_3(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_2(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_4(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_3(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_5(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_4(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_6(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_5(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_7(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_6(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_8(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_7(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_9(what, whatE, x, ...)  what(x)RS_EXPAND(RS_FOR_EACH_END_8(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_10(what, whatE, x, ...) what(x)RS_EXPAND(RS_FOR_EACH_END_9(what, whatE,  __VA_ARGS__))
+#define RS_FOR_EACH_END_N(N, what, whatE, ...) RS_EXPAND(RS_CONCATENATE(RS_FOR_EACH_END_, N)(what, whatE, __VA_ARGS__))
 
 // Implementation of RS_INDEXED_FOR_EACH
 #define RS_INDEXED_FOR_EACH_1(what, index, x, ...) what(x, index)
