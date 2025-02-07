@@ -20,14 +20,14 @@ namespace RS::DX12
 		void Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORMAT format = DXGI_FORMAT_R10G10B10A2_UNORM);
 		void Remove();
 
-		void Present(DXColorBuffer* pBase);
+		void Present(DXColorBuffer* pBase, DXGraphicsContext* pContext = nullptr);
 
 		void Resize(uint32 width, uint32 height);
 
 		void OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed) override;
 
 	private:
-		void PresentSDR(DXColorBuffer* pBase);
+		void PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pContext);
 
 	private:
 		DXColorBuffer m_DisplayPlanes[SWAP_CHAIN_BUFFER_COUNT];

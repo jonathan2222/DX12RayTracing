@@ -131,9 +131,8 @@ int main(int argc, char* argv[])
         context.SetRenderTarget(buffer.GetRTV());
         context.SetViewportAndScissor(0, 0, buffer.GetWidth(), buffer.GetHeight());
         context.Draw(3);
-        context.Finish();
 
-        RS::DX12::DXCore::GetDXDisplay()->Present(&buffer);
+        RS::DX12::DXCore::GetDXDisplay()->Present(&buffer, &context);
 
         RS::Input::Get()->PostUpdate(frameStats.frame.currentDT);
 

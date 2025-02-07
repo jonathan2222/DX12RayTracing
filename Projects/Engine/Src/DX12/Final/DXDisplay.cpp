@@ -149,14 +149,14 @@ void RS::DX12::DXDisplay::Remove()
         m_DisplayPlanes[i].Destroy();
 }
 
-void RS::DX12::DXDisplay::Present(DXColorBuffer* pBase)
+void RS::DX12::DXDisplay::Present(DXColorBuffer* pBase, DXGraphicsContext* pContext)
 {
     RS_ASSERT(pBase != nullptr);
 
     //if(m_EnableHDROutput)
     //    PresentHDR(pBase);
     //else
-        PresentSDR(pBase);
+        PresentSDR(pBase, pContext);
 
     uint32 presentInterval = m_EnableVSync ? std::min(4u, (uint32)std::roundf(m_FrameTime * 60.0f)) : 0u;
     m_pSwapChain1->Present(presentInterval, 0);
@@ -225,9 +225,9 @@ void RS::DX12::DXDisplay::OnSizeChange(uint32 width, uint32 height, bool isFulls
     Resize(width, height);
 }
 
-void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase)
+void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pContext)
 {
-    DXGraphicsContext& context = DXGraphicsContext::Begin(L"Present");
+    DXGraphicsContext& context = pContext ? *pContext : DXGraphicsContext::Begin(L"Present");
 
     context.SetRootSignature(m_PresentRootSignature);
     context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
