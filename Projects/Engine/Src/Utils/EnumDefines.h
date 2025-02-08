@@ -91,6 +91,7 @@
 		void Clear(const name& flags) { m_Value = (m_Value & (~flags.m_Value)); } \
 		bool IsOne() const { return RS::Utils::IsPowerOfTwo(m_Value); } \
 		type& Get() { return m_Value; } \
+		type GetConst() const { return m_Value; } \
 		\
 		template<NumberType T> \
 		name operator&(T other) const { return name(m_Value & (type)other);} \

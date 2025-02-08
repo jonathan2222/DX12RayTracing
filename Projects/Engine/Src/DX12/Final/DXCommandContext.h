@@ -30,6 +30,8 @@
 
 #include "Graphics/RenderCore.h"
 
+#include "Core/FileWatcher.h"
+
 #include "Utils/Misc/SIMDUtils.h"
 
 #include <vector>
@@ -74,8 +76,11 @@ namespace RS::DX12
 
     class DXContextManager
     {
+        friend DXCommandContext;
+
     public:
-        DXContextManager(void) {}
+        DXContextManager() { m_ShaderFileWatcher.Init("Shader File Watcher"); }
+        ~DXContextManager() { m_ShaderFileWatcher.Release(); }
 
         DXCommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type);
         void FreeContext(DXCommandContext*);
@@ -85,6 +90,8 @@ namespace RS::DX12
         std::vector<std::unique_ptr<DXCommandContext> > sm_ContextPool[4];
         std::queue<DXCommandContext*> sm_AvailableContexts[4];
         std::mutex sm_ContextAllocationMutex;
+
+        FileWatcher m_ShaderFileWatcher;
     };
 
     struct NonCopyable
@@ -171,7 +178,7 @@ namespace RS::DX12
 
         void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12DescriptorHeap* HeapPtr);
         void SetDescriptorHeaps(UINT HeapCount, D3D12_DESCRIPTOR_HEAP_TYPE Type[], ID3D12DescriptorHeap* HeapPtrs[]);
-        void SetPipelineState(const DXPSO& PSO);
+        void SetPipelineState(DXPSO& pso);
 
         void SetPredication(ID3D12Resource* Buffer, UINT64 BufferOffset, D3D12_PREDICATION_OP Op);
 
@@ -202,6 +209,9 @@ namespace RS::DX12
         void SetID(const std::wstring& ID) { m_ID = ID; }
 
         D3D12_COMMAND_LIST_TYPE m_Type;
+
+        // Debug only
+        DXPSO* pPSO = nullptr;
     };
 
     class DXGraphicsContext : public DXCommandContext
@@ -327,16 +337,6 @@ namespace RS::DX12
             m_CommandList->ResourceBarrier(m_NumBarriersToFlush, m_ResourceBarrierBuffer);
             m_NumBarriersToFlush = 0;
         }
-    }
-
-    inline void DXCommandContext::SetPipelineState(const DXPSO& PSO)
-    {
-        ID3D12PipelineState* PipelineState = PSO.GetPipelineStateObject();
-        if (PipelineState == m_CurPipelineState)
-            return;
-
-        m_CommandList->SetPipelineState(PipelineState);
-        m_CurPipelineState = PipelineState;
     }
 
     inline void DXGraphicsContext::SetViewportAndScissor(UINT x, UINT y, UINT w, UINT h)

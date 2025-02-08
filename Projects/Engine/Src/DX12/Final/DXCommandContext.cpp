@@ -227,6 +227,39 @@ void DXCommandContext::BindDescriptorHeaps(void)
         m_CommandList->SetDescriptorHeaps(NonNullHeaps, HeapsToBind);
 }
 
+void DXCommandContext::SetPipelineState(DXPSO& pso)
+{
+    ID3D12PipelineState* PipelineState = pso.GetPipelineStateObject();
+    if (PipelineState == m_CurPipelineState)
+        return;
+
+    m_CommandList->SetPipelineState(PipelineState);
+    m_CurPipelineState = PipelineState;
+
+    // --------------- Debug only ---------------
+    pPSO = &pso;
+    for (auto& entry : pso.m_ShaderDescs)
+    {
+        if (!DXCore::GetContextManager()->m_ShaderFileWatcher.HasExactListener(entry.first))
+        {
+            DXCore::GetContextManager()->m_ShaderFileWatcher.AddFileListener(entry.first, [entry, this](std::filesystem::path, FileWatcher::FileStatus status)
+                {
+                    DXShader shader;
+                    bool succeeded = shader.Create(entry.second.description);
+                    if (!succeeded)
+                        return;
+
+                    RS_ASSERT(shader.GetTypes() == entry.second.types)
+                    pPSO->SetShader(shader);
+                    pPSO->Finalize();
+                    shader.Release();
+
+                    SetPipelineState(*pPSO);
+                });
+        }
+    }
+}
+
 void DXGraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV)
 {
     m_CommandList->OMSetRenderTargets(NumRTVs, RTVs, FALSE, &DSV);

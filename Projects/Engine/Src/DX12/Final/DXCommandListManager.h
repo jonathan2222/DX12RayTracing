@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include "DX12/Final/DXCommandAllocatorPool.h"
 
+#include "Core/FileWatcher.h" // Shader hot-reloading
+
 namespace RS::DX12
 {
     class DXCommandQueue
@@ -74,8 +76,6 @@ namespace RS::DX12
 
     class DXCommandListManager
     {
-        friend class DXCommandContext;
-
     public:
         DXCommandListManager();
         ~DXCommandListManager();

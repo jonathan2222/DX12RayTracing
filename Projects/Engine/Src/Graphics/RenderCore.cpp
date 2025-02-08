@@ -175,8 +175,7 @@ void RS::RenderCore::InitCommonStates()
     { \
         generateMipsShader.Create(shaderDesc); \
         ObjName.SetRootSignature(m_sCommonRootSignature); \
-        IDxcBlob* pShaderBlob = generateMipsShader.GetShaderBlob(shaderDesc.typeFlags); \
-        ObjName.SetComputeShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize()); \
+        ObjName.SetComputeShader(generateMipsShader); \
         ObjName.Finalize(); \
         generateMipsShader.Release(); \
     }

@@ -23,6 +23,8 @@ namespace RS::DX12
     class DXPSO
     {
     public:
+        friend class DXCommandContext;
+    public:
 
         DXPSO(const wchar_t* Name) : m_Name(Name), m_RootSignature(nullptr), m_PSO(nullptr) {}
 
@@ -41,13 +43,26 @@ namespace RS::DX12
 
         ID3D12PipelineState* GetPipelineStateObject(void) const { return m_PSO; }
 
-    protected:
+        void SetShader(DXShader& shader);
+        virtual void SetShaderType(DXShader::TypeFlag type, DXShader& shader) = 0;
+        virtual void Finalize() = 0;
 
+    protected:
+        void SetShaderDescription(const DXShader::Description& desc, const DXShader::TypeFlags& type);
+
+    protected:
         const wchar_t* m_Name;
 
         const DXRootSignature* m_RootSignature;
 
         ID3D12PipelineState* m_PSO;
+
+        struct ShaderBundle
+        {
+            DXShader::Description description;
+            uint32 types;
+        };
+        std::unordered_map<std::string, ShaderBundle> m_ShaderDescs;
     };
 
     class DXGraphicsPSO : public DXPSO
@@ -70,24 +85,23 @@ namespace RS::DX12
         void SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs);
         void SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBProps);
 
+        void SetVertexShader(DXShader& shader);
+        void SetPixelShader(DXShader& shader);
+        void SetGeometryShader(DXShader& shader);
+        void SetHullShader(DXShader& shader);
+        void SetDomainShader(DXShader& shader);
+        void SetShaderType(DXShader::TypeFlag type, DXShader& shader) override;
+
+        // Perform validation and compute a hash value for fast state block comparisons
+        void Finalize() override;
+
+    private:
         // These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
         void SetVertexShader(const void* Binary, size_t Size) { m_PSODesc.VS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetPixelShader(const void* Binary, size_t Size) { m_PSODesc.PS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetGeometryShader(const void* Binary, size_t Size) { m_PSODesc.GS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetHullShader(const void* Binary, size_t Size) { m_PSODesc.HS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
         void SetDomainShader(const void* Binary, size_t Size) { m_PSODesc.DS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
-        void SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size);
-
-        void SetVertexShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.VS = Binary; }
-        void SetPixelShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.PS = Binary; }
-        void SetGeometryShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.GS = Binary; }
-        void SetHullShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.HS = Binary; }
-        void SetDomainShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.DS = Binary; }
-
-        void SetShader(DXShader& shader);
-
-        // Perform validation and compute a hash value for fast state block comparisons
-        void Finalize();
 
     private:
 
@@ -103,15 +117,15 @@ namespace RS::DX12
     public:
         DXComputePSO(const wchar_t* Name = L"Unnamed Compute PSO");
 
-        void SetComputeShader(const void* Binary, size_t Size) { m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
-        void SetComputeShader(const D3D12_SHADER_BYTECODE& Binary) { m_PSODesc.CS = Binary; }
-        void SetShader(DXShader::TypeFlag type, const void* pBinary, uint64 size);
-        void SetShader(DXShader& shader);
+        void SetComputeShader(DXShader& shader);
+        void SetShaderType(DXShader::TypeFlag type, DXShader& shader) override;
 
-        void Finalize();
+        void Finalize() override;
 
     private:
+        void SetComputeShader(const void* Binary, size_t Size) { m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }
 
+    private:
         D3D12_COMPUTE_PIPELINE_STATE_DESC m_PSODesc;
     };
 }

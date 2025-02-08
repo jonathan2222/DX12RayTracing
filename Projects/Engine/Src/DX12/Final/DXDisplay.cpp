@@ -89,13 +89,11 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
     shaderDesc.path = "Core/BufferCopyPS.hlsl";
     DXShader bufferCopyPSShader;
     bufferCopyPSShader.Create(shaderDesc);
-    IDxcBlob* pBufferCopyPSShaderBlob = bufferCopyPSShader.GetShaderBlob(shaderDesc.typeFlags);
 
     shaderDesc.path = "Core/ScreenQuadPresentVS.hlsl";
     shaderDesc.typeFlags = DXShader::TypeFlag::Vertex;
     DXShader screenQuadPresentVSShader;
     screenQuadPresentVSShader.Create(shaderDesc);
-    IDxcBlob* pScreenQuadPresentVSShaderBlob = screenQuadPresentVSShader.GetShaderBlob(shaderDesc.typeFlags);
 
     // Initialize PSOs
     m_BlendUIPSO.SetRootSignature(m_PresentRootSignature);
@@ -105,8 +103,8 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
     m_BlendUIPSO.SetSampleMask(0xFFFFFFFF);
     m_BlendUIPSO.SetInputLayout(0, nullptr);
     m_BlendUIPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-    m_BlendUIPSO.SetVertexShader(pScreenQuadPresentVSShaderBlob->GetBufferPointer(), pScreenQuadPresentVSShaderBlob->GetBufferSize());
-    m_BlendUIPSO.SetPixelShader(pBufferCopyPSShaderBlob->GetBufferPointer(), pBufferCopyPSShaderBlob->GetBufferSize());
+    m_BlendUIPSO.SetVertexShader(screenQuadPresentVSShader);
+    m_BlendUIPSO.SetPixelShader(bufferCopyPSShader);
     m_BlendUIPSO.SetRenderTargetFormat(m_SwapChainFormat, DXGI_FORMAT_UNKNOWN);
     m_BlendUIPSO.Finalize();
 
@@ -115,8 +113,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
         ObjName = m_BlendUIPSO; \
         shader.Create(shaderDesc); \
         ObjName.SetBlendState(RenderCore::BlendDisable); \
-        IDxcBlob* pShaderBlob = shader.GetShaderBlob(shaderDesc.typeFlags); \
-        ObjName.SetPixelShader(pShaderBlob->GetBufferPointer(), pShaderBlob->GetBufferSize()); \
+        ObjName.SetPixelShader(shader); \
         ObjName.Finalize(); \
         shader.Release(); \
     }

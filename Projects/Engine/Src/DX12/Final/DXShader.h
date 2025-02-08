@@ -35,6 +35,8 @@ namespace RS::DX12
 	public:
 		~DXShader();
 
+		static std::string GetDiskPathFromVirtualPath(const std::string& virtualPath, bool isInternal);
+
 		/*
 		* If succeeds, it will create the shader. If not, it will keep the state as it were before calling Create!
 		*/

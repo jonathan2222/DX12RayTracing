@@ -61,13 +61,18 @@ RS::DX12::DXShader::~DXShader()
 	}
 }
 
+std::string RS::DX12::DXShader::GetDiskPathFromVirtualPath(const std::string& virtualPath, bool isInternal)
+{
+	return Engine::GetDataFilePath(isInternal) + RS_SHADER_PATH + virtualPath;
+}
+
 bool RS::DX12::DXShader::Create(const Description& description)
 {
 	if (!ValidateShaderTypes(description.typeFlags))
 		return false;
 
 	std::string shaderVirtualPath = description.path;
-	std::string shaderPath = Engine::GetDataFilePath(description.isInternalPath) + RS_SHADER_PATH + shaderVirtualPath;
+	std::string shaderPath = GetDiskPathFromVirtualPath(shaderVirtualPath, description.isInternalPath);
 
 	if (LaunchArguments::Contains(LaunchParams::logShaderDebug))
 		LOG_INFO("Compiling shader with types: {}, Path: {}", TypesToString(description.typeFlags), shaderPath);
