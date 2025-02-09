@@ -26,13 +26,21 @@ namespace RS::DX12
         friend class DXCommandContext;
     public:
 
-        DXPSO(const wchar_t* Name) : m_Name(Name), m_RootSignature(nullptr), m_PSO(nullptr) {}
+        DXPSO(const wchar_t* Name) : m_Name(Name), m_RootSignature(nullptr), m_PSO(nullptr)
+        {
+            for (uint64& hash : m_HashCodeShaders)
+                hash = 0u;
+
+            static uint64 s_Generator = 0u;
+            m_ID = ++s_Generator;
+        }
 
         static void DestroyAll(void);
 
         void SetRootSignature(const DXRootSignature& BindMappings)
         {
             m_RootSignature = &BindMappings;
+            m_HashCodeRootSignature = Utils::Hash64(m_RootSignature);
         }
 
         const DXRootSignature& GetRootSignature(void) const
@@ -44,18 +52,31 @@ namespace RS::DX12
         ID3D12PipelineState* GetPipelineStateObject(void) const { return m_PSO; }
 
         void SetShader(DXShader& shader);
+        void SetShaderTypes(DXShader::TypeFlag types, DXShader& shader);
         virtual void SetShaderType(DXShader::TypeFlag type, DXShader& shader) = 0;
-        virtual void Finalize() = 0;
+        virtual ID3D12PipelineState* Finalize(bool detach = false) = 0;
+
+        uint64 GetID() const { return m_ID; }
+        DXShader::TypeFlag GetShaderFlags() const { return m_ShaderFlags; }
 
     protected:
         void SetShaderDescription(const DXShader::Description& desc, const DXShader::TypeFlags& type);
+
+        void SetPipelineStateObject(ID3D12PipelineState* pPSO) { m_PSO = pPSO; }
 
     protected:
         const wchar_t* m_Name;
 
         const DXRootSignature* m_RootSignature;
 
+        // Hash code for each settable state.
+        uint64 m_HashCodeRootSignature = 0u;
+        uint64 m_HashCodeShaders[DXShader::TypeFlags::COUNT-1];
+        // Main hash code
+        uint64 m_HashCode = 0u;
         ID3D12PipelineState* m_PSO;
+        uint64 m_ID = 0u;
+        DXShader::TypeFlag m_ShaderFlags = DXShader::TypeFlag::NONE;
 
         struct ShaderBundle
         {
@@ -93,7 +114,7 @@ namespace RS::DX12
         void SetShaderType(DXShader::TypeFlag type, DXShader& shader) override;
 
         // Perform validation and compute a hash value for fast state block comparisons
-        void Finalize() override;
+        ID3D12PipelineState* Finalize(bool detach = false) override;
 
     private:
         // These const_casts shouldn't be necessary, but we need to fix the API to accept "const void* pShaderBytecode"
@@ -107,6 +128,17 @@ namespace RS::DX12
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC m_PSODesc;
         std::shared_ptr<const D3D12_INPUT_ELEMENT_DESC> m_InputLayouts;
+
+        // Hashes
+        uint64 m_HashCodeBlendState = 0u;
+        uint64 m_HashCodeRasterizerState = 0u;
+        uint64 m_HashCodeDepthStencilState = 0u;
+        uint64 m_HashCodeSampleMask = 0u;
+        uint64 m_HashCodePrimitiveTopologyType = 0u;
+        uint64 m_HashCodeDepthTargetFormat = 0u;
+        uint64 m_HashCodeRenderTargetFormats = 0u;
+        uint64 m_HashCodeInputLayout = 0u;
+        uint64 m_HashCodePrimitiveRestart = 0u;
     };
 
 
@@ -120,7 +152,7 @@ namespace RS::DX12
         void SetComputeShader(DXShader& shader);
         void SetShaderType(DXShader::TypeFlag type, DXShader& shader) override;
 
-        void Finalize() override;
+        ID3D12PipelineState* Finalize(bool detatch = false) override;
 
     private:
         void SetComputeShader(const void* Binary, size_t Size) { m_PSODesc.CS = CD3DX12_SHADER_BYTECODE(const_cast<void*>(Binary), Size); }

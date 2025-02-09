@@ -24,6 +24,7 @@
 #include "DX12/Final/DXPixelBuffer.h"
 #include "DX12/Final/DXLinearAllocator.h"
 #include "DX12/Final/DXCommandSignature.h"
+#include "DX12/Final/DXShader.h"
 
 #include "DX12/Final/DXColorBuffer.h"
 #include "DX12/Final/DXDepthBuffer.h"
@@ -110,6 +111,7 @@ namespace RS::DX12
 
         void Reset(void);
 
+        void HotShaderReloading(DXPSO& pso);
     public:
 
         ~DXCommandContext(void);
@@ -210,8 +212,20 @@ namespace RS::DX12
 
         D3D12_COMMAND_LIST_TYPE m_Type;
 
-        // Debug only
-        DXPSO* pPSO = nullptr;
+        // --------- Debug Hot-shader reloading ---------
+        struct ShaderRecompileState
+        {
+            ID3D12PipelineState* m_pCompiledPSO = nullptr;
+            DXPSO* m_pPSO = nullptr;
+            DXShader::TypeFlag m_FinishedShaderTypes = DXShader::TypeFlag::NONE;
+            DXShader::TypeFlag m_ShaderTypes = DXShader::TypeFlag::NONE;
+            std::vector<std::shared_ptr<DXShader>> m_pShadersToRelease;
+            ShaderRecompileState() {}
+            ShaderRecompileState(DXPSO* pPSO, DXShader::TypeFlag shaderTypes) : m_pPSO(pPSO), m_ShaderTypes(shaderTypes), m_FinishedShaderTypes(0u) {}
+        };
+        std::vector<ShaderRecompileState> m_PSOs;
+        std::unordered_map<uint64, uint32> m_IDToPSOIndexMap;
+        std::mutex m_ShaderRecompileMutex;
     };
 
     class DXGraphicsContext : public DXCommandContext

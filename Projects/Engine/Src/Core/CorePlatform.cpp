@@ -7,6 +7,8 @@
 
 #include "GUI/LogNotifier.h"
 
+#include <thread>
+
 RS::CorePlatform::CorePlatform()
 {
 	m_sTemporaryDirectoryPath = CreateTemporaryPath();
@@ -155,6 +157,18 @@ void RS::CorePlatform::SetCurrentThreadName(const std::string& name)
 	std::wstring wname = Utils::ToWString(name);
 	HRESULT hr = SetThreadDescription(GetCurrentThread(), wname.c_str());
 	RS_ASSERT(SUCCEEDED(hr), "Failed to set name of current thread!");
+}
+
+void RS::CorePlatform::ThreadSleep(uint64 milliseconds)
+{
+	auto delay = std::chrono::duration<uint, std::milli>(milliseconds);
+	std::this_thread::sleep_for(delay);
+}
+
+uint RS::CorePlatform::GetCoreCount(uint defaultCount)
+{
+	uint hardwareCount = (uint)std::thread::hardware_concurrency();
+	return hardwareCount == 0u ? defaultCount : hardwareCount;
 }
 
 #include <shlobj.h> // Used for SHGetFolderPathW

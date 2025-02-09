@@ -43,14 +43,33 @@ void RS::DX12::DXPSO::SetShader(DXShader& shader)
     }
 }
 
+void RS::DX12::DXPSO::SetShaderTypes(DXShader::TypeFlag types, DXShader& shader)
+{
+    uint32 shaderIndex = UINT32_MAX;
+    DXShader::TypeFlags shaderTypes = types;
+    while (Utils::ForwardBitScan(shaderTypes, shaderIndex))
+    {
+        Utils::ClearBit(shaderTypes.Get(), shaderIndex);
+        DXShader::TypeFlags shaderType = 1 << shaderIndex;
+        SetShaderType(shaderType, shader);
+    }
+}
+
 void RS::DX12::DXPSO::SetShaderDescription(const DXShader::Description& desc, const DXShader::TypeFlags& type)
 {
+    RS_ASSERT(Utils::IsPowerOfTwo(type), "Cannot pass in more shader types, only one is allowed!");
     std::string key = DXShader::GetDiskPathFromVirtualPath(desc.path, desc.isInternalPath);
     auto it = m_ShaderDescs.find(key);
     if (it != m_ShaderDescs.end())
         it->second.types |= type.GetConst();
     else
         m_ShaderDescs[key] = ShaderBundle{.description = desc, .types = type.GetConst()};
+
+    const uint32 index = Utils::IndexOfPow2Bit(type.GetConst());
+    m_HashCodeShaders[index] = Utils::Hash64(desc.path);
+    m_HashCodeShaders[index] = Utils::Hash64(desc.isInternalPath, m_HashCodeShaders[index]);
+
+    m_ShaderFlags |= type;
 }
 
 RS::DX12::DXGraphicsPSO::DXGraphicsPSO(const wchar_t* Name)
@@ -66,27 +85,32 @@ RS::DX12::DXGraphicsPSO::DXGraphicsPSO(const wchar_t* Name)
 void RS::DX12::DXGraphicsPSO::SetBlendState(const D3D12_BLEND_DESC& BlendDesc)
 {
     m_PSODesc.BlendState = BlendDesc;
+    m_HashCodeBlendState = Utils::Hash64State(&BlendDesc);
 }
 
 void RS::DX12::DXGraphicsPSO::SetRasterizerState(const D3D12_RASTERIZER_DESC& RasterizerDesc)
 {
     m_PSODesc.RasterizerState = RasterizerDesc;
+    m_HashCodeRasterizerState = Utils::Hash64State(&RasterizerDesc);
 }
 
 void RS::DX12::DXGraphicsPSO::SetDepthStencilState(const D3D12_DEPTH_STENCIL_DESC& DepthStencilDesc)
 {
     m_PSODesc.DepthStencilState = DepthStencilDesc;
+    m_HashCodeDepthStencilState = Utils::Hash64State(&DepthStencilDesc);
 }
 
 void RS::DX12::DXGraphicsPSO::SetSampleMask(UINT SampleMask)
 {
     m_PSODesc.SampleMask = SampleMask;
+    m_HashCodeSampleMask = Utils::Hash64(SampleMask);
 }
 
 void RS::DX12::DXGraphicsPSO::SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE TopologyType)
 {
     RS_ASSERT(TopologyType != D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED, "Can't draw with undefined topology");
     m_PSODesc.PrimitiveTopologyType = TopologyType;
+    m_HashCodePrimitiveTopologyType = Utils::Hash64State(&TopologyType);
 }
 
 void RS::DX12::DXGraphicsPSO::SetDepthTargetFormat(DXGI_FORMAT DSVFormat, UINT MsaaCount, UINT MsaaQuality)
@@ -113,6 +137,12 @@ void RS::DX12::DXGraphicsPSO::SetRenderTargetFormats(UINT NumRTVs, const DXGI_FO
     m_PSODesc.DSVFormat = DSVFormat;
     m_PSODesc.SampleDesc.Count = MsaaCount;
     m_PSODesc.SampleDesc.Quality = MsaaQuality;
+
+    m_HashCodeRenderTargetFormats = Utils::Hash64State(&m_PSODesc.RTVFormats[0], 8);
+    m_HashCodeRenderTargetFormats = Utils::Hash64(m_PSODesc.NumRenderTargets, m_HashCodeRenderTargetFormats);
+    m_HashCodeRenderTargetFormats = Utils::Hash64(m_PSODesc.DSVFormat, m_HashCodeRenderTargetFormats);
+    m_HashCodeRenderTargetFormats = Utils::Hash64(m_PSODesc.SampleDesc.Count, m_HashCodeRenderTargetFormats);
+    m_HashCodeRenderTargetFormats = Utils::Hash64(m_PSODesc.SampleDesc.Quality, m_HashCodeRenderTargetFormats);
 }
 
 void RS::DX12::DXGraphicsPSO::SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DESC* pInputElementDescs)
@@ -127,11 +157,14 @@ void RS::DX12::DXGraphicsPSO::SetInputLayout(UINT NumElements, const D3D12_INPUT
     }
     else
         m_InputLayouts = nullptr;
+
+    m_HashCodeInputLayout = Utils::Hash64State(pInputElementDescs, NumElements);
 }
 
 void RS::DX12::DXGraphicsPSO::SetPrimitiveRestart(D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBProps)
 {
     m_PSODesc.IBStripCutValue = IBProps;
+    m_HashCodePrimitiveRestart = Utils::Hash64State(&IBProps);
 }
 
 void RS::DX12::DXGraphicsPSO::SetShaderType(DXShader::TypeFlag type, DXShader& shader)
@@ -177,48 +210,65 @@ void RS::DX12::DXGraphicsPSO::SetDomainShader(DXShader& shader)
     SetShaderType(DXShader::TypeFlag::Domain, shader);
 }
 
-void RS::DX12::DXGraphicsPSO::Finalize()
+ID3D12PipelineState* RS::DX12::DXGraphicsPSO::Finalize(bool detach)
 {
     // Make sure the root signature is finalized first
     m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
     RS_ASSERT(m_PSODesc.pRootSignature != nullptr);
 
     m_PSODesc.InputLayout.pInputElementDescs = nullptr;
-    size_t HashCode = Utils::Hash64State(&m_PSODesc);
-    HashCode = Utils::Hash64State(m_InputLayouts.get(), m_PSODesc.InputLayout.NumElements, HashCode);
+    m_HashCode = Utils::Hash64State(&m_PSODesc);
+    m_HashCode = Utils::Hash64State(m_InputLayouts.get(), m_PSODesc.InputLayout.NumElements, m_HashCode);
     m_PSODesc.InputLayout.pInputElementDescs = m_InputLayouts.get();
+
+    //m_HashCode = Utils::Hash64State(&m_HashCodeShaders[0], DXShader::TypeFlag::COUNT - 1, m_HashCodeRootSignature);
+    //m_HashCode = Utils::Hash64(m_HashCodeBlendState, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeRasterizerState, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeDepthStencilState, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeDepthTargetFormat, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeInputLayout, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodePrimitiveRestart, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodePrimitiveTopologyType, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeRenderTargetFormats, m_HashCode);
+    //m_HashCode = Utils::Hash64(m_HashCodeSampleMask, m_HashCode);
 
     ID3D12PipelineState** PSORef = nullptr;
     bool firstCompile = false;
     {
         static std::mutex s_HashMapMutex;
         std::lock_guard<std::mutex> CS(s_HashMapMutex);
-        auto iter = s_GraphicsPSOHashMap.find(HashCode);
+        auto iter = s_GraphicsPSOHashMap.find(m_HashCode);
 
         // Reserve space so the next inquiry will find that someone got here first.
         if (iter == s_GraphicsPSOHashMap.end())
         {
             firstCompile = true;
-            PSORef = s_GraphicsPSOHashMap[HashCode].GetAddressOf();
+            PSORef = s_GraphicsPSOHashMap[m_HashCode].GetAddressOf();
         }
         else
             PSORef = iter->second.GetAddressOf();
     }
 
+    ID3D12PipelineState* pPSO = nullptr;
+
     if (firstCompile)
     {
-        m_PSO = nullptr; // Will be deleted when calling DeleteAll()
         RS_ASSERT(m_PSODesc.DepthStencilState.DepthEnable != (m_PSODesc.DSVFormat == DXGI_FORMAT_UNKNOWN));
-        DXCall(DXCore::GetDevice()->CreateGraphicsPipelineState(&m_PSODesc, IID_PPV_ARGS(&m_PSO)));
-        s_GraphicsPSOHashMap[HashCode].Attach(m_PSO);
-        m_PSO->SetName(m_Name);
+        DXCall(DXCore::GetDevice()->CreateGraphicsPipelineState(&m_PSODesc, IID_PPV_ARGS(&pPSO)));
+        s_GraphicsPSOHashMap[m_HashCode].Attach(pPSO);
+        pPSO->SetName(m_Name);
     }
     else
     {
         while (*PSORef == nullptr)
             std::this_thread::yield();
-        m_PSO = *PSORef;
+        pPSO = *PSORef;
     }
+
+    if (!detach)
+        m_PSO = pPSO;
+
+    return pPSO;
 }
 
 RS::DX12::DXComputePSO::DXComputePSO(const wchar_t* Name)
@@ -233,44 +283,50 @@ void RS::DX12::DXComputePSO::SetComputeShader(DXShader& shader)
     SetShaderType(DXShader::TypeFlag::Compute, shader);
 }
 
-void RS::DX12::DXComputePSO::Finalize()
+ID3D12PipelineState* RS::DX12::DXComputePSO::Finalize(bool detach)
 {
     // Make sure the root signature is finalized first
     m_PSODesc.pRootSignature = m_RootSignature->GetSignature();
     RS_ASSERT(m_PSODesc.pRootSignature != nullptr);
 
-    size_t HashCode = Utils::Hash64State(&m_PSODesc);
+    m_HashCode = Utils::Hash64State(&m_PSODesc);
+    //m_HashCode = Utils::Hash64State(&m_HashCodeShaders[0], DXShader::TypeFlag::COUNT - 1, m_HashCodeRootSignature);
 
     ID3D12PipelineState** PSORef = nullptr;
     bool firstCompile = false;
     {
         static std::mutex s_HashMapMutex;
         std::lock_guard<std::mutex> CS(s_HashMapMutex);
-        auto iter = s_ComputePSOHashMap.find(HashCode);
+        auto iter = s_ComputePSOHashMap.find(m_HashCode);
 
         // Reserve space so the next inquiry will find that someone got here first.
         if (iter == s_ComputePSOHashMap.end())
         {
             firstCompile = true;
-            PSORef = s_ComputePSOHashMap[HashCode].GetAddressOf();
+            PSORef = s_ComputePSOHashMap[m_HashCode].GetAddressOf();
         }
         else
             PSORef = iter->second.GetAddressOf();
     }
 
+    ID3D12PipelineState* pPSO = nullptr;
     if (firstCompile)
     {
-        m_PSO = nullptr; // Will be deleted when calling DeleteAll()
-        DXCall(DXCore::GetDevice()->CreateComputePipelineState(&m_PSODesc, IID_PPV_ARGS(&m_PSO)));
-        s_ComputePSOHashMap[HashCode].Attach(m_PSO);
-        m_PSO->SetName(m_Name);
+        DXCall(DXCore::GetDevice()->CreateComputePipelineState(&m_PSODesc, IID_PPV_ARGS(&pPSO)));
+        s_ComputePSOHashMap[m_HashCode].Attach(pPSO);
+        pPSO->SetName(m_Name);
     }
     else
     {
         while (*PSORef == nullptr)
             std::this_thread::yield();
-        m_PSO = *PSORef;
+        pPSO = *PSORef;
     }
+
+    if (!detach)
+        m_PSO = pPSO;
+
+    return pPSO;
 }
 
 void RS::DX12::DXComputePSO::SetShaderType(DXShader::TypeFlag type, DXShader& shader)

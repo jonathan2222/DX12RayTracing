@@ -176,7 +176,7 @@ void RS::RenderCore::InitCommonStates()
         generateMipsShader.Create(shaderDesc); \
         ObjName.SetRootSignature(m_sCommonRootSignature); \
         ObjName.SetComputeShader(generateMipsShader); \
-        ObjName.Finalize(); \
+        ObjName.Finalize(false); \
         generateMipsShader.Release(); \
     }
 

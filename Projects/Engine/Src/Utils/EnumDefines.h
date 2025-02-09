@@ -61,6 +61,7 @@
 	flags.IsOne() -> true if only one flag is set.
 	flags.Get() -> returns the reference to the underlying value.
 */
+// TODO: Move these utils functions outside the class to make the declaration less intense!
 #define _RS_ENUM_FLAGS_ENTRY(x, i, d) inline static constexpr d x = (d)(1 << (i));
 #define _RS_ENUM_FLAGS_ENTRY_STR(x) #x, 
 #define _RS_ENUM_FLAGS_ENTRY_STR_END(x) #x
@@ -100,11 +101,17 @@
 		name operator|(T other) const { return name(m_Value | (type)other);} \
 		name operator|(const name& other) const { return name(m_Value | other.m_Value);} \
 		template<NumberType T> \
+		name operator^(T other) const { return name(m_Value ^ (type)other);} \
+		name operator^(const name& other) const { return name(m_Value ^ other.m_Value);} \
+		template<NumberType T> \
 		name& operator=(T other) { m_Value = (type)other; return *this; } \
 		name& operator=(const name& other) { m_Value = other.m_Value; return *this; } \
 		template<NumberType T> \
 		name& operator&=(T other) { m_Value = m_Value & (type)other; return *this; } \
 		name& operator&=(const name& other) { m_Value = m_Value & other.m_Value; return *this; } \
+		template<NumberType T> \
+		name& operator^=(T other) { m_Value = m_Value ^ (type)other; return *this; } \
+		name& operator^=(const name& other) { m_Value = m_Value ^ other.m_Value; return *this; } \
 		template<NumberType T> \
 		name& operator|=(T other) { m_Value = m_Value | (type)other; return *this; } \
 		name& operator|=(const name& other) { m_Value = m_Value | other.m_Value; return *this; } \
@@ -132,7 +139,7 @@
 		name& operator++() { ++m_Value; return *this; } \
 		name operator++(int) { name ret(m_Value); ++m_Value; return ret; } \
 	private: \
-		type m_Value; \
 		static inline const char* ms_pStrings[COUNT+2] = { "NONE", RS_FOR_EACH_END(_RS_ENUM_FLAGS_ENTRY_STR, _RS_ENUM_FLAGS_ENTRY_STR_END, __VA_ARGS__), "?" }; \
+		type m_Value; \
 	}; \
 	using name##s = name;

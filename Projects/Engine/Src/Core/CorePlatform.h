@@ -44,6 +44,8 @@ namespace RS
 		static std::string GetLastErrorString();
 
 		static void SetCurrentThreadName(const std::string& name);
+		static void ThreadSleep(uint64 milliseconds);
+		static uint GetCoreCount(uint defaultCount = 8);
 
 	private:
 		std::string CreateTemporaryPath();

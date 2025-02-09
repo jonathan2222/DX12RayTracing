@@ -112,7 +112,7 @@ void RS::GraphicsPSO::SetShader(Shader* pShader)
     if (!m_ShaderFileWatcher.HasExactListener(pShader->GetPath()))
     {
         m_ShaderFileWatcher.AddFileListener(pShader->GetPath(),
-            [&](const std::filesystem::path& path, FileWatcher::FileStatus status)
+            [&](const std::filesystem::path& path, uint64 userData, FileWatcher::FileStatus status)
             {
                 Shader shader;
                 bool updatedSuccessfully = shader.Create(m_ShaderDescription);

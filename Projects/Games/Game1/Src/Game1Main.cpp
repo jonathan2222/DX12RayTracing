@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         graphicsPSO.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
         graphicsPSO.SetShader(shader);
         graphicsPSO.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
-        graphicsPSO.Finalize();
+        graphicsPSO.Finalize(false);
         shader.Release();
     }
 

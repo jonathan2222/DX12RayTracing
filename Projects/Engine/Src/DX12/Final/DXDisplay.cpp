@@ -106,7 +106,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
     m_BlendUIPSO.SetVertexShader(screenQuadPresentVSShader);
     m_BlendUIPSO.SetPixelShader(bufferCopyPSShader);
     m_BlendUIPSO.SetRenderTargetFormat(m_SwapChainFormat, DXGI_FORMAT_UNKNOWN);
-    m_BlendUIPSO.Finalize();
+    m_BlendUIPSO.Finalize(false);
 
 #define CreatePSO(ObjName, shaderDesc) \
     { \
@@ -114,7 +114,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
         shader.Create(shaderDesc); \
         ObjName.SetBlendState(RenderCore::BlendDisable); \
         ObjName.SetPixelShader(shader); \
-        ObjName.Finalize(); \
+        ObjName.Finalize(false); \
         shader.Release(); \
     }
 

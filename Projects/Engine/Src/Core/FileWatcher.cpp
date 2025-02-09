@@ -40,21 +40,28 @@ void RS::FileWatcher::Release()
 
 void RS::FileWatcher::SetDelay(uint milliseconds)
 {
-    m_Delay = std::chrono::duration<uint, std::milli>(milliseconds);
+    m_Delay = milliseconds;
 }
 
 void RS::FileWatcher::AddFileListener(const std::filesystem::path& pathOnDisk, Listener callback)
 {
+    AddFileListener(pathOnDisk, 0u, callback);
+}
+
+void RS::FileWatcher::AddFileListener(const std::filesystem::path& pathOnDisk, uint64 userKey, Listener callback)
+{
+    ListenerKey key{ .m_Path = pathOnDisk, .m_UserKey = userKey };
+
     std::lock_guard<std::mutex> lock(m_FileMutex);
 
-    auto it = m_Listeners.find(pathOnDisk);
+    auto it = m_Listeners.find(key);
     if (it != m_Listeners.end())
     {
         it->second.push_back(callback);
         return;
     }
 
-    m_Listeners[pathOnDisk] = { callback };
+    m_Listeners[key] = { callback };
 
     if (std::filesystem::is_directory(pathOnDisk))
     {
@@ -75,8 +82,15 @@ void RS::FileWatcher::AddFileListener(const std::filesystem::path& pathOnDisk, L
 
 bool RS::FileWatcher::HasExactListener(const Path& pathOnDisk)
 {
+    return HasExactListener(pathOnDisk, 0u);
+}
+
+bool RS::FileWatcher::HasExactListener(const Path& pathOnDisk, uint64 userKey)
+{
+    ListenerKey key{ .m_Path = pathOnDisk, .m_UserKey = userKey };
+
     std::lock_guard<std::mutex> lock(m_FileMutex);
-    return m_Listeners.find(pathOnDisk) != m_Listeners.end();
+    return m_Listeners.find(key) != m_Listeners.end();
 }
 
 void RS::FileWatcher::Clear()
@@ -96,12 +110,12 @@ void RS::FileWatcher::CallListeners(const Path& filePath, FileStatus status)
         Path canonicalFilePath = std::filesystem::canonical(filePath);
         for (auto& entry : m_Listeners)
         {
-            Path canonicalListenerPath = std::filesystem::canonical(entry.first);
+            Path canonicalListenerPath = std::filesystem::canonical(entry.first.m_Path);
 
             if (canonicalListenerPath.string() == canonicalFilePath.string())
             {
                 for (Listener& listener : entry.second)
-                    listener(filePath, status);
+                    listener(filePath, entry.first.m_UserKey, status);
             }
             else
             // Because the canonical path is basically a kind of absolute path, we know that if one is part of the other,
@@ -112,7 +126,7 @@ void RS::FileWatcher::CallListeners(const Path& filePath, FileStatus status)
                 if (canonicalListenerPath.string().find(canonicalFilePath.string()) == 0)
                 {
                     for (Listener& listener : entry.second)
-                        listener(filePath, status);
+                        listener(filePath, entry.first.m_UserKey, status);
                 }
             }
             else if (canonicalListenerPath.string().size() < canonicalFilePath.string().size())
@@ -121,7 +135,7 @@ void RS::FileWatcher::CallListeners(const Path& filePath, FileStatus status)
                 if (canonicalFilePath.string().find(canonicalListenerPath.string()) == 0)
                 {
                     for (Listener& listener : entry.second)
-                        listener(filePath, status);
+                        listener(filePath, entry.first.m_UserKey, status);
                 }
             }
         }
@@ -138,7 +152,7 @@ void RS::FileWatcher::ThreadFunction(const std::string& threadName)
 
     while (m_Running)
     {
-        std::this_thread::sleep_for(m_Delay);
+        CorePlatform::ThreadSleep(m_Delay);
 
         std::lock_guard<std::mutex> lock(m_FileMutex);
 

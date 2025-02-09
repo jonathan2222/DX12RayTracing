@@ -212,6 +212,67 @@ void DXCommandContext::Reset(void)
     BindDescriptorHeaps();
 }
 
+void RS::DX12::DXCommandContext::HotShaderReloading(DXPSO& pso)
+{
+    std::unique_lock<std::mutex> lock(m_ShaderRecompileMutex);
+    auto it = m_IDToPSOIndexMap.find(pso.GetID());
+    if (it == m_IDToPSOIndexMap.end())
+    {
+        m_IDToPSOIndexMap[pso.GetID()] = (uint32)m_PSOs.size();
+        m_PSOs.emplace_back(&pso, pso.GetShaderFlags());
+    }
+    ShaderRecompileState& state = m_PSOs[m_IDToPSOIndexMap[pso.GetID()]];
+    if (state.m_pPSO != &pso)
+        state.m_pPSO = &pso;
+
+    if (state.m_FinishedShaderTypes == pso.GetShaderFlags())
+    {
+        // Reset state and assign the detached PSO to the original again.
+        state.m_FinishedShaderTypes = 0u;
+        state.m_pPSO->SetPipelineStateObject(state.m_pCompiledPSO);
+        state.m_pCompiledPSO = nullptr;
+    }
+    lock.unlock();
+
+    for (auto& entry : pso.m_ShaderDescs)
+    {
+        if (!DXCore::GetContextManager()->m_ShaderFileWatcher.HasExactListener(entry.first, pso.GetID()))
+        {
+            DXCore::GetContextManager()->m_ShaderFileWatcher.AddFileListener(entry.first, pso.GetID(), [entry, this](std::filesystem::path, uint64 userKey, FileWatcher::FileStatus status)
+                {
+                    DXShader* pShader = new DXShader();
+                    bool succeeded = pShader->Create(entry.second.description);
+                    if (!succeeded)
+                        return;
+
+                    RS_ASSERT(pShader->GetTypes() == entry.second.types);
+
+                    std::unique_lock<std::mutex> lock(m_ShaderRecompileMutex);
+                    ShaderRecompileState& state = m_PSOs[m_IDToPSOIndexMap[userKey]];
+                    state.m_pPSO->SetShader(*pShader);
+                    state.m_pShadersToRelease.push_back(std::shared_ptr<DXShader>(pShader));
+                    lock.unlock();
+
+                    uint64 finishedShaderTypes = state.m_FinishedShaderTypes | entry.second.types;
+                    if (state.m_ShaderTypes == finishedShaderTypes)
+                    {
+                        // Finalize the PSO but do not set its internal PSO yet.
+                        // We do this such that we can finalize it in this thread without affecting the main thread.
+                        state.m_pCompiledPSO = state.m_pPSO->Finalize(true);
+                        for (std::shared_ptr<DXShader>& pShaderToRelease : state.m_pShadersToRelease)
+                            pShaderToRelease->Release();
+                        state.m_pShadersToRelease.clear();
+                    }
+
+                    // Updating finished state last such that next time the HotShaderReloading function is called we can assign the detached PSO to it.
+                    lock.lock();
+                    state.m_FinishedShaderTypes = finishedShaderTypes;
+                    lock.unlock();
+                });
+        }
+    }
+}
+
 void DXCommandContext::BindDescriptorHeaps(void)
 {
     UINT NonNullHeaps = 0;
@@ -229,35 +290,15 @@ void DXCommandContext::BindDescriptorHeaps(void)
 
 void DXCommandContext::SetPipelineState(DXPSO& pso)
 {
+    // --------------- Debug only ---------------
+    HotShaderReloading(pso);
+
     ID3D12PipelineState* PipelineState = pso.GetPipelineStateObject();
     if (PipelineState == m_CurPipelineState)
         return;
 
     m_CommandList->SetPipelineState(PipelineState);
     m_CurPipelineState = PipelineState;
-
-    // --------------- Debug only ---------------
-    pPSO = &pso;
-    for (auto& entry : pso.m_ShaderDescs)
-    {
-        if (!DXCore::GetContextManager()->m_ShaderFileWatcher.HasExactListener(entry.first))
-        {
-            DXCore::GetContextManager()->m_ShaderFileWatcher.AddFileListener(entry.first, [entry, this](std::filesystem::path, FileWatcher::FileStatus status)
-                {
-                    DXShader shader;
-                    bool succeeded = shader.Create(entry.second.description);
-                    if (!succeeded)
-                        return;
-
-                    RS_ASSERT(shader.GetTypes() == entry.second.types)
-                    pPSO->SetShader(shader);
-                    pPSO->Finalize();
-                    shader.Release();
-
-                    SetPipelineState(*pPSO);
-                });
-        }
-    }
 }
 
 void DXGraphicsContext::SetRenderTargets(UINT NumRTVs, const D3D12_CPU_DESCRIPTOR_HANDLE RTVs[], D3D12_CPU_DESCRIPTOR_HANDLE DSV)

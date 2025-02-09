@@ -73,6 +73,25 @@ namespace RS::Utils
 		return Hash64((uint32*)pStateDesc, (uint32*)(pStateDesc + count), hash);
 	}
 
+	inline uint64 Hash64(const std::string& str, uint64 hash = 2166136261U)
+	{
+		std::string wordAligned(str);
+		if ((wordAligned.size() & 3) == 0)
+		{
+			const uint64 bytesToAdd = wordAligned.size() & (~3);
+			wordAligned.insert(wordAligned.end(), bytesToAdd, ' ');
+		}
+		return Hash64((uint32*)wordAligned.data(), (uint32*)(wordAligned.data() + wordAligned.size()), hash);
+	}
+
+	template <typename T>
+	inline uint64 Hash64(const T& value, uint64 hash = 2166136261U)
+	{
+		uint64 finalValue;
+		std::memcpy((void*)&finalValue, (void*)&value, std::min(sizeof(value), sizeof(uint64)));
+		return Hash64((uint32*)&finalValue, (uint32*)(&finalValue + 1), hash);
+	}
+
 	template<typename T>
 	inline uint64 Hash(const T& v)
 	{
