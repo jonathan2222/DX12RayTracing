@@ -46,6 +46,7 @@ void RS::DX12::DXUploadBuffer::Create(const std::wstring& name, size_t BufferSiz
 
     DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_pResource)));
+    m_Alive = true;
 
     m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 

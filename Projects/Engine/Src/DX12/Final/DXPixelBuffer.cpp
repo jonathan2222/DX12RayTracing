@@ -102,6 +102,7 @@ void RS::DX12::DXPixelBuffer::CreateTextureResource(ID3D12Device* Device, const 
         CD3DX12_HEAP_PROPERTIES HeapProps(D3D12_HEAP_TYPE_DEFAULT);
         DXCall(Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
             &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, &ClearValue, IID_PPV_ARGS(&m_pResource)));
+        m_Alive = true;
     }
 
     m_UsageState = D3D12_RESOURCE_STATE_COMMON;

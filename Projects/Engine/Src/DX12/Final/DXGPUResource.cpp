@@ -1,6 +1,19 @@
 #include "PreCompiled.h"
 #include "DXGPUResource.h"
 
+#include "DX12/Final/DXCore.h"
+
+void RS::DX12::DXGPUResource::Destroy()
+{
+    if (m_Alive)
+    {
+        DXCore::FreeResource(m_pResource);
+        m_GpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
+        ++m_VersionID;
+        m_Alive = false;
+    }
+}
+
 bool RS::DX12::DXGPUResource::Map(uint32 subresource, const D3D12_RANGE* pReadRange, void** ppData, DataAccess access)
 {
     // Debug

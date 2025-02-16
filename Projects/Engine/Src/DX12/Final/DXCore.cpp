@@ -28,8 +28,20 @@ void RS::DX12::DXCore::Init()
 	pDisplay->AddOnSizeChangeCallback("Display SizeChangeCallback", dynamic_cast<RS::IDisplaySizeChange*>(m_pDisplay));
 }
 
-void RS::DX12::DXCore::Release()
+void RS::DX12::DXCore::FreeResource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource)
 {
+	RS_ASSERT(m_spContextManager != nullptr, "Cannot free resource. The core is already destroyed!");
+	m_pDisplay->FreeResource(pResource);
+}
+
+void RS::DX12::DXCore::Destroy()
+{
+	if (m_spContextManager == nullptr)
+	{
+		RS_ASSERT("Trying to destory an already destroyed core!");
+		return;
+	}
+
 	m_sCommandListManager.IdleGPU();
 
 	DXCommandContext::DestroyAllContexts();

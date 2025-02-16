@@ -43,6 +43,7 @@ void RS::DX12::DXTexture::Create2D(size_t RowPitchBytes, size_t Width, size_t He
 
     DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &texDesc,
         m_UsageState, nullptr, IID_PPV_ARGS(m_pResource.ReleaseAndGetAddressOf())));
+    m_Alive = true;
 
     m_pResource->SetName(L"Texture");
 
@@ -89,6 +90,7 @@ void RS::DX12::DXTexture::CreateCube(size_t RowPitchBytes, size_t Width, size_t 
 
     DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &texDesc,
         m_UsageState, nullptr, IID_PPV_ARGS(m_pResource.ReleaseAndGetAddressOf())));
+    m_Alive = true;
 
     m_pResource->SetName(L"Texture");
 

@@ -35,6 +35,7 @@ void RS::DX12::DXReadbackBuffer::Create(const std::wstring& name, uint32 NumElem
 
     DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc,
         D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_pResource)));
+    m_Alive = true;
 
     m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 

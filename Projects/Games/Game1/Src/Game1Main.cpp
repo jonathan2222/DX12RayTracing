@@ -164,7 +164,9 @@ int main(int argc, char* argv[])
     RS::ImGuiRenderer::Get()->Release();
     buffer.Destroy();
     RS::Console::Get()->Release();
-    RS::DX12::DXCore::Release();
+
+    texture.Destroy();
+    RS::DX12::DXCore::Destroy();
 
     //auto pEngineLoop = RS::EngineLoop::Get();
     //pEngineLoop->Init();

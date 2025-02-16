@@ -29,7 +29,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
     swapChainDesc.Height = height;
     swapChainDesc.Format = format;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = SWAP_CHAIN_BUFFER_COUNT;
+    swapChainDesc.BufferCount = BufferCount;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
     swapChainDesc.Scaling = DXGI_SCALING_NONE;
@@ -67,7 +67,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
         }
     }
 
-    for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+    for (uint32_t i = 0; i < BufferCount; ++i)
     {
         ComPtr<ID3D12Resource> displayPlane;
         DXCall(m_pSwapChain1->GetBuffer(i, IID_PPV_ARGS(&displayPlane)));
@@ -130,7 +130,7 @@ void RS::DX12::DXDisplay::Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORM
     bufferCopyPSShader.Release();
     screenQuadPresentVSShader.Release();
 
-    m_CurrentBuffer = 0;
+    m_CurrentBufferIndex = 0;
     m_FrameIndex = 0;
     m_FrameStartTick = 0;
 }
@@ -139,14 +139,16 @@ void RS::DX12::DXDisplay::Remove()
 {
     RS_ASSERT(m_pSwapChain1);
 
+    DeleteAllPendingRemovals();
+
     m_pSwapChain1->SetFullscreenState(FALSE, nullptr);
     m_pSwapChain1->Release();
 
-    for (UINT i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+    for (UINT i = 0; i < BufferCount; ++i)
         m_DisplayPlanes[i].Destroy();
 }
 
-void RS::DX12::DXDisplay::Present(DXColorBuffer* pBase, DXGraphicsContext* pContext)
+uint RS::DX12::DXDisplay::Present(DXColorBuffer* pBase, DXGraphicsContext* pContext)
 {
     RS_ASSERT(pBase != nullptr);
 
@@ -158,7 +160,9 @@ void RS::DX12::DXDisplay::Present(DXColorBuffer* pBase, DXGraphicsContext* pCont
     uint32 presentInterval = m_EnableVSync ? std::min(4u, (uint32)std::roundf(m_FrameTime * 60.0f)) : 0u;
     m_pSwapChain1->Present(presentInterval, 0);
 
-    m_CurrentBuffer = (m_CurrentBuffer + 1) % SWAP_CHAIN_BUFFER_COUNT;
+    uint currentBufferIndex = (m_CurrentBufferIndex + 1) % BufferCount;
+    DeletePendingRemovals(currentBufferIndex);
+    m_CurrentBufferIndex = currentBufferIndex;
 
     uint64 currentTick = Timer::GetCurrentTick();
 
@@ -184,6 +188,8 @@ void RS::DX12::DXDisplay::Present(DXColorBuffer* pBase, DXGraphicsContext* pCont
 
     m_FrameStartTick = currentTick;
     ++m_FrameIndex;
+
+    return m_CurrentBufferIndex;
 }
 
 void RS::DX12::DXDisplay::Resize(uint32 width, uint32 height)
@@ -195,20 +201,20 @@ void RS::DX12::DXDisplay::Resize(uint32 width, uint32 height)
 
     RS_LOG_INFO("Changing display resolution to {}x{}", width, height);
 
-    for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+    for (uint32_t i = 0; i < BufferCount; ++i)
         m_DisplayPlanes[i].Destroy();
 
     RS_ASSERT(m_pSwapChain1 != nullptr);
-    DXCall(m_pSwapChain1->ResizeBuffers(SWAP_CHAIN_BUFFER_COUNT, width, height, m_SwapChainFormat, 0));
+    DXCall(m_pSwapChain1->ResizeBuffers(BufferCount, width, height, m_SwapChainFormat, 0));
 
-    for (uint32_t i = 0; i < SWAP_CHAIN_BUFFER_COUNT; ++i)
+    for (uint32_t i = 0; i < BufferCount; ++i)
     {
         ComPtr<ID3D12Resource> displayPlane;
         DXCall(m_pSwapChain1->GetBuffer(i, IID_PPV_ARGS(&displayPlane)));
         m_DisplayPlanes[i].CreateFromSwapChain(L"Primary SwapChain Buffer", displayPlane.Detach());
     }
 
-    m_CurrentBuffer = 0;
+    m_CurrentBufferIndex = 0;
 
     DXCore::GetCommandListManager()->IdleGPU();
 
@@ -220,6 +226,14 @@ void RS::DX12::DXDisplay::OnSizeChange(uint32 width, uint32 height, bool isFulls
     RS_UNUSED(isFullscreen);
     RS_UNUSED(windowed);
     Resize(width, height);
+}
+
+void RS::DX12::DXDisplay::FreeResource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource)
+{
+    const uint bufferIndex = GetCurrentBufferIndex();
+
+    std::lock_guard<std::mutex> lock(m_PendingRemovalsMutex);
+    m_PendingRemovalsPerDisplayBuffer[bufferIndex].push_back(pResource);
 }
 
 void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pContext)
@@ -236,13 +250,27 @@ void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pC
 
     // Render texture to the swapchain buffer
     context.SetPipelineState(m_PresentSDRPSO);
-    context.TransitionResource(m_DisplayPlanes[m_CurrentBuffer], D3D12_RESOURCE_STATE_RENDER_TARGET);
-    context.SetRenderTarget(m_DisplayPlanes[m_CurrentBuffer].GetRTV());
+    context.TransitionResource(m_DisplayPlanes[m_CurrentBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+    context.SetRenderTarget(m_DisplayPlanes[m_CurrentBufferIndex].GetRTV());
     context.SetViewportAndScissor(0, 0, m_Width, m_Height);
     context.Draw(3);
 
-    context.TransitionResource(m_DisplayPlanes[m_CurrentBuffer], D3D12_RESOURCE_STATE_PRESENT);
+    context.TransitionResource(m_DisplayPlanes[m_CurrentBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
 
     // Close the final context to be executed before frame present.
     context.Finish();
+}
+
+void RS::DX12::DXDisplay::DeletePendingRemovals(uint bufferIndex)
+{
+    std::unique_lock<std::mutex> lock(m_PendingRemovalsMutex);
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>>& pendingRemovals = m_PendingRemovalsPerDisplayBuffer[bufferIndex];
+    pendingRemovals.clear();
+}
+
+void RS::DX12::DXDisplay::DeleteAllPendingRemovals()
+{
+    std::unique_lock<std::mutex> lock(m_PendingRemovalsMutex);
+    for (auto& pendingRemovals : m_PendingRemovalsPerDisplayBuffer)
+        pendingRemovals.clear();
 }

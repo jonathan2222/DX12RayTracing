@@ -34,7 +34,8 @@ namespace RS::DX12
         DXGPUResource() :
             m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL),
             m_UsageState(D3D12_RESOURCE_STATE_COMMON),
-            m_TransitioningState((D3D12_RESOURCE_STATES)-1)
+            m_TransitioningState((D3D12_RESOURCE_STATES)-1),
+            m_Alive(false)
         {
         }
 
@@ -42,18 +43,14 @@ namespace RS::DX12
             m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL),
             m_pResource(pResource),
             m_UsageState(CurrentState),
-            m_TransitioningState((D3D12_RESOURCE_STATES)-1)
+            m_TransitioningState((D3D12_RESOURCE_STATES)-1),
+            m_Alive(true)
         {
         }
 
         ~DXGPUResource() { Destroy(); }
 
-        virtual void Destroy()
-        {
-            m_pResource = nullptr;
-            m_GpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
-            ++m_VersionID;
-        }
+        virtual void Destroy();
 
         ID3D12Resource* operator->() { return m_pResource.Get(); }
         const ID3D12Resource* operator->() const { return m_pResource.Get(); }
@@ -86,5 +83,7 @@ namespace RS::DX12
 
         // Used to identify when a resource changes so descriptors can be copied etc.
         uint32_t m_VersionID = 0;
+
+        bool m_Alive;
     };
 }

@@ -49,6 +49,7 @@ namespace RS::DX12
 
         DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
             &ResourceDesc, m_UsageState, nullptr, IID_PPV_ARGS(&m_pResource)));
+        m_Alive = true;
 
         m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 
@@ -87,6 +88,7 @@ namespace RS::DX12
 
         DXCall(DXCore::GetDevice()->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                 &ResourceDesc, m_UsageState, nullptr, IID_PPV_ARGS(&m_pResource)));
+        m_Alive = true;
 
         m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 
@@ -114,6 +116,7 @@ namespace RS::DX12
         m_UsageState = D3D12_RESOURCE_STATE_COMMON;
 
         DXCall(DXCore::GetDevice()->CreatePlacedResource(pBackingHeap, HeapOffset, &ResourceDesc, m_UsageState, nullptr, IID_PPV_ARGS(&m_pResource)));
+        m_Alive = true;
 
         m_GpuVirtualAddress = m_pResource->GetGPUVirtualAddress();
 

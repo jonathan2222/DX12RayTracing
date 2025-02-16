@@ -8,19 +8,22 @@
 
 #include "Utils/Timer.h"
 
-#define SWAP_CHAIN_BUFFER_COUNT 3
-
 namespace RS::DX12
 {
+	class DXGraphicsContext;
 	class DXDisplay : public IDisplaySizeChange
 	{
+	public:
+		inline static constexpr uint BufferCount = 3;
+
 	public:
 		DXDisplay();
 
 		void Init(HWND hWnd, uint32 width, uint32 height, DXGI_FORMAT format = DXGI_FORMAT_R10G10B10A2_UNORM);
 		void Remove();
 
-		void Present(DXColorBuffer* pBase, DXGraphicsContext* pContext = nullptr);
+		// Returns the new buffer index
+		uint Present(DXColorBuffer* pBase, DXGraphicsContext* pContext = nullptr);
 
 		void Resize(uint32 width, uint32 height);
 
@@ -28,14 +31,23 @@ namespace RS::DX12
 
 		DXGI_FORMAT GetFormat() const { return m_SwapChainFormat; }
 
+		uint GetCurrentBufferIndex() const { return m_CurrentBufferIndex; }
+		uint GetCurrentFrameIndex() const { return m_FrameIndex; }
+
+		// Thread safe
+		void FreeResource(Microsoft::WRL::ComPtr<ID3D12Resource> pResource);
+
 	private:
 		void PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pContext);
 
+		void DeletePendingRemovals(uint bufferIndex);
+		void DeleteAllPendingRemovals();
+
 	private:
-		DXColorBuffer m_DisplayPlanes[SWAP_CHAIN_BUFFER_COUNT];
+		DXColorBuffer m_DisplayPlanes[BufferCount];
 		IDXGISwapChain1* m_pSwapChain1 = nullptr;
 		DXGI_FORMAT m_SwapChainFormat;
-		uint m_CurrentBuffer = 0;
+		uint m_CurrentBufferIndex = 0;
 		uint m_FrameIndex = 0;
 
 		DXRootSignature m_PresentRootSignature;
@@ -53,5 +65,9 @@ namespace RS::DX12
 		bool m_EnableVSync = true;
 		bool m_EnableHDROutput = false;
 		bool m_LimitTo30Hz = false;
+
+		// Remove resource each time Present is called.
+		std::mutex m_PendingRemovalsMutex;
+		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_PendingRemovalsPerDisplayBuffer[BufferCount];
 	};
 }
