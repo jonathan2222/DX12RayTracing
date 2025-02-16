@@ -191,7 +191,8 @@ void RS::DX12Core3::Render()
         }
 
         // ImGui
-        ImGuiRenderer::Get()->Render();
+        //ImGuiRenderer::Get()->Render();
+        RS_ASSERT_ALWAYS("Change to the new backend");
     }
 
     // Frame index is the same as the back buffer index.

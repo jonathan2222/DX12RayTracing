@@ -106,8 +106,9 @@ void RSE::Canvas::Render()
         ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
         auto pTexture = m_RenderTarget->GetAttachment(AttachmentPoint::Color0);
-        ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
-        ImGui::Image(textureID, windowSize);
+        //ImTextureID textureID = ImGuiRenderer::Get()->GetImTextureID(pTexture);
+        //ImGui::Image(textureID, windowSize);
+        RS_ASSERT_ALWAYS("Change to the new backend");
         ImGui::EndChild();
 
 		ImGui::End();

@@ -5,6 +5,7 @@
 #include "GUI/LogNotifier.h"
 
 #include "Core/Console.h"
+#include "Core/Display.h"
 
 #include "Tools/ConsoleInspectorTool.h"
 

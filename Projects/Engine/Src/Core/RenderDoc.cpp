@@ -6,7 +6,7 @@
 #include "Core/LaunchArguments.h"
 #include "Core/Display.h"
 
-#include "DX12/NewCore/DX12Core3.h"
+#include "DX12/Final/DXCore.h"
 
 using namespace RS;
 
@@ -109,7 +109,7 @@ void RS::RenderDoc::StartFrameCapture()
     if (frameDiff == 0 || frameDiff > m_MaxCaptureFrames)
         return;
 
-    auto pDevice = DX12Core3::Get()->GetD3D12Device();
+    auto pDevice = DX12::DXCore::GetDevice();
     HWND hwnd = Display::Get()->GetHWND();
     m_pRenderDocAPI->StartFrameCapture(pDevice, hwnd);
 
@@ -129,7 +129,7 @@ void RS::RenderDoc::EndFrameCapture()
     if (frameDiff == 0 || frameDiff > m_MaxCaptureFrames)
         return;
     
-    auto pDevice = DX12Core3::Get()->GetD3D12Device();
+    auto pDevice = DX12::DXCore::GetDevice();
     HWND hwnd = Display::Get()->GetHWND();
     uint32 result = m_pRenderDocAPI->EndFrameCapture(pDevice, hwnd);
     if (result != 1)

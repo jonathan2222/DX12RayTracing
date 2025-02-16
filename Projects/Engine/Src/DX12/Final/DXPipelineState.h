@@ -59,6 +59,8 @@ namespace RS::DX12
         uint64 GetID() const { return m_ID; }
         DXShader::TypeFlag GetShaderFlags() const { return m_ShaderFlags; }
 
+        bool IsValid() const { return m_PSO != nullptr; }
+
     protected:
         void SetShaderDescription(const DXShader::Description& desc, const DXShader::TypeFlags& type);
 

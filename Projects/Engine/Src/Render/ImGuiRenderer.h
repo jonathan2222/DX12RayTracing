@@ -1,14 +1,18 @@
 #pragma once
 
-#include "DX12/NewCore/DX12Core3.h"
-#include "DX12/NewCore/RootSignature.h"
-#include "DX12/NewCore/Resources.h"
+#include "DX12/Final/DXCore.h"
+#include "DX12/Final/DXRootSignature.h"
+#include "DX12/Final/DXPipelineState.h"
+#include "DX12/Final/DXTexture.h"
+#include "DX12/Final/DXGPUBuffers.h"
+#include "DX12/Final/DXColorBuffer.h"
+#include "DX12/Final/DXCommandContext.h"
 //#define ImTextureID RS::Texture*
 #include <imgui.h>
 #include <mutex>
 #include <functional>
 
-#include "DX12/Dx12Device.h"
+//#include "DX12/Dx12Device.h"
 #include "GUI/IconsFontAwesome6.h"
 #include "GUI/ImGuiNotify.h"
 
@@ -29,7 +33,7 @@ namespace RS
 
 		void Draw(std::function<void(void)> callback);
 
-		void Render();
+		void Render(DX12::DXColorBuffer& colorBuffer, DX12::DXGraphicsContext* pContext);
 
 		bool WantKeyInput();
 
@@ -37,24 +41,28 @@ namespace RS
 
 		float GetGuiScale();
 
-		ImTextureID GetImTextureID(std::shared_ptr<Texture> pTexture);
+		ImTextureID GetImTextureID(std::shared_ptr<DX12::DXTexture> pTexture);
 
 		std::function<void(uint32, uint32)> additionalResizeFunction;
 	private:
 		struct ImplDX12BackendRendererData
 		{
 			DXGI_FORMAT rtvFormat;
-			std::shared_ptr<RootSignature> pRootSignature; // Should be able to hold varying number of textures.
-			ID3D12PipelineState* pPipelineState = nullptr;
-			std::shared_ptr<Texture> pFontTexture;
+			DX12::DXRootSignature rootSignature; // Should be able to hold varying number of textures.
+			DX12::DXGraphicsPSO graphicsPSO;
+			//ID3D12PipelineState* pPipelineState = nullptr;
+			std::shared_ptr<DX12::DXTexture> pFontTexture;
 
-			ImplDX12BackendRendererData() { memset((void*)this, 0, sizeof(*this)); }
+			ImplDX12BackendRendererData() : graphicsPSO(L"ImGUI Graphics PSO") { }
 		};
 
 		struct ImplDX12RenderBuffers
 		{
-			std::shared_ptr<VertexBuffer> pVertexBuffer;
-			std::shared_ptr<IndexBuffer> pIndexBuffer;
+			DX12::DXByteAddressBuffer geometry;
+			uint allocatedVertexCount = 0u;
+			uint allocatedIndexCount = 0u;
+			D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+			D3D12_INDEX_BUFFER_VIEW indexBufferView;
 		};
 
 		struct ImplDX12ViewportData
@@ -86,8 +94,8 @@ namespace RS
 
 		void ImplDX12NewFrame();
 
-		static void ImplDX12SetupRenderState(ImDrawData* draw_data, std::shared_ptr<CommandList> pCommandList, ImplDX12RenderBuffers* fr);
-		void ImplDX12RenderDrawData(ImDrawData* draw_data, std::shared_ptr<CommandList> pCommandList);
+		static void ImplDX12SetupRenderState(ImDrawData* draw_data, DX12::DXGraphicsContext& context, ImplDX12RenderBuffers* fr);
+		void ImplDX12RenderDrawData(ImDrawData* draw_data, DX12::DXGraphicsContext& context);
 		static void ImplDX12CreateFontsTexture();
 		bool ImplDX12CreateDeviceObjects();
 		void ImplDX12InvalidateDeviceObjects();
@@ -103,7 +111,7 @@ namespace RS
 		static void WaitForPendingOperations(ImplDX12ViewportData* vd);
 		static void ImplDX12CreateWindow(ImGuiViewport* viewport);
 
-		void TrackTextureResource(std::shared_ptr<Texture> pTexture);
+		void TrackTextureResource(std::shared_ptr<DX12::DXTexture> pTexture);
 		void FreeAllTextureResources();
 
 	private:
@@ -118,6 +126,6 @@ namespace RS
 
 		ImGuiConfigFlags						m_ImGuiConfigFlags = 0;
 
-		std::unordered_map<Texture*, std::shared_ptr<Texture>>	m_TrackedTextureResources;
+		std::unordered_map<DX12::DXTexture*, std::shared_ptr<DX12::DXTexture>>	m_TrackedTextureResources;
 	};
 }

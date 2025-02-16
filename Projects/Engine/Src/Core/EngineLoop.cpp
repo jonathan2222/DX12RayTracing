@@ -7,7 +7,7 @@
 #include "DX12/DirecXRaytracingHelper.h"
 //#include "Raytracing.hlsl.h"
 
-#include "DX12/NewCore/DX12Core3.h"
+#include "DX12/Final/DXCore.h"
 
 #include "Core/Console.h"
 
@@ -37,8 +37,9 @@ void EngineLoop::Init()
 
     m_RenderDoc.Init();
 
-    std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
-    DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+    //std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
+    //DX12Core3::Get()->Init(pDisplay->GetHWND(), pDisplay->GetWidth(), pDisplay->GetHeight());
+    RS::DX12::DXCore::Init();
 
     GetRenderCore()->Init();
 

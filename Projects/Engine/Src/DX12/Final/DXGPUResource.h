@@ -18,6 +18,12 @@
 
 namespace RS::DX12
 {
+    enum DataAccess
+    {
+        Read,
+        Write,
+    };
+
     class DXGPUResource
     {
         friend class DXCommandContext;
@@ -60,6 +66,16 @@ namespace RS::DX12
         D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return m_GpuVirtualAddress; }
 
         uint32_t GetVersionID() const { return m_VersionID; }
+
+        bool Map(uint32 subresource, const D3D12_RANGE* pReadRange, void** ppData, DataAccess access);
+        bool Map(uint32 subresource, void** ppData, DataAccess access);
+
+        void Unmap(uint32 subresource, const D3D12_RANGE* pWrittenRange);
+        void Unmap(uint32 subresource);
+
+        bool IsValid() const { return m_pResource != nullptr; }
+
+        void GetHeapProperties(D3D12_HEAP_PROPERTIES& heapPropertiesOut, D3D12_HEAP_FLAGS& heapFlagsOut);
 
     protected:
 

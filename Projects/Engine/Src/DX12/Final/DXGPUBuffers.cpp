@@ -26,7 +26,7 @@
 //using namespace Graphics;
 namespace RS::DX12
 {
-    void DXGPUBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize, const void* initialData)
+    void DXGPUBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize, const void* initialData, D3D12_HEAP_TYPE heapType)
     {
         Destroy();
 
@@ -34,12 +34,14 @@ namespace RS::DX12
         m_ElementSize = ElementSize;
         m_BufferSize = NumElements * ElementSize;
 
+        if (heapType == D3D12_HEAP_TYPE_UPLOAD)
+            m_ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
         D3D12_RESOURCE_DESC ResourceDesc = DescribeBuffer();
 
         m_UsageState = D3D12_RESOURCE_STATE_COMMON;
 
         D3D12_HEAP_PROPERTIES HeapProps;
-        HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+        HeapProps.Type = heapType;
         HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
         HeapProps.CreationNodeMask = 1;
@@ -62,7 +64,7 @@ namespace RS::DX12
         CreateDerivedViews();
     }
 
-    void DXGPUBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize, const DXUploadBuffer& srcData, uint32_t srcOffset)
+    void DXGPUBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize, const DXUploadBuffer& srcData, uint32_t srcOffset, D3D12_HEAP_TYPE heapType)
     {
         Destroy();
 
@@ -70,12 +72,14 @@ namespace RS::DX12
         m_ElementSize = ElementSize;
         m_BufferSize = NumElements * ElementSize;
 
+        if (heapType == D3D12_HEAP_TYPE_UPLOAD)
+            m_ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
         D3D12_RESOURCE_DESC ResourceDesc = DescribeBuffer();
 
         m_UsageState = D3D12_RESOURCE_STATE_COMMON;
 
         D3D12_HEAP_PROPERTIES HeapProps;
-        HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+        HeapProps.Type = heapType;
         HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
         HeapProps.CreationNodeMask = 1;
@@ -123,7 +127,12 @@ namespace RS::DX12
 #endif
 
         CreateDerivedViews();
+    }
 
+    const D3D12_CPU_DESCRIPTOR_HANDLE& DXGPUBuffer::GetUAV(void) const
+    {
+        RS_ASSERT((m_ResourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0);
+        return m_UAV;
     }
 
     //void DXGPUBuffer::Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize, EsramAllocator& Allocator, const void* initialData)
@@ -179,15 +188,18 @@ namespace RS::DX12
             m_SRV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         DXCore::GetDevice()->CreateShaderResourceView(m_pResource.Get(), &SRVDesc, m_SRV);
 
-        D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-        UAVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-        UAVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
-        UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+        if ((m_ResourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
+        {
+            D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+            UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+            UAVDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+            UAVDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
+            UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-        if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-            m_UAV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        DXCore::GetDevice()->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
+            if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+                m_UAV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            DXCore::GetDevice()->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
+        }
     }
 
     void DXStructuredBuffer::CreateDerivedViews(void)
@@ -232,15 +244,18 @@ namespace RS::DX12
             m_SRV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         DXCore::GetDevice()->CreateShaderResourceView(m_pResource.Get(), &SRVDesc, m_SRV);
 
-        D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
-        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-        UAVDesc.Format = m_DataFormat;
-        UAVDesc.Buffer.NumElements = m_ElementCount;
-        UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+        if ((m_ResourceFlags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
+        {
+            D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+            UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+            UAVDesc.Format = m_DataFormat;
+            UAVDesc.Buffer.NumElements = m_ElementCount;
+            UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-        if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-            m_UAV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        DXCore::GetDevice()->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
+            if (m_UAV.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+                m_UAV = DXCore::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            DXCore::GetDevice()->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
+        }
     }
 
     const D3D12_CPU_DESCRIPTOR_HANDLE& DXStructuredBuffer::GetCounterSRV(DXCommandContext& Context)

@@ -30,10 +30,12 @@ namespace RS::DX12
 
         // Create a buffer.  If initial data is provided, it will be copied into the buffer using the default command context.
         void Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize,
-            const void* initialData = nullptr);
+            const void* initialData = nullptr,
+            D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT);
 
         void Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize,
-            const DXUploadBuffer& srcData, uint32_t srcOffset = 0);
+            const DXUploadBuffer& srcData, uint32_t srcOffset = 0,
+            D3D12_HEAP_TYPE heapType = D3D12_HEAP_TYPE_DEFAULT);
 
         // Create a buffer in ESRAM.  On Windows, ESRAM is not used.
         //void Create(const std::wstring& name, uint32_t NumElements, uint32_t ElementSize,
@@ -43,7 +45,7 @@ namespace RS::DX12
         void CreatePlaced(const std::wstring& name, ID3D12Heap* pBackingHeap, uint32_t HeapOffset, uint32_t NumElements, uint32_t ElementSize,
             const void* initialData = nullptr);
 
-        const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) const { return m_UAV; }
+        const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) const;
         const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) const { return m_SRV; }
 
         D3D12_GPU_VIRTUAL_ADDRESS RootConstantBufferView(void) const { return m_GpuVirtualAddress; }
@@ -89,21 +91,21 @@ namespace RS::DX12
         D3D12_RESOURCE_FLAGS m_ResourceFlags;
     };
 
-    inline D3D12_VERTEX_BUFFER_VIEW DXGPUBuffer::VertexBufferView(size_t Offset, uint32_t Size, uint32_t Stride) const
+    inline D3D12_VERTEX_BUFFER_VIEW DXGPUBuffer::VertexBufferView(size_t offsetInBytes, uint32_t sizeInBytes, uint32_t strideInBytes) const
     {
         D3D12_VERTEX_BUFFER_VIEW VBView;
-        VBView.BufferLocation = m_GpuVirtualAddress + Offset;
-        VBView.SizeInBytes = Size;
-        VBView.StrideInBytes = Stride;
+        VBView.BufferLocation = m_GpuVirtualAddress + offsetInBytes;
+        VBView.SizeInBytes = sizeInBytes;
+        VBView.StrideInBytes = strideInBytes;
         return VBView;
     }
 
-    inline D3D12_INDEX_BUFFER_VIEW DXGPUBuffer::IndexBufferView(size_t Offset, uint32_t Size, bool b32Bit) const
+    inline D3D12_INDEX_BUFFER_VIEW DXGPUBuffer::IndexBufferView(size_t offsetInBytes, uint32_t sizeInBytes, bool b32Bit) const
     {
         D3D12_INDEX_BUFFER_VIEW IBView;
-        IBView.BufferLocation = m_GpuVirtualAddress + Offset;
+        IBView.BufferLocation = m_GpuVirtualAddress + offsetInBytes;
         IBView.Format = b32Bit ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-        IBView.SizeInBytes = Size;
+        IBView.SizeInBytes = sizeInBytes;
         return IBView;
     }
 

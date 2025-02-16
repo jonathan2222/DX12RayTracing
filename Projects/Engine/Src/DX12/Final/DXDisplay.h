@@ -26,6 +26,8 @@ namespace RS::DX12
 
 		void OnSizeChange(uint32 width, uint32 height, bool isFullscreen, bool windowed) override;
 
+		DXGI_FORMAT GetFormat() const { return m_SwapChainFormat; }
+
 	private:
 		void PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pContext);
 

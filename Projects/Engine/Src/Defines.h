@@ -110,6 +110,12 @@ concept VecSizeConstant = ForceUIntType<T> && requires (T t) {
 #endif
 
 #ifdef RS_CONFIG_DEVELOPMENT
+	#define RS_DEBUG(code) code
+#else
+	#define RS_DEBUG(code)
+#endif
+
+#ifdef RS_CONFIG_DEVELOPMENT
 	inline void RS_LOG_WARNING_ONCE_IF_LogWarning(const char* pFileName, int line, const char* pFuncName)
 	{
 		RS_UNUSED(pFileName);

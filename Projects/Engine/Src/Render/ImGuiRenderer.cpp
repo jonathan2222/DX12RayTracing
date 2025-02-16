@@ -4,11 +4,14 @@
 #include "GUI/ImGuiAdapter.h"
 //#include <backends/imgui_impl_dx12.h>
 
-#include "DX12/NewCore/DX12Core3.h"
+#include "DX12/Final/DXCore.h"
+#include "DX12/Final/DXCommandContext.h"
+#include "DX12/Final/DXDisplay.h"
+#include "DX12/Final/DXUploadBuffer.h"
 #include "Core/Display.h"
 #include "Core/Console.h"
 
-#include "DX12/NewCore/Shader.h"
+#include "DX12/Final/DXShader.h"
 
 RS::ImGuiRenderer* RS::ImGuiRenderer::Get()
 {
@@ -54,7 +57,7 @@ void RS::ImGuiRenderer::Draw(std::function<void(void)> callback)
 	m_DrawCalls.emplace_back(callback);
 }
 
-void RS::ImGuiRenderer::Render()
+void RS::ImGuiRenderer::Render(DX12::DXColorBuffer& colorBuffer, DX12::DXGraphicsContext* pContext)
 {
 	if (m_DrawCalls.empty())
 		return;
@@ -86,18 +89,19 @@ void RS::ImGuiRenderer::Render()
 			drawCall();
 	}
 
-	auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
-	auto pCommandList = pCommandQueue->GetCommandList();
+	RS::DX12::DXGraphicsContext* context = pContext;
+	if (pContext == nullptr)
+		context = &RS::DX12::DXGraphicsContext::Begin(L"ImGUI");
 
 	// Rendering
 	ImGui::Render();
 
-	auto pRenderTarget = DX12Core3::Get()->GetSwapChain()->GetCurrentRenderTarget();
-	pCommandList->SetRenderTarget(pRenderTarget);
+	context->SetRenderTarget(colorBuffer.GetRTV());
 
-	ImplDX12RenderDrawData(ImGui::GetDrawData(), pCommandList);
+	ImplDX12RenderDrawData(ImGui::GetDrawData(), *context);
 
-	pCommandQueue->ExecuteCommandList(pCommandList);
+	if (pContext == nullptr)
+		context->Finish();
 
 	// Clear the call stack
 	m_DrawCalls.clear();
@@ -131,7 +135,7 @@ float RS::ImGuiRenderer::GetGuiScale()
 	return m_Scale;
 }
 
-ImTextureID RS::ImGuiRenderer::GetImTextureID(std::shared_ptr<Texture> pTexture)
+ImTextureID RS::ImGuiRenderer::GetImTextureID(std::shared_ptr<DX12::DXTexture> pTexture)
 {
 	TrackTextureResource(pTexture);
 	return (ImTextureID)pTexture.get();
@@ -141,9 +145,6 @@ void RS::ImGuiRenderer::InternalInit()
 {
 	m_IsInitialized = true;
 	m_IsReleased = false;
-
-	//auto pCommandQueue = DX12Core3::Get()->GetDirectCommandQueue();
-	//auto pCommandList = pCommandQueue->GetCommandList();
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -161,7 +162,7 @@ void RS::ImGuiRenderer::InternalInit()
 
 	ImGuiAdapter::Init(Display::Get()->GetGLFWWindow(), true, ImGuiAdapter::ClientAPI::DX12);
 
-	DXGI_FORMAT format = DX12Core3::Get()->GetSwapChain()->GetFormat();
+	DXGI_FORMAT format = DX12::DXCore::GetDXDisplay()->GetFormat();
 	ImplDX12Init(format);
 
 	// Add icon font:
@@ -188,7 +189,7 @@ void RS::ImGuiRenderer::InternalResize()
 	{
 		if (!m_IsReleased)
 		{
-			DX12Core3::Get()->Flush();
+			//DX12::DXCore::Flush();
 			FreeDescriptor();
 			Release();
 		}
@@ -254,8 +255,7 @@ void RS::ImGuiRenderer::ImplDX12Shutdown()
 	if (ImplDX12ViewportData* vd = (ImplDX12ViewportData*)main_viewport->RendererUserData)
 	{
 		// We could just call ImGui_ImplDX12_DestroyWindow(main_viewport) as a convenience but that would be misleading since we only use data->Resources[]
-		vd->renderBuffers.pVertexBuffer.reset();
-		vd->renderBuffers.pIndexBuffer.reset();
+		vd->renderBuffers.geometry.Destroy();
 		IM_DELETE(vd);
 		main_viewport->RendererUserData = nullptr;
 	}
@@ -275,126 +275,65 @@ void RS::ImGuiRenderer::ImplDX12Shutdown()
 
 void RS::ImGuiRenderer::ImplDX12CreateRootSignature(ImplDX12BackendRendererData* br)
 {
-	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags = 
+	br->rootSignature.Reset(2, 1);
+	br->rootSignature[0].InitAsConstants(0, 16, D3D12_SHADER_VISIBILITY_VERTEX);
+	br->rootSignature[1].InitAsDescriptorTable(1, D3D12_SHADER_VISIBILITY_PIXEL);
+	br->rootSignature[1].SetTableRange(0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 0, 1);
+
+	D3D12_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.MipLODBias = 0.f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	samplerDesc.BorderColor[0] = 0.f;
+	samplerDesc.BorderColor[1] = 0.f;
+	samplerDesc.BorderColor[2] = 0.f;
+	samplerDesc.BorderColor[3] = 0.f;
+	samplerDesc.MinLOD = 0.f;
+	samplerDesc.MaxLOD = 0.f;
+	br->rootSignature.InitStaticSampler(0, samplerDesc, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-	br->pRootSignature = std::make_shared<RootSignature>(rootSignatureFlags);
-
-	static const uint32 MAX_NUM_GPU_TEXTURES = 1; // TODO: Add support for more textures!
-
-	auto& rootSignature = *br->pRootSignature.get();
-	rootSignature[0].Constants(16, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-	rootSignature[1][0].SRV(MAX_NUM_GPU_TEXTURES, 0);
-	rootSignature[1].SetVisibility(D3D12_SHADER_VISIBILITY_PIXEL);
-
-	{
-		CD3DX12_STATIC_SAMPLER_DESC staticSampler{};
-		staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		staticSampler.MipLODBias = 0.f;
-		staticSampler.MaxAnisotropy = 0;
-		staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		staticSampler.MinLOD = 0.f;
-		staticSampler.MaxLOD = 0.f;
-		staticSampler.ShaderRegister = 0;
-		staticSampler.RegisterSpace = 0;
-		staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		rootSignature.AddStaticSampler(staticSampler);
-	}
-
-	rootSignature.Bake("ImGuiRenderer_RootSignature");
+	br->rootSignature.Finalize(L"ImGuiRenderer_RootSignature", rootSignatureFlags);
 }
 
 void RS::ImGuiRenderer::ImplDX12CreatePipelineState(ImplDX12BackendRendererData* br)
 {
-	Shader shader;
-	Shader::Description shaderDesc{};
+	DX12::DXShader shader;
+	DX12::DXShader::Description shaderDesc{};
 	shaderDesc.isInternalPath = true;
 	shaderDesc.path = "ImGui/ImGuiShader.hlsl";
-	shaderDesc.typeFlags = Shader::TypeFlag::Pixel | Shader::TypeFlag::Vertex;
-	shaderDesc.customEntryPoints = { {Shader::TypeFlag::Pixel, "PixelMain"}, {Shader::TypeFlag::Vertex, "VertexMain"} };
+	shaderDesc.typeFlags = DX12::DXShader::TypeFlag::Pixel | DX12::DXShader::TypeFlag::Vertex;
+	shaderDesc.customEntryPoints = { {DX12::DXShader::TypeFlag::Pixel, "PixelMain"}, {DX12::DXShader::TypeFlag::Vertex, "VertexMain"} };
 	shader.Create(shaderDesc);
 
 	ImplDX12CreateRootSignature(br);
 
-	auto pDevice = DX12Core3::Get()->GetD3D12Device();
-
-	auto GetShaderBytecode = [&](IDxcBlob* shaderObject)->CD3DX12_SHADER_BYTECODE {
-		if (shaderObject)
-			return CD3DX12_SHADER_BYTECODE(shaderObject->GetBufferPointer(), shaderObject->GetBufferSize());
-		return CD3DX12_SHADER_BYTECODE(nullptr, 0);
-	};
-
-	static D3D12_INPUT_ELEMENT_DESC local_layout[] =
+	static D3D12_INPUT_ELEMENT_DESC pLocalLayout[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (UINT)IM_OFFSETOF(ImDrawVert, uv),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
-	memset(&psoDesc, 0, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	psoDesc.InputLayout = { local_layout, 3 };
-	psoDesc.pRootSignature = br->pRootSignature->GetRootSignature().Get();
-	psoDesc.VS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Vertex, true));
-	psoDesc.PS = GetShaderBytecode(shader.GetShaderBlob(Shader::TypeFlag::Pixel, true));
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	psoDesc.SampleDesc.Count = 1;
-	psoDesc.NodeMask = 0; // Single GPU -> Set to 0.
-	psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-	// Create the blending setup
-	{
-		D3D12_BLEND_DESC& desc = psoDesc.BlendState;
-		desc.AlphaToCoverageEnable = false;
-		desc.RenderTarget[0].BlendEnable = true;
-		desc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		desc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		desc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-		desc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-		desc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-		desc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-		desc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-	}
-
-	// Create the rasterizer state
-	{
-		D3D12_RASTERIZER_DESC& desc = psoDesc.RasterizerState;
-		desc.FillMode = D3D12_FILL_MODE_SOLID;
-		desc.CullMode = D3D12_CULL_MODE_NONE;
-		desc.FrontCounterClockwise = FALSE;
-		desc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-		desc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-		desc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-		desc.DepthClipEnable = true;
-		desc.MultisampleEnable = FALSE;
-		desc.AntialiasedLineEnable = FALSE;
-		desc.ForcedSampleCount = 0;
-		desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-	}
-
-	// Create depth-stencil State
-	{
-		D3D12_DEPTH_STENCIL_DESC& desc = psoDesc.DepthStencilState;
-		desc.DepthEnable = false;
-		desc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		desc.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		desc.StencilEnable = false;
-		desc.FrontFace.StencilFailOp = desc.FrontFace.StencilDepthFailOp = desc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		desc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		desc.BackFace = desc.FrontFace;
-	}
-
-	DXCall(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&br->pPipelineState)));
+	DX12::DXGraphicsPSO& pso = br->graphicsPSO;
+	pso.SetRootSignature(br->rootSignature);
+	pso.SetRasterizerState(RenderCore::RasterizerTwoSided);
+	pso.SetBlendState(RenderCore::BlendTraditional);
+	pso.SetDepthStencilState(RenderCore::DepthStateDisabled);
+	pso.SetSampleMask(0xFFFFFFFF);
+	pso.SetInputLayout(3, pLocalLayout);
+	pso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	pso.SetShader(shader);
+	pso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
+	pso.Finalize(false);
 
 	shader.Release();
 
@@ -406,11 +345,11 @@ void RS::ImGuiRenderer::ImplDX12NewFrame()
 	ImplDX12BackendRendererData* bd = ImplDX12GetBackendData();
 	IM_ASSERT(bd != nullptr && "Did you call ImplDX12Init()?");
 
-	if (!bd->pPipelineState)
+	if (!bd->graphicsPSO.IsValid())
 		ImplDX12CreateDeviceObjects();
 }
 
-void RS::ImGuiRenderer::ImplDX12SetupRenderState(ImDrawData* draw_data, std::shared_ptr<CommandList> pCommandList, ImplDX12RenderBuffers* fr)
+void RS::ImGuiRenderer::ImplDX12SetupRenderState(ImDrawData* draw_data, DX12::DXGraphicsContext& context, ImplDX12RenderBuffers* fr)
 {
 	ImplDX12BackendRendererData* bd = ImplDX12GetBackendData();
 
@@ -440,23 +379,24 @@ void RS::ImGuiRenderer::ImplDX12SetupRenderState(ImDrawData* draw_data, std::sha
 	vp.MinDepth = 0.0f;
 	vp.MaxDepth = 1.0f;
 	vp.TopLeftX = vp.TopLeftY = 0.0f;
-	pCommandList->SetViewport(vp);
+	context.SetViewport(vp);
+	context.SetScissor(0, 0, vp.Width, vp.Height);
 
-	pCommandList->SetVertexBuffers(0, fr->pVertexBuffer);
-	pCommandList->SetIndexBuffer(fr->pIndexBuffer);
+	context.SetVertexBuffer(0, fr->vertexBufferView);
+	context.SetIndexBuffer(fr->indexBufferView);
 
-	pCommandList->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pCommandList->SetPipelineState(bd->pPipelineState);
-	pCommandList->SetRootSignature(bd->pRootSignature);
+	context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context.SetPipelineState(bd->graphicsPSO);
+	context.SetRootSignature(bd->rootSignature);
 
-	pCommandList->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer);
+	context.SetConstantArray(0, 16, &vertex_constant_buffer);
 
 	// Setup blend factor
-	const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-	pCommandList->SetBlendFactor(blend_factor);
+	Color32 blendFactor(0.f, 0.f, 0.f, 0.f);
+	context.SetBlendFactor(blendFactor);
 }
 
-void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::shared_ptr<CommandList> pCommandList)
+void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, DX12::DXGraphicsContext& context)
 {
 	// Avoid rendering when minimized
 	if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
@@ -467,77 +407,35 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 	ImplDX12RenderBuffers* fr = &vd->renderBuffers;
 
 	// Create and grow vertex/index buffers if needed
-	if (fr->pVertexBuffer == nullptr || (fr->pVertexBuffer && fr->pVertexBuffer->GetCount() < draw_data->TotalVtxCount))
+	if (!fr->geometry.IsValid() || (fr->allocatedVertexCount < draw_data->TotalVtxCount) || (fr->allocatedIndexCount < draw_data->TotalIdxCount))
 	{
-		uint64 newCount = 0;
-		if (fr->pVertexBuffer == nullptr)
-			newCount = 5000; // Initial vertex count.
-		if (fr->pVertexBuffer)
-		{
-			newCount = fr->pVertexBuffer->GetCount();
-			fr->pVertexBuffer.reset();
-		}
-		newCount = draw_data->TotalVtxCount + 5000;
+		const uint64 addedVertexCount = 5000;
+		const uint64 newVertexCount = draw_data->TotalVtxCount + addedVertexCount;
+		const uint64 addedIndexCount = 10000;
+		const uint64 newIndexCount = draw_data->TotalIdxCount + addedIndexCount;
 
-		uint32 stride = sizeof(ImDrawVert);
-		D3D12_RESOURCE_DESC desc;
-		memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
-		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		desc.Width = newCount * sizeof(ImDrawVert);
-		desc.Height = 1;
-		desc.DepthOrArraySize = 1;
-		desc.MipLevels = 1;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.SampleDesc.Count = 1;
-		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		fr->pVertexBuffer = std::make_shared<VertexBuffer>(stride, desc, nullptr, "ImGui Vertex Buffer", D3D12_HEAP_TYPE_UPLOAD);
-	}
+		DX12::DXUploadBuffer geometryUploadBuffer;
+		const uint64 geometryBinarySize = newVertexCount * sizeof(ImDrawVert) + newIndexCount * sizeof(ImDrawIdx);
+		fr->geometry.Create(L"ImGUI Geometry Buffer", geometryBinarySize, 1, nullptr, D3D12_HEAP_TYPE_UPLOAD);
 
-	if (fr->pIndexBuffer == nullptr || (fr->pIndexBuffer && (fr->pIndexBuffer->GetSize() / sizeof(ImDrawIdx)) < draw_data->TotalIdxCount))
-	{
-		uint64 newCount = 0;
-		if (fr->pIndexBuffer == nullptr)
-			newCount = 10000; // Initial index count.
-		if (fr->pIndexBuffer)
-		{
-			newCount = fr->pIndexBuffer->GetSize() / sizeof(ImDrawIdx);
-			fr->pIndexBuffer.reset();
-		}
-		newCount = draw_data->TotalIdxCount + 10000;
-
-		D3D12_RESOURCE_DESC desc;
-		memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
-		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		desc.Width = newCount * sizeof(ImDrawIdx);
-		desc.Height = 1;
-		desc.DepthOrArraySize = 1;
-		desc.MipLevels = 1;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.SampleDesc.Count = 1;
-		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		fr->pIndexBuffer = std::make_shared<IndexBuffer>(false, desc, nullptr, "ImGui Index Buffer", D3D12_HEAP_TYPE_UPLOAD);
+		fr->allocatedVertexCount = newVertexCount;
+		fr->allocatedIndexCount = newIndexCount;
 	}
 
 	// Upload vertex/index data into a single contiguous GPU buffer
-	void* vtx_resource, * idx_resource;
-	if (!fr->pVertexBuffer->Map(0, &vtx_resource))
+	uint8* pGeometryData = nullptr;
+	if (!fr->geometry.Map(0, (void**)&pGeometryData, DX12::DataAccess::Write))
 	{
-		pCommandList->FlushResourceBarriers();
+		context.FlushResourceBarriers();
 		FreeAllTextureResources();
 		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
 		return;
 	}
-	if (!fr->pIndexBuffer->Map(0, &idx_resource))
-	{
-		pCommandList->FlushResourceBarriers();
-		FreeAllTextureResources();
-		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
-		return;
-	}
-	ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
-	ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
+
+	uint32 vertexCount = 0u;
+	uint32 indexCount = 0u;
+	ImDrawVert* vtx_dst = (ImDrawVert*)pGeometryData;
+	ImDrawIdx* idx_dst = (ImDrawIdx*)(pGeometryData + fr->allocatedVertexCount * sizeof(ImDrawVert));
 	for (int n = 0; n < draw_data->CmdListsCount; n++)
 	{
 		const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -545,12 +443,17 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 		memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
 		vtx_dst += cmd_list->VtxBuffer.Size;
 		idx_dst += cmd_list->IdxBuffer.Size;
+		vertexCount += cmd_list->VtxBuffer.Size;
+		indexCount += cmd_list->IdxBuffer.Size;
 	}
-	fr->pVertexBuffer->Unmap(0);
-	fr->pIndexBuffer->Unmap(0);
+	fr->geometry.Unmap(0);
+
+	// Update views
+	fr->vertexBufferView = fr->geometry.VertexBufferView(0, vertexCount * sizeof(ImDrawVert), sizeof(ImDrawVert));
+	fr->indexBufferView = fr->geometry.IndexBufferView(fr->allocatedVertexCount * sizeof(ImDrawVert), indexCount * sizeof(ImDrawIdx), false);
 
 	// Setup desired DX state
-	ImplDX12SetupRenderState(draw_data, pCommandList, fr);
+	ImplDX12SetupRenderState(draw_data, context, fr);
 
 	bool calledDraw = false;
 
@@ -570,7 +473,7 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 				// User callback, registered via ImDrawList::AddCallback()
 				// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
 				if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
-					ImplDX12SetupRenderState(draw_data, pCommandList, fr);
+					ImplDX12SetupRenderState(draw_data, context, fr);
 				else
 					pcmd->UserCallback(cmd_list, pcmd);
 				calledDraw = true;
@@ -585,11 +488,11 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 
 				// Apply Scissor/clipping rectangle, Bind texture, Draw
 				const D3D12_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
-				Texture* pTexture = (Texture*)pcmd->GetTexID();
+				DX12::DXTexture* pTexture = (DX12::DXTexture*)pcmd->GetTexID();
 				if (pTexture) // Binding at offset 0 works because we only bind one texture at a time, and because we update the gpu descriptor heap for each draw call.
-					pCommandList->BindTexture(1, 0, m_TrackedTextureResources[pTexture]);
-				pCommandList->SetScissorRect(r);
-				pCommandList->DrawIndexInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+					context.SetDynamicDescriptor(1, 0, m_TrackedTextureResources[pTexture]->GetSRV());
+				context.SetScissor(r);
+				context.DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
 				calledDraw = true;
 			}
 		}
@@ -599,7 +502,7 @@ void RS::ImGuiRenderer::ImplDX12RenderDrawData(ImDrawData* draw_data, std::share
 
 	if (!calledDraw)
 	{
-		pCommandList->FlushResourceBarriers();
+		context.FlushResourceBarriers();
 		FreeAllTextureResources();
 		TrackTextureResource(bd->pFontTexture); // Font texture should always be tracked.
 	}
@@ -616,15 +519,9 @@ void RS::ImGuiRenderer::ImplDX12CreateFontsTexture()
 
 	// Upload texture to graphics system
 	{
-
-		auto pCommandQueue = RS::DX12Core3::Get()->GetDirectCommandQueue();
-		auto pCommandList = pCommandQueue->GetCommandList();
-
-		bd->pFontTexture = pCommandList->CreateTexture((uint32)width, (uint32)height, pixels, DXGI_FORMAT_R8G8B8A8_UNORM, "ImGui Font Texture");
-
-		uint64 fenceValue = pCommandQueue->ExecuteCommandList(pCommandList);
-		// Wait for load to finish.
-		pCommandQueue->WaitForFenceValue(fenceValue);
+		RS::DX12::DXGraphicsContext& context = RS::DX12::DXGraphicsContext::Begin(L"ImGUI Init Font Context");
+		bd->pFontTexture = std::make_shared<DX12::DXTexture>();
+		bd->pFontTexture->Create2D((uint64)width * 4, (uint64)width, (uint64)height, DXGI_FORMAT_R8G8B8A8_UNORM, pixels);
 	}
 
 	// Store our identifier
@@ -645,7 +542,7 @@ bool RS::ImGuiRenderer::ImplDX12CreateDeviceObjects()
 	ImplDX12BackendRendererData* bd = ImplDX12GetBackendData();
 	if (!bd)
 		return false;
-	if (bd->pPipelineState)
+	if (bd->graphicsPSO.IsValid())
 		ImplDX12InvalidateDeviceObjects();
 
 	ImplDX12CreatePipelineState(bd);
@@ -658,13 +555,13 @@ void RS::ImGuiRenderer::ImplDX12InvalidateDeviceObjects()
 		return;
 
 	ImGuiIO& io = ImGui::GetIO();
-	bd->pRootSignature.reset();
+	//bd->rootSignature.DestroyAll();
 	bd->pFontTexture.reset();
-	if (bd->pPipelineState)
-	{
-		bd->pPipelineState->Release();
-		bd->pPipelineState = nullptr;
-	}
+	//if (bd->graphicsPSO.IsValid())
+	//{
+	//	bd->pPipelineState->Release();
+	//	bd->pPipelineState = nullptr;
+	//}
 	io.Fonts->SetTexID(nullptr); // We copied bd->pFontTexture to io.Fonts->TexID so let's clear that as well.
 
 }
@@ -720,7 +617,7 @@ void RS::ImGuiRenderer::ImplDX12CreateWindow(ImGuiViewport* viewport)
 	LOG_CRITICAL("ImplDX12CreateWindow is not implemented");
 }
 
-void RS::ImGuiRenderer::TrackTextureResource(std::shared_ptr<RS::Texture> pTexture)
+void RS::ImGuiRenderer::TrackTextureResource(std::shared_ptr<RS::DX12::DXTexture> pTexture)
 {
 	m_TrackedTextureResources[pTexture.get()] = pTexture;
 }

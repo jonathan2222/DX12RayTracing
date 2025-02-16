@@ -15,6 +15,8 @@
 #include "Graphics/RenderCore.h"
 #include "DX12/Final/DXCommandContext.h"
 
+#include "Render/ImGuiRenderer.h"
+
 int main(int argc, char* argv[])
 {
     RS::Engine::SetInternalDataFilePath("../../../Assets/");
@@ -44,6 +46,8 @@ int main(int argc, char* argv[])
 
     RS::DX12::DXColorBuffer buffer(RS::Color::ToColor32(1.f, 0.f, 0.f, 1.f));
     buffer.Create(L"Main Color Buffer", pDisplay->GetWidth(), pDisplay->GetHeight(), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+    RS::ImGuiRenderer::Get()->Init();
 
     auto pImage = RS::CorePlatform::LoadImageData("flyToYourDream.jpg", RS::Format::RS_FORMAT_R8G8B8A8_UNORM, RS::CorePlatform::ImageFlag::FLIP_Y, true);
     RS::DX12::DXTexture texture;
@@ -132,6 +136,22 @@ int main(int argc, char* argv[])
         context.SetViewportAndScissor(0, 0, buffer.GetWidth(), buffer.GetHeight());
         context.Draw(3);
 
+        if (RS::Console::Get()->IsEnabled() || ImGui::HasToastNotifications())
+        {
+            RS::ImGuiRenderer::Get()->Draw([&]() {
+                RS::Console::Get()->Render();
+
+                // Render toasts on top of everything, at the end of your code!
+                // You should push style vars here
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 5.f); // Round borders
+                ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(43.f / 255.f, 43.f / 255.f, 43.f / 255.f, 100.f / 255.f)); // Background color
+                ImGui::RenderNotifications(); // <-- Here we render all notifications
+                ImGui::PopStyleVar(1); // Don't forget to Pop()
+                ImGui::PopStyleColor(1);
+            });
+        }
+        RS::ImGuiRenderer::Get()->Render(buffer, &context);
+
         RS::DX12::DXCore::GetDXDisplay()->Present(&buffer, &context);
 
         RS::Input::Get()->PostUpdate(frameStats.frame.currentDT);
@@ -140,6 +160,8 @@ int main(int argc, char* argv[])
 
         frameTimer.End();
     }
+
+    RS::ImGuiRenderer::Get()->Release();
     buffer.Destroy();
     RS::Console::Get()->Release();
     RS::DX12::DXCore::Release();
