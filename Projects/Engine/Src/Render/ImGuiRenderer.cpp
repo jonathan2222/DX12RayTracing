@@ -98,7 +98,9 @@ void RS::ImGuiRenderer::Render(DX12::DXColorBuffer& colorBuffer, DX12::DXGraphic
 
 	context->SetRenderTarget(colorBuffer.GetRTV());
 
+	context->BeginEvent("ImGui");
 	ImplDX12RenderDrawData(ImGui::GetDrawData(), *context);
+	context->EndEvent();
 
 	if (pContext == nullptr)
 		context->Finish();

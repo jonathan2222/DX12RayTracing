@@ -240,6 +240,7 @@ void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pC
 {
     DXGraphicsContext& context = pContext ? *pContext : DXGraphicsContext::Begin(L"Present");
 
+    context.BeginEvent("Present SDR");
     context.SetRootSignature(m_PresentRootSignature);
     context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -256,6 +257,8 @@ void RS::DX12::DXDisplay::PresentSDR(DXColorBuffer* pBase, DXGraphicsContext* pC
     context.Draw(3);
 
     context.TransitionResource(m_DisplayPlanes[m_CurrentBufferIndex], D3D12_RESOURCE_STATE_PRESENT);
+
+    context.EndEvent();
 
     // Close the final context to be executed before frame present.
     context.Finish();

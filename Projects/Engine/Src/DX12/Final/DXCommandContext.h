@@ -174,6 +174,10 @@ namespace RS::DX12
 
         void InsertTimeStamp(ID3D12QueryHeap* pQueryHeap, uint32_t QueryIdx);
         void ResolveTimeStamps(ID3D12Resource* pReadbackHeap, ID3D12QueryHeap* pQueryHeap, uint32_t NumQueries);
+
+        void BeginEvent(const char* pLabel);
+        void EndEvent();
+
         void PIXBeginEvent(const wchar_t* label);
         void PIXEndEvent(void);
         void PIXSetMarker(const wchar_t* label);
@@ -728,6 +732,16 @@ namespace RS::DX12
     inline void DXCommandContext::ResolveTimeStamps(ID3D12Resource* pReadbackHeap, ID3D12QueryHeap* pQueryHeap, uint32_t NumQueries)
     {
         m_CommandList->ResolveQueryData(pQueryHeap, D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, pReadbackHeap, 0);
+    }
+
+    inline void DXCommandContext::BeginEvent(const char* pLabel)
+    {
+        m_CommandList->BeginEvent(1, pLabel, sizeof(pLabel));
+    }
+
+    inline void DXCommandContext::EndEvent()
+    {
+        m_CommandList->EndEvent();
     }
 }
 

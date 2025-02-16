@@ -41,6 +41,9 @@ int main(int argc, char* argv[])
     RS::DX12::DXShader::TypeFlag flag = 1;
     flag = flag << 1;
 
+    RS::RenderDoc renderDoc;
+    renderDoc.Init();
+
     RS::DX12::DXCore::Init();
     std::shared_ptr<RS::Display> pDisplay = RS::Display::Get();
 
@@ -86,7 +89,7 @@ int main(int argc, char* argv[])
     {
         frameTimer.Begin();
 
-        //m_RenderDoc.StartFrameCapture();
+        renderDoc.StartFrameCapture();
 
         pDisplay->PollEvents();
         RS::Input::Get()->PreUpdate();
@@ -98,10 +101,10 @@ int main(int argc, char* argv[])
         }
 
         // Toggle fullscreen by pressing F11
-        //{
-        //    if (RS::Input::Get()->IsKeyClicked(RS::Key::F11))
-        //        pDisplay->ToggleFullscreen();
-        //}
+        {
+            if (RS::Input::Get()->IsKeyClicked(RS::Key::F11))
+                pDisplay->ToggleFullscreen();
+        }
 
         // Toggle console by pressing §
         {
@@ -124,6 +127,8 @@ int main(int argc, char* argv[])
 
         RS::DX12::DXGraphicsContext& context = RS::DX12::DXGraphicsContext::Begin(L"Color");
 
+        context.BeginEvent("Texture buffer");
+
         context.SetRootSignature(RS::RenderCore::GetCommonRootSignature());
         context.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -135,6 +140,8 @@ int main(int argc, char* argv[])
         context.SetRenderTarget(buffer.GetRTV());
         context.SetViewportAndScissor(0, 0, buffer.GetWidth(), buffer.GetHeight());
         context.Draw(3);
+
+        context.EndEvent();
 
         if (RS::Console::Get()->IsEnabled() || ImGui::HasToastNotifications())
         {
@@ -156,7 +163,7 @@ int main(int argc, char* argv[])
 
         RS::Input::Get()->PostUpdate(frameStats.frame.currentDT);
 
-        //m_RenderDoc.EndFrameCapture();
+        renderDoc.EndFrameCapture();
 
         frameTimer.End();
     }
